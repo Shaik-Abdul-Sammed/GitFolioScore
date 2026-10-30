@@ -1,18 +1,20 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
-  MapPin, Users, GitBranch, Calendar, Award, TrendingUp, TrendingDown, Minus,
-  Mail, Link as LinkIcon, Building, ExternalLink
+  MapPin, Users, GitBranch, Calendar, Award,
+  Mail, Link as LinkIcon, Building, ExternalLink, Download, Sparkles, CheckCircle2
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare }) => {
+  const cardRef = useRef(null);
+  const [downloading, setDownloading] = useState(false);
+
   const scoreColor = useMemo(() => {
     if (score >= 80) return '#10b981';
     if (score >= 60) return '#3b82f6';
     if (score >= 40) return '#f59e0b';
     return '#ef4444';
   }, [score]);
-
-
 
   const scoreMessage = useMemo(() => {
     if (score >= 80) return '🏆 Excellent Portfolio!';
@@ -21,13 +23,76 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare 
     return '⚠️ Critical Attention Needed';
   }, [score]);
 
-  const scoreTrend = useMemo(() => {
-    if (!previousScore) return null;
+  // Feature 8: Score History Tracking & Badge
+  const scoreHistoryBadge = useMemo(() => {
+    if (previousScore === undefined || previousScore === null) {
+      return {
+        text: 'Initial Audit Recorded',
+        color: '#818cf8',
+        bg: 'rgba(99, 102, 241, 0.12)',
+        border: 'rgba(99, 102, 241, 0.3)',
+      };
+    }
     const diff = score - previousScore;
-    if (diff > 0) return { icon: TrendingUp, color: '#10b981', text: `+${diff} points` };
-    if (diff < 0) return { icon: TrendingDown, color: '#ef4444', text: `${diff} points` };
-    return { icon: Minus, color: 'var(--text-muted)', text: 'No change' };
+    if (diff > 0) {
+      return {
+        text: `Score +${diff} since last audit!`,
+        color: '#10b981',
+        bg: 'rgba(16, 185, 129, 0.12)',
+        border: 'rgba(16, 185, 129, 0.3)',
+      };
+    }
+    if (diff < 0) {
+      return {
+        text: `Score ${diff} since last audit`,
+        color: '#f59e0b',
+        bg: 'rgba(245, 158, 11, 0.12)',
+        border: 'rgba(245, 158, 11, 0.3)',
+      };
+    }
+    return {
+      text: 'Score unchanged since last audit',
+      color: '#94a3b8',
+      bg: 'rgba(148, 163, 184, 0.12)',
+      border: 'rgba(148, 163, 184, 0.3)',
+    };
   }, [score, previousScore]);
+
+  // Feature 7: Profile Completion Progress Bar Calculation
+  const profileCompletion = useMemo(() => {
+    if (!profile) return 0;
+    let total = 0;
+    if (profile.avatar_url) total += 15;
+    if (profile.bio && profile.bio.trim().length > 10) total += 20;
+    if (profile.location) total += 15;
+    if (profile.company || profile.blog || profile.email) total += 15;
+    if ((profile.public_repos || 0) >= 3) total += 15;
+    // Scale remaining 20% according to overall score
+    total += Math.round((Math.min(score, 100) / 100) * 20);
+    return Math.min(100, Math.max(10, total));
+  }, [profile, score]);
+
+  // Feature 3: Dynamic OG Image Generation using html2canvas
+  const handleDownloadScorecard = async () => {
+    if (!cardRef.current) return;
+    try {
+      setDownloading(true);
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#0f172a',
+      });
+      const link = document.createElement('a');
+      link.download = `gitfolioscore-${profile.login || 'portfolio'}-scorecard.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Scorecard download failed:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const getMemberSince = () => {
     if (!profile.created_at) return '';
@@ -43,7 +108,30 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare 
   const dashOffset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="premium-card overflow-hidden animate-fade-in-up">
+    <div ref={cardRef} className="premium-card overflow-hidden animate-fade-in-up">
+      {/* Feature 7: Profile Completion Progress Bar */}
+      <div className="px-8 pt-5 pb-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-glass)' }}>
+        <div className="flex items-center justify-between text-xs mb-2">
+          <div className="flex items-center gap-1.5 font-semibold" style={{ color: 'var(--text-primary)' }}>
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Profile Completion Index</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-indigo-400">{profileCompletion}%</span>
+            <span style={{ color: 'var(--text-muted)' }}>towards Perfect 100</span>
+          </div>
+        </div>
+        <div className="w-full h-2 rounded-full overflow-hidden bg-white/10">
+          <div
+            className="h-full rounded-full transition-all duration-1000 ease-out"
+            style={{
+              width: `${profileCompletion}%`,
+              background: 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #10b981 100%)',
+            }}
+          />
+        </div>
+      </div>
+
       <div className="p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
           {/* Avatar */}
@@ -87,30 +175,51 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare 
 
           {/* User Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                {profile.name || profile.login || 'Unknown'}
-              </h2>
-              {profile.login && (
-                <a
-                  href={profile.html_url || `https://github.com/${profile.login}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-sm font-medium hover:underline"
-                  style={{ color: 'var(--primary)' }}
-                >
-                  @{profile.login} <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
+            <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {profile.name || profile.login || 'Unknown'}
+                </h2>
+                {profile.login && (
+                  <a
+                    href={profile.html_url || `https://github.com/${profile.login}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm font-medium hover:underline"
+                    style={{ color: 'var(--primary)' }}
+                  >
+                    @{profile.login} <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+
+              {/* Feature 3: Download Scorecard Button */}
+              <button
+                onClick={handleDownloadScorecard}
+                disabled={downloading}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-indigo-400/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-semibold shadow transition-all active:scale-95"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{downloading ? 'Capturing...' : 'Download Scorecard'}</span>
+              </button>
             </div>
 
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="badge badge-purple font-semibold" style={{ background: `${scoreColor}15`, color: scoreColor }}>
                 {scoreMessage}
               </span>
-              {scoreTrend && (
-                <span className="flex items-center gap-1 text-sm font-medium" style={{ color: scoreTrend.color }}>
-                  <scoreTrend.icon className="w-4 h-4" />
-                  {scoreTrend.text}
+
+              {/* Feature 8: Score History Badge */}
+              {scoreHistoryBadge && (
+                <span
+                  className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border shadow-sm"
+                  style={{
+                    color: scoreHistoryBadge.color,
+                    background: scoreHistoryBadge.bg,
+                    borderColor: scoreHistoryBadge.border,
+                  }}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {scoreHistoryBadge.text}
                 </span>
               )}
             </div>

@@ -13,15 +13,28 @@ import ShareScore from './components/ShareScore';
 import LinkedInBadge from './components/LinkedInBadge';
 import Tips from './components/Tips';
 import WeightsForm from './components/WeightsForm';
-import { Search, Moon, Sun, Sparkles, RefreshCw, AlertCircle, Copy, Check } from 'lucide-react';
+import { Search, Moon, Sun, Sparkles, RefreshCw, AlertCircle, Copy, Check, Flame } from 'lucide-react';
 import { fetchProfile, fetchRepos } from './lib/github';
 import { calculateReport } from './lib/score';
 import { generateAdvice } from './lib/llm';
 import { cacheGet, cacheSet } from './lib/cache';
 
+const FAMOUS_USERS = ['torvalds', 'gaearon', 'sindresorhus', 'yyx990803'];
+
+const TARGET_ROLES = [
+  'Fullstack Engineer',
+  'Frontend Engineer',
+  'Backend Engineer',
+  'Machine Learning / AI Engineer',
+  'DevOps & Cloud Engineer',
+  'Mobile Engineer',
+];
+
 function App() {
   const [username, setUsername] = useState('');
-  const [targetRole, setTargetRole] = useState('');
+  const [targetRole, setTargetRole] = useState('Fullstack Engineer');
+  const [roastMode, setRoastMode] = useState(false);
+  const [previousScore, setPreviousScore] = useState(null);
   const [state, setState] = useState('idle'); // idle | fetching | scored | advising | advised | fetch_failed | llm_failed
   const [errorMessage, setErrorMessage] = useState('');
   const [llmError, setLlmError] = useState('');
@@ -91,11 +104,11 @@ function App() {
     }
   }, []);
 
-  const runLLMAdvice = async (report, role) => {
+  const runLLMAdvice = async (report, role, isRoast = roastMode) => {
     setState('advising');
     setLlmError('');
     try {
-      const result = await generateAdvice(report, role);
+      const result = await generateAdvice(report, role, { roastMode: isRoast });
       setAdvice(result);
       setState('advised');
     } catch (err) {
@@ -106,9 +119,13 @@ function App() {
     }
   };
 
-  const handleAnalyze = async () => {
-    const cleanUsername = username.trim();
-    if (!cleanUsername) return;
+  const handleAnalyze = async (overrideUsername, overrideRole, overrideRoast) => {
+    const activeUsername = (overrideUsername !== undefined ? overrideUsername : username).trim();
+    if (!activeUsername) return;
+    if (overrideUsername !== undefined) setUsername(activeUsername);
+
+    const activeRole = overrideRole !== undefined ? overrideRole : targetRole;
+    const activeRoast = overrideRoast !== undefined ? overrideRoast : roastMode;
 
     setErrorMessage('');
     setLlmError('');
@@ -117,19 +134,40 @@ function App() {
     setState('fetching');
 
     try {
+      // Feature 8: Retrieve previous score from storage
+      const storageKey = `score_history_${activeUsername.toLowerCase()}`;
+      let prevScore = null;
+      try {
+        if (window.anna?.storage?.get) {
+          const res = await window.anna.storage.get({ key: storageKey });
+          if (res?.value?.score !== undefined) {
+            prevScore = res.value.score;
+          }
+        } else if (typeof localStorage !== 'undefined') {
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed?.score !== undefined) prevScore = parsed.score;
+          }
+        }
+      } catch {
+        // Storage lookup is best effort
+      }
+      setPreviousScore(prevScore);
+
       // 1. Check persistent cache
-      const cached = await cacheGet(cleanUsername);
+      const cached = await cacheGet(activeUsername);
       if (cached && cached.report) {
         setData(cached.report);
         setState('scored');
-        await runLLMAdvice(cached.report, targetRole);
+        await runLLMAdvice(cached.report, activeRole, activeRoast);
         return;
       }
 
       // 2. Parallel GitHub fetch
       const [profile, repos] = await Promise.all([
-        fetchProfile(cleanUsername),
-        fetchRepos(cleanUsername),
+        fetchProfile(activeUsername),
+        fetchRepos(activeUsername),
       ]);
 
       // 3. Pure scoring computation
@@ -137,11 +175,23 @@ function App() {
       setData(report);
       setState('scored');
 
+      // Feature 8: Record new score history
+      try {
+        const payload = { score: report.score, timestamp: Date.now() };
+        if (window.anna?.storage?.set) {
+          await window.anna.storage.set({ key: storageKey, value: payload });
+        } else if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(storageKey, JSON.stringify(payload));
+        }
+      } catch {
+        // Storage save is best effort
+      }
+
       // 4. Save to client APS cache (best effort)
-      await cacheSet(cleanUsername, { profile, repos, report });
+      await cacheSet(activeUsername, { profile, repos, report });
 
       // 5. Generate AI advice
-      await runLLMAdvice(report, targetRole);
+      await runLLMAdvice(report, activeRole, activeRoast);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Analysis error:', err);
@@ -149,7 +199,7 @@ function App() {
       if (err.code === 'RATE_LIMIT') {
         setErrorMessage('GitHub API rate limit exceeded. Please try again in a few minutes.');
       } else if (err.code === 'NOT_FOUND') {
-        setErrorMessage(`GitHub user "${cleanUsername}" was not found.`);
+        setErrorMessage(`GitHub user "${activeUsername}" was not found.`);
       } else if (err.code === 'NETWORK') {
         setErrorMessage('Network connection error. Please check your internet connection.');
       } else {
@@ -158,9 +208,23 @@ function App() {
     }
   };
 
+  // Part 2: Quick Try Click Handler
+  const handleQuickTry = (uname) => {
+    setUsername(uname);
+    handleAnalyze(uname, targetRole, roastMode);
+  };
+
+  const handleToggleRoastMode = () => {
+    const nextRoast = !roastMode;
+    setRoastMode(nextRoast);
+    if (data) {
+      runLLMAdvice(data, targetRole, nextRoast);
+    }
+  };
+
   const handleRetryLLM = () => {
     if (data) {
-      runLLMAdvice(data, targetRole);
+      runLLMAdvice(data, targetRole, roastMode);
     }
   };
 
@@ -235,7 +299,7 @@ function App() {
             </p>
 
             {/* Inputs */}
-            <div className="max-w-xl mx-auto space-y-3">
+            <div className="max-w-2xl mx-auto space-y-3">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300" />
@@ -249,32 +313,69 @@ function App() {
                     disabled={isAnalyzing}
                   />
                 </div>
-                <input
-                  className="sm:w-48 px-4 py-3 rounded-xl text-white placeholder-indigo-300/60 bg-white/10 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
-                  type="text"
-                  placeholder="Target Role (optional)..."
+                {/* Feature 2: Role Benchmarking Dropdown */}
+                <select
+                  aria-label="Target Role Benchmark"
+                  className="sm:w-56 px-4 py-3 rounded-xl text-white bg-slate-900/80 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm cursor-pointer"
                   value={targetRole}
                   onChange={(e) => setTargetRole(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                   disabled={isAnalyzing}
-                />
+                >
+                  {TARGET_ROLES.map((r) => (
+                    <option key={r} value={r} className="bg-slate-900 text-white">
+                      {r}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <button
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 text-base"
-                style={{ background: 'var(--gradient-primary)' }}
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || !username.trim()}
-              >
-                {isAnalyzing ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <RefreshCw className="animate-spin h-5 w-5" />
-                    Analyzing Portfolio...
-                  </span>
-                ) : (
-                  'Analyze & Coach'
-                )}
-              </button>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                {/* Feature 1: Roast My Profile Toggle */}
+                <button
+                  type="button"
+                  onClick={handleToggleRoastMode}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                    roastMode
+                      ? 'bg-gradient-to-r from-orange-500/30 to-red-500/30 border-orange-500/60 text-orange-200 ring-2 ring-orange-400/40'
+                      : 'bg-white/10 hover:bg-white/15 border-white/20 text-indigo-200'
+                  }`}
+                >
+                  <Flame className={`w-4 h-4 ${roastMode ? 'text-orange-400 fill-orange-400' : 'text-gray-400'}`} />
+                  <span>{roastMode ? '🔥 Roast Mode: ACTIVE' : 'Roast My Profile'}</span>
+                </button>
+
+                <button
+                  className="w-full sm:w-auto px-8 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 text-sm"
+                  style={{ background: 'var(--gradient-primary)' }}
+                  onClick={() => handleAnalyze()}
+                  disabled={isAnalyzing || !username.trim()}
+                >
+                  {isAnalyzing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <RefreshCw className="animate-spin h-4 w-4" />
+                      Analyzing Portfolio...
+                    </span>
+                  ) : (
+                    'Analyze & Coach'
+                  )}
+                </button>
+              </div>
+
+              {/* Part 2: Quick Try Row */}
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                <span className="text-xs text-indigo-200/80 font-medium">Quick Try:</span>
+                {FAMOUS_USERS.map((uname) => (
+                  <button
+                    key={uname}
+                    type="button"
+                    onClick={() => handleQuickTry(uname)}
+                    disabled={isAnalyzing}
+                    className="px-3 py-1 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20 text-indigo-100 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    @{uname}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Custom weights toggle */}
@@ -305,7 +406,7 @@ function App() {
               <p className="font-medium text-sm">{errorMessage}</p>
             </div>
             <button
-              onClick={handleAnalyze}
+              onClick={() => handleAnalyze()}
               className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition"
             >
               Retry
@@ -319,32 +420,56 @@ function App() {
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-fade-in-up">
           {/* Actions Bar */}
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <ExportReport targetRef={reportRef} />
+            <ExportReport
+              targetRef={reportRef}
+              data={data}
+              username={username}
+              targetRole={targetRole}
+              advice={advice}
+            />
             <ShareScore score={data.score} username={username} />
           </div>
 
           <div ref={reportRef} className="space-y-8">
             {/* Score Card */}
-            <ScoreCard score={data.score} profile={data.profile} />
+            <ScoreCard score={data.score} profile={data.profile} previousScore={previousScore} />
 
             {/* AI Advisor Panel */}
             <div
-              className="rounded-2xl p-6 border shadow-lg transition-all"
+              className={`rounded-2xl p-6 border shadow-lg transition-all ${
+                roastMode ? 'border-orange-500/50 bg-gradient-to-b from-orange-500/5 to-transparent' : ''
+              }`}
               style={{
-                background: 'var(--card-bg, rgba(255, 255, 255, 0.03))',
-                borderColor: 'var(--border, rgba(255, 255, 255, 0.1))',
+                background: roastMode ? undefined : 'var(--card-bg, rgba(255, 255, 255, 0.03))',
+                borderColor: roastMode ? undefined : 'var(--border, rgba(255, 255, 255, 0.1))',
               }}
             >
-              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4 flex-wrap gap-2">
                 <div className="flex items-center gap-2.5">
                   <Sparkles className="w-5 h-5 text-indigo-400" />
                   <h3 className="text-lg font-bold">AI Career Coach Analysis</h3>
                   {targetRole && (
                     <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">
-                      Target: {targetRole}
+                      Role: {targetRole}
+                    </span>
+                  )}
+                  {roastMode && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-300 font-bold flex items-center gap-1">
+                      <Flame className="w-3 h-3 text-orange-400 fill-orange-400" />
+                      Roast Edition
                     </span>
                   )}
                 </div>
+
+                {/* Quick Toggle Roast Mode inside card */}
+                <button
+                  type="button"
+                  onClick={handleToggleRoastMode}
+                  className="text-xs px-3 py-1 rounded-lg border border-white/10 hover:bg-white/10 text-gray-300 flex items-center gap-1 transition"
+                >
+                  <Flame className="w-3 h-3 text-orange-400" />
+                  {roastMode ? 'Switch to Constructive' : 'Roast Me'}
+                </button>
               </div>
 
               {state === 'advising' && (

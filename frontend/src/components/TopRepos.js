@@ -53,6 +53,7 @@ function TopRepos({ repos, username }) {
         <select
           className="premium-input py-2 text-sm"
           value={langFilter}
+          aria-label="Filter by language"
           onChange={e => { setLangFilter(e.target.value); setPage(1); }}
         >
           <option value="">All Languages</option>
@@ -61,6 +62,7 @@ function TopRepos({ repos, username }) {
         <select
           className="premium-input py-2 text-sm"
           value={sortBy}
+          aria-label="Sort repositories by"
           onChange={e => setSortBy(e.target.value)}
         >
           <option value="stars">⭐ Stars</option>

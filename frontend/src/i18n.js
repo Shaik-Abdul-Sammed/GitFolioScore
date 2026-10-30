@@ -68,7 +68,8 @@ i18n
     resources,
     lng: 'en',
     fallbackLng: 'en',
-    interpolation: { escapeValue: false }
+    interpolation: { escapeValue: false },
+    showSupportNotice: false,
   });
 
 export default i18n;

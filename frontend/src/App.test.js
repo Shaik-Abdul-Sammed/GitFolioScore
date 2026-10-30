@@ -153,6 +153,16 @@ describe('App.js - UI & Integration Tests', () => {
   });
 
   describe('LLM Fails but Fetch Succeeds', () => {
+    let consoleSpy;
+
+    beforeEach(() => {
+      consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleSpy.mockRestore();
+    });
+
     it('displays the calculated score while showing the AI Analysis Notice and Retry button', async () => {
       const user = userEvent.setup();
 

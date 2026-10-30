@@ -9,6 +9,7 @@ yarn.lock
 # Build & Production
 build/
 dist/
+bundle
 .next/
 out/
 *.log

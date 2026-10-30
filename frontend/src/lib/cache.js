@@ -33,6 +33,7 @@ export async function cacheGet(username) {
 
     return data;
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.warn('Anna storage.get failed (continuing without cache):', err);
     return null;
   }
@@ -65,6 +66,7 @@ export async function cacheSet(username, data) {
       ttl_seconds: 86400, // 24h auto-expiry in APS
     });
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.warn('Anna storage.set failed (non-blocking):', err);
   }
 }

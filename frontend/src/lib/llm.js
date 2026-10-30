@@ -44,6 +44,7 @@ function handleLLMError(err) {
   } else if (code === 'APP_PROVIDER_ERROR') {
     userMessage = 'No AI model set up on your Anna account. Configure one in settings, then retry.';
   } else if (code === 'APP_NOT_GRANTED') {
+    // eslint-disable-next-line no-console
     console.error('App configuration error: host_api.llm not granted in manifest.', err);
     userMessage = 'App configuration error. Please contact the developer.';
   } else if (code === 'APP_INVALID_REQUEST') {

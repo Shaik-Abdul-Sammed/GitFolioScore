@@ -47,6 +47,7 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('test') === '1' && !window.anna) {
+      // eslint-disable-next-line no-console
       console.log('Test harness activated via ?test=1');
       window.anna = {
         llm: {
@@ -98,6 +99,7 @@ function App() {
       setAdvice(result);
       setState('advised');
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('LLM generation error:', err);
       setLlmError(err.userMessage || 'AI analysis could not be completed.');
       setState('llm_failed');
@@ -141,6 +143,7 @@ function App() {
       // 5. Generate AI advice
       await runLLMAdvice(report, targetRole);
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Analysis error:', err);
       setState('fetch_failed');
       if (err.code === 'RATE_LIMIT') {

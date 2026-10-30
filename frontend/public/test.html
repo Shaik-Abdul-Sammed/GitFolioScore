@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitFolioScore — Anna AI OS Local Test Harness</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      padding: 12px 20px;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #3b82f6;
+      color: white;
+    }
+    .status {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>
+      <span>⚡ GitFolioScore Harness</span>
+      <span class="badge">Local Mock Active</span>
+    </h1>
+    <div class="status">
+      Mocking <code>window.anna.llm</code> &amp; <code>window.anna.storage</code>
+    </div>
+  </header>
+
+  <iframe id="appFrame" src="./index.html?test=1"></iframe>
+
+  <script>
+    console.log("Anna Test Harness loaded. App running inside iframe with ?test=1.");
+  </script>
+</body>
+</html>

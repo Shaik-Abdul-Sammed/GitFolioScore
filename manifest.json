@@ -1,0 +1,46 @@
+{
+  "schema": 2,
+  "required_executas": [],
+  "host_capabilities": [],
+  "permissions": [],
+  "tags": [
+    "developer-tools",
+    "portfolio",
+    "github",
+    "ai-coaching",
+    "recruiting"
+  ],
+  "system_prompt_addendum": "GitFolioScore evaluates GitHub portfolios and generates personalized career coaching actions.",
+  "ui": {
+    "bundle": {
+      "entry": "index.html",
+      "format": "static-spa",
+      "external_origins": [
+        "https://api.github.com"
+      ]
+    },
+    "views": [
+      {
+        "name": "main",
+        "title": "GitFolioScore",
+        "default": true,
+        "default_size": {
+          "w": 1024,
+          "h": 768
+        },
+        "resizable": true,
+        "movable": true,
+        "single_instance": true
+      }
+    ],
+    "host_api": {
+      "llm": [
+        "complete"
+      ],
+      "storage": [
+        "get",
+        "set"
+      ]
+    }
+  }
+}

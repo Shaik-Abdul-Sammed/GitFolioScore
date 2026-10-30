@@ -1,4 +1,8 @@
-# ⚡ GitFolioScore - AI-Powered GitHub Portfolio Analyzer & Enhancer
+# GitFolioScore
+
+![GitFolioScore Dashboard Mockup](./assets/cover-image.png)
+
+Score your GitHub portfolio and get AI-driven career advice...
 
 [![Hackathon](https://img.shields.io/badge/Hackathon-GitHub_Portfolio_Analyzer_&_Enhancer-orange)](https://github.com/)
 [![Achievement](https://img.shields.io/badge/Status-Top_50_Selection-RGUKT_RKV-gold)]

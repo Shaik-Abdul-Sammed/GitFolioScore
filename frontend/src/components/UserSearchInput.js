@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, RefreshCw, History, X } from 'lucide-react';
+import { Search, RefreshCw, History, X, Mic, MicOff } from 'lucide-react';
 
 /**
  * Live user search dropdown using GitHub Search API.
- * Supports debounced autocomplete, recent history dropdown, clear button, and focus ring.
+ * Supports debounced autocomplete, recent history dropdown, voice-activated search, clear button, and focus ring.
  */
 function UserSearchInput({
   value,
@@ -15,13 +15,73 @@ function UserSearchInput({
   placeholder = 'GitHub username (e.g. torvalds)...',
   recentProfiles = [],
   inputRef,
+  onToast,
 }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [listening, setListening] = useState(false);
   const debounceRef = useRef(null);
   const containerRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  const startVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      if (onToast) {
+        onToast('Voice search requires browser SpeechRecognition support.', 'warning');
+      }
+      return;
+    }
+    try {
+      if (listening && recognitionRef.current) {
+        recognitionRef.current.stop();
+        setListening(false);
+        return;
+      }
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setListening(true);
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results?.[0]?.[0]?.transcript || '';
+        const clean = transcript
+          .replace(/^(analyze|search|audit|inspect|check|find|who is)\s+/i, '')
+          .replace(/^@+/, '')
+          .trim()
+          .split(/\s+/)[0];
+
+        if (clean) {
+          onChange(clean);
+          if (onSelect) {
+            onSelect(clean);
+          } else if (onSubmit) {
+            setTimeout(() => onSubmit(), 100);
+          }
+        }
+        setListening(false);
+      };
+
+      recognition.onerror = () => {
+        setListening(false);
+      };
+
+      recognition.onend = () => {
+        setListening(false);
+      };
+
+      recognition.start();
+    } catch {
+      setListening(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -134,6 +194,22 @@ function UserSearchInput({
             <X className="w-3.5 h-3.5" />
           </button>
         )}
+
+        {/* Voice-Activated Search Button */}
+        <button
+          type="button"
+          onClick={startVoiceSearch}
+          disabled={disabled}
+          className={`p-1 rounded-md transition ${
+            listening
+              ? 'text-rose-400 bg-rose-500/20 ring-2 ring-rose-500 animate-pulse'
+              : 'text-gray-400 hover:text-indigo-200 hover:bg-white/10'
+          }`}
+          aria-label={listening ? 'Listening to voice search...' : 'Voice Search'}
+          title={listening ? 'Listening... say e.g. "Analyze torvalds"' : 'Voice Search (say "Analyze torvalds")'}
+        >
+          {listening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+        </button>
 
         {/* Recently Viewed History Dropdown Trigger */}
         {recentProfiles && recentProfiles.length > 0 && (

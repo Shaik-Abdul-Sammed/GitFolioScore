@@ -29,6 +29,21 @@ import QuickChipsBar from './components/QuickChipsBar';
 import SkeletonLoader from './components/SkeletonLoader';
 import ScrollToTopFAB from './components/ScrollToTopFAB';
 import ToastContainer from './components/Toast';
+import ScoreSimulator from './components/ScoreSimulator';
+import CommitRoaster from './components/CommitRoaster';
+import TerminalEasterEgg from './components/TerminalEasterEgg';
+import TechDebtGraveyard from './components/TechDebtGraveyard';
+import RecruiterSwipeMode from './components/RecruiterSwipeMode';
+import ReadmeWidgetGenerator from './components/ReadmeWidgetGenerator';
+import CompanyOSINT from './components/CompanyOSINT';
+import FakePRGenerator from './components/FakePRGenerator';
+import SecurityScanModal from './components/SecurityScanModal';
+import GamifiedXP from './components/GamifiedXP';
+import VoiceOfGodAudio from './components/VoiceOfGodAudio';
+import LanguageTrendsPredictor from './components/LanguageTrendsPredictor';
+import TimeMachineView from './components/TimeMachineView';
+import OpenToWorkBanner from './components/OpenToWorkBanner';
+import { loadXP, addXPPoints } from './lib/xpStorage';
 import {
   Moon,
   Sun,
@@ -45,6 +60,8 @@ import {
   Target,
   Download,
   Zap,
+  Sliders,
+  User,
 } from 'lucide-react';
 import { fetchProfile, fetchRepos } from './lib/github';
 import { calculateReport } from './lib/score';
@@ -107,7 +124,26 @@ function App() {
   const mainInputRef = useRef();
   const compareRef = useRef();
   const [toasts, setToasts] = useState([]);
+  const [xp, setXp] = useState(20);
   const { i18n } = useTranslation();
+
+  useEffect(() => {
+    loadXP().then(setXp);
+  }, []);
+
+  const handleRewardXP = async (amount, reason) => {
+    try {
+      const res = await addXPPoints(amount);
+      setXp(res.newXP);
+      if (res.leveledUp) {
+        showToast(`🎉 Level Up! You reached Level ${res.newLevel}! (+${amount} XP: ${reason})`, 'success');
+      } else {
+        showToast(`+${amount} XP: ${reason}`, 'info');
+      }
+    } catch {
+      // Ignore
+    }
+  };
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -289,6 +325,7 @@ function App() {
       const report = calculateReport({ profile, repos, weights });
       setData(report);
       setState('scored');
+      handleRewardXP(10, 'Analyzed GitHub profile');
 
       // Feature 8: Record new score history
       try {
@@ -404,6 +441,7 @@ function App() {
         user1: { username: u1, report: rep1 },
         user2: { username: u2, report: rep2 },
       });
+      handleRewardXP(15, 'Run 1v1 VS Battle');
       showToast(`VS Battle: @${u1} vs @${u2} ready!`);
       setTimeout(() => {
         compareRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -529,6 +567,8 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2">
+            <GamifiedXP xp={xp} onRewardXP={handleRewardXP} />
+
             <select
               className="px-3 py-1.5 rounded-lg text-xs font-medium border border-white/20 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
               value={i18n.language}
@@ -552,14 +592,14 @@ function App() {
       </nav>
 
       {/* Hero Header */}
-      <header className="relative" style={{ background: 'var(--gradient-hero)' }}>
+      <header className="relative py-12 md:py-16" style={{ background: 'var(--gradient-hero)' }}>
         <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
           <div className="absolute top-10 left-10 w-72 h-72 bg-purple-500 rounded-full blur-3xl"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-500 rounded-full blur-3xl"></div>
           <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-violet-500 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
+        <div className="relative z-10 max-w-6xl mx-auto px-4">
           {/* Hero content */}
           <div className="text-center py-4 animate-fade-in-up">
             <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
@@ -572,8 +612,36 @@ function App() {
               Objective evaluation with scoring breakdown, strengths, red flags, and personalized AI career coaching.
             </p>
 
-            {/* Inputs */}
-            <div className="max-w-2xl mx-auto space-y-3">
+            {/* Segmented Mode Selector: Single Audit vs VS Battle */}
+            <div className="inline-flex items-center p-1 rounded-2xl bg-slate-900/90 border border-white/15 backdrop-blur-xl shadow-xl mb-6 select-none">
+              <button
+                type="button"
+                onClick={() => setShowCompareInput(false)}
+                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+                  !showCompareInput
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Single Portfolio Audit</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCompareInput(true)}
+                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+                  showCompareInput
+                    ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white shadow-lg shadow-rose-500/25'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span>1v1 VS Battle Mode</span>
+              </button>
+            </div>
+
+            {/* Inputs Container */}
+            <div className="max-w-4xl mx-auto space-y-4">
               {!showCompareInput ? (
                 <div className="relative flex flex-col sm:flex-row gap-3 z-30">
                   <UserSearchInput
@@ -588,11 +656,12 @@ function App() {
                     onClear={handleClearSearch}
                     recentProfiles={recentProfiles}
                     disabled={isAnalyzing}
+                    onToast={showToast}
                   />
                   {/* Feature 2: Role Benchmarking Dropdown */}
                   <select
                     aria-label="Target Role Benchmark"
-                    className="sm:w-56 px-4 py-3 rounded-xl text-white bg-slate-900/80 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm cursor-pointer"
+                    className="sm:w-56 px-4 py-3 rounded-xl text-white bg-slate-900/80 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm cursor-pointer shadow-lg"
                     value={targetRole}
                     onChange={(e) => setTargetRole(e.target.value)}
                     disabled={isAnalyzing}
@@ -617,6 +686,7 @@ function App() {
                       onClear={handleClearSearch}
                       recentProfiles={recentProfiles}
                       disabled={isComparing}
+                      onToast={showToast}
                     />
                   </div>
 
@@ -687,15 +757,14 @@ function App() {
                     ))}
                   </select>
 
-                  {/* Feature 1: Toggle Comparison mode */}
+                  {/* Custom Weights Modal Trigger */}
                   <button
                     type="button"
-                    onClick={() => setShowCompareInput(!showCompareInput)}
-                    className="relative text-xs text-indigo-300 hover:text-white flex items-center gap-1 font-medium transition ring-1 ring-indigo-400/20 px-2.5 py-1.5 rounded-lg shadow-[0_0_10px_rgba(99,102,241,0.2)]"
+                    onClick={() => setShowWeights(true)}
+                    className="relative text-xs text-indigo-300 hover:text-white flex items-center gap-1.5 font-medium transition ring-1 ring-indigo-400/20 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
                   >
-                    <span className="absolute -top-1 -right-1 text-[8px] font-black text-indigo-300 bg-indigo-500/30 px-1 rounded-full border border-indigo-500/40">✦</span>
-                    <Users2 className="w-3.5 h-3.5" />
-                    <span>{showCompareInput ? 'Hide Compare' : 'Compare vs Friend'}</span>
+                    <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Custom Weights</span>
                   </button>
                 </div>
 
@@ -727,20 +796,15 @@ function App() {
               />
             </div>
 
-            {/* Custom weights toggle */}
-            <div className="mt-4">
-              <button
-                className="text-indigo-300/70 text-xs hover:text-indigo-200 transition-colors"
-                onClick={() => setShowWeights((w) => !w)}
-              >
-                {showWeights ? '▲ Hide custom weights' : '▼ Customize scoring weights'}
-              </button>
-            </div>
-
+            {/* Part 1, Item 1: Custom Weights Modal */}
             {showWeights && (
-              <div className="mt-4 animate-fade-in max-w-xl mx-auto">
-                <WeightsForm weights={weights} setWeights={setWeights} dark={true} />
-              </div>
+              <WeightsForm
+                weights={weights}
+                setWeights={setWeights}
+                dark={true}
+                isModal={true}
+                onClose={() => setShowWeights(false)}
+              />
             )}
           </div>
         </div>
@@ -780,7 +844,7 @@ function App() {
 
       {/* Results Section */}
       {showResults && (
-        <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-fade-in-up">
+        <div className="max-w-6xl mx-auto px-4 py-12 md:py-16 space-y-12 md:space-y-16 animate-fade-in-up">
           {/* Actions Bar */}
           <div className="flex flex-wrap items-center justify-center gap-3">
             <ExportReport
@@ -789,8 +853,10 @@ function App() {
               username={username}
               targetRole={targetRole}
               advice={advice}
+              onExport={() => handleRewardXP(20, 'Export PDF Resume')}
             />
             <ShareScore score={data.score} username={username} onToast={showToast} />
+            <VoiceOfGodAudio username={username} score={data.score} advice={advice} />
             <button
               onClick={handleCopyPortfolioJSON}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-semibold transition active:scale-95"
@@ -801,7 +867,7 @@ function App() {
             </button>
           </div>
 
-          <div ref={reportRef} className="space-y-8">
+          <div ref={reportRef} className="space-y-12 md:space-y-16">
             {/* Score Card */}
             <ScoreCard
               score={data.score}
@@ -810,6 +876,9 @@ function App() {
               topRepos={data.topRepos}
               languages={data.mostUsedLanguages}
             />
+
+            {/* Feature 1: "What-If" Score Simulator */}
+            <ScoreSimulator data={data} weights={weights} />
 
             {/* Hiring Readiness Gauge (70% GitHub + 30% LinkedIn) */}
             <HiringReadinessGauge
@@ -992,6 +1061,12 @@ function App() {
               )}
             </div>
 
+            {/* Feature 2: AI Commit Message Roaster */}
+            <CommitRoaster username={username} repos={data.repos || data.topRepos} />
+
+            {/* Feature 8: AI Target Company OSINT */}
+            <CompanyOSINT username={username} data={data} repos={data.repos || data.topRepos} />
+
             {/* Score Breakdown */}
             <Breakdown breakdown={data.scoreBreakdown} />
 
@@ -1002,6 +1077,14 @@ function App() {
             <LinkedInSync
               report={data}
               onUpdateHiringReadiness={(score) => setLinkedInConsistencyScore(score)}
+            />
+
+            {/* Feature 14: The "Time Machine" View */}
+            <TimeMachineView
+              repos={data.repos || data.topRepos}
+              profile={data.profile}
+              weights={weights}
+              currentScore={data.score}
             />
 
             {/* Commit Activity */}
@@ -1015,6 +1098,15 @@ function App() {
               username={username}
               topRepos={data.topRepos}
             />
+
+            {/* Feature 5: Recruiter "Tinder" Mode */}
+            <RecruiterSwipeMode repos={data.repos || data.topRepos} username={username} />
+
+            {/* Feature 4: Tech Debt Graveyard */}
+            <TechDebtGraveyard repos={data.repos || data.topRepos} username={username} onToast={showToast} />
+
+            {/* Feature 9: "Fake" PR Generator */}
+            <FakePRGenerator username={username} repos={data.repos || data.topRepos} onToast={showToast} />
 
             {/* Repo Insights for top repos */}
             {data.topRepos && data.topRepos.length > 0 && data.repoInsights && (
@@ -1035,8 +1127,32 @@ function App() {
               <LanguageChart languages={data.mostUsedLanguages} />
             </div>
 
+            {/* Feature 13: Predictive Language Trends */}
+            <LanguageTrendsPredictor repos={data.repos || data.topRepos} username={username} />
+
             {/* Feature 12: Portfolio Web Connectivity Graph */}
             <PortfolioWebGraph repos={data.topRepos} languages={data.mostUsedLanguages} />
+
+            {/* Feature 10: Dark Web OSINT Check (Simulated) */}
+            <SecurityScanModal
+              username={username}
+              repos={data.repos || data.topRepos}
+              profile={data.profile}
+              onToast={showToast}
+              onRewardXP={handleRewardXP}
+            />
+
+            {/* Feature 6: "Hype" Readme Widget Generator */}
+            <ReadmeWidgetGenerator username={username} score={data.score} tier={data.tier} onToast={showToast} />
+
+            {/* Feature 15: "Open to Work" Banner Generator */}
+            <OpenToWorkBanner
+              username={username}
+              score={data.score}
+              profile={data.profile}
+              repos={data.repos || data.topRepos}
+              onToast={showToast}
+            />
 
             {/* Resume Generator */}
             <ResumeGenerator report={data} advice={advice} />
@@ -1078,6 +1194,9 @@ function App() {
 
       {/* Floating Scroll to Top Action Button */}
       <ScrollToTopFAB />
+
+      {/* Feature 3: Interactive Terminal Mode Easter Egg */}
+      <TerminalEasterEgg username={username} score={data?.score} data={data} advice={advice} />
     </div>
   );
 }

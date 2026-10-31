@@ -141,7 +141,7 @@ describe('App.js - UI & Integration Tests', () => {
 
       // Verify ScoreCard renders with /100 score marker and username
       expect(await screen.findByText('/100')).toBeInTheDocument();
-      expect(screen.getByText('@octocat')).toBeInTheDocument();
+      expect(screen.getAllByText('@octocat')[0]).toBeInTheDocument();
 
       // Verify AI Career Coach analysis section renders
       expect(await screen.findByText(/Top 3 Prioritized Actions/i)).toBeInTheDocument();
@@ -182,7 +182,7 @@ describe('App.js - UI & Integration Tests', () => {
 
       // Score still succeeds and renders
       expect(await screen.findByText('/100')).toBeInTheDocument();
-      expect(screen.getByText('@octocat')).toBeInTheDocument();
+      expect(screen.getAllByText('@octocat')[0]).toBeInTheDocument();
 
       // AI Analysis Notice is displayed with error description
       expect(await screen.findByText('AI Analysis Notice')).toBeInTheDocument();

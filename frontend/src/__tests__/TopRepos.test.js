@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import TopRepos from '../components/TopRepos';
 
 const repos = Array.from({ length: 12 }, (_, i) => ({
@@ -11,8 +11,10 @@ const repos = Array.from({ length: 12 }, (_, i) => ({
 }));
 
 describe('TopRepos', () => {
-  it('renders pagination and filtering', () => {
-    render(<TopRepos repos={repos} />);
+  it('renders pagination and filtering', async () => {
+    await act(async () => {
+      render(<TopRepos repos={repos} />);
+    });
     expect(screen.getByText('Top Repositories')).toBeInTheDocument();
     // Check pagination exists by finding Next button
     expect(screen.getByText('Next →')).toBeInTheDocument();

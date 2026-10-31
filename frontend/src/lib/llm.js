@@ -3,10 +3,19 @@
  */
 
 const SYSTEM_PROMPT =
-  'You are a senior software engineer and career coach. Given a scored GitHub portfolio, produce exactly 3 prioritized actions each tied to a specific signal in the report, plus a 2-sentence shareable summary. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText}.';
+  'You are a senior software engineer and career coach. Given a scored GitHub portfolio, produce exactly 3 prioritized actions each tied to a specific signal in the report, plus a 2-sentence shareable summary, an estimated time-to-hire in weeks (e.g. 4-12), and a list of 4-8 missing ATS keywords. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.';
 
 const ROAST_SYSTEM_PROMPT =
-  'You are a brutally honest, sarcastic senior engineer. Roast this developer\'s portfolio harshly but constructively, pointing out every missing README and dead project. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText}.';
+  'You are a brutally honest, sarcastic senior engineer. Roast this developer\'s portfolio harshly but constructively, pointing out every missing README and dead project. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.';
+
+const PERSONA_PROMPTS = {
+  'Friendly Mentor':
+    'You are an encouraging, experienced software engineering mentor. Help this developer level up their portfolio with empathetic, constructive, highly practical guidance. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
+  'Strict FAANG Recruiter':
+    'You are an elite, highly demanding FAANG staff technical recruiter. You evaluate candidates with uncompromising standards around high-scale system design, code quality, testing rigor, and documentation. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
+  'Open Source Maintainer':
+    'You are a veteran open-source maintainer. You judge portfolios by architectural clarity, reproducible build setups, explicit licensing, contribution hygiene, and clean README standards. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
+};
 
 /**
  * Clean and parse JSON from LLM text response.
@@ -32,6 +41,14 @@ function extractJSON(rawText) {
   if (!parsed.summary || !Array.isArray(parsed.actions) || !parsed.shareText) {
     throw new Error('JSON response does not match expected schema');
   }
+
+  if (typeof parsed.timeToHireWeeks !== 'number') {
+    parsed.timeToHireWeeks = 6;
+  }
+  if (!Array.isArray(parsed.atsMissingKeywords) || parsed.atsMissingKeywords.length === 0) {
+    parsed.atsMissingKeywords = ['Docker', 'CI/CD Pipelines', 'Automated Testing', 'Cloud Deployment'];
+  }
+
   return parsed;
 }
 
@@ -82,7 +99,12 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
     throw error;
   }
 
-  const activeSystemPrompt = options?.roastMode ? ROAST_SYSTEM_PROMPT : SYSTEM_PROMPT;
+  let activeSystemPrompt = SYSTEM_PROMPT;
+  if (options?.roastMode) {
+    activeSystemPrompt = ROAST_SYSTEM_PROMPT;
+  } else if (options?.persona && PERSONA_PROMPTS[options.persona]) {
+    activeSystemPrompt = PERSONA_PROMPTS[options.persona];
+  }
 
   // Build condensed report payload to avoid context bloat
   const condensedReport = {
@@ -204,6 +226,91 @@ Format cleanly in GitHub Flavored Markdown.`;
       { timeoutMs: 30000 }
     );
     return response?.content?.text || '# ' + repo.name + '\n\n' + (repo.description || '');
+  } catch (err) {
+    throw handleLLMError(err);
+  }
+}
+
+/**
+ * Match portfolio against a pasted Job Description.
+ */
+export async function matchJobDescription(report, jdText) {
+  if (!window.anna?.llm?.complete) {
+    const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
+    error.code = 'API_UNAVAILABLE';
+    throw error;
+  }
+
+  const prompt = `Candidate Portfolio Data:
+- Top Languages: ${JSON.stringify(report.mostUsedLanguages?.slice(0, 5) || [])}
+- Top Repositories: ${JSON.stringify(report.topRepos?.map((r) => ({ name: r.name, desc: r.description, lang: r.language })) || [])}
+- Portfolio Score: ${report.score}
+
+Job Description:
+"""
+${(jdText || '').slice(0, 2500)}
+"""
+
+Evaluate how well the candidate matches this Job Description.
+Return ONLY valid JSON:
+{
+  "matchPercentage": 78,
+  "matchingSkills": ["React", "JavaScript", "REST APIs", "Git"],
+  "missingSkills": ["Kubernetes", "AWS", "GraphQL"],
+  "verdict": "Strong match on frontend fundamentals and state management, but requires cloud deployment and containerization artifacts to meet senior requirements."
+}`;
+
+  try {
+    const response = await window.anna.llm.complete(
+      {
+        messages: [{ role: 'user', content: prompt }],
+        systemPrompt:
+          'You are an AI Technical Hiring Evaluator and ATS Matcher. Analyze job descriptions against developer GitHub portfolios and output only valid JSON.',
+        maxTokens: 800,
+        temperature: 0.3,
+      },
+      { timeoutMs: 35000 }
+    );
+    const text = response?.content?.text || '';
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    return JSON.parse(cleaned);
+  } catch (err) {
+    throw handleLLMError(err);
+  }
+}
+
+/**
+ * Generate a high-converting, professional 160-character GitHub bio.
+ */
+export async function generateBio(profile, topRepos = [], languages = []) {
+  if (!window.anna?.llm?.complete) {
+    const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
+    error.code = 'API_UNAVAILABLE';
+    throw error;
+  }
+
+  const prompt = `Write a catchy, modern, professional GitHub bio (strictly MAXIMUM 160 characters) for developer @${profile?.login || 'dev'}:
+- Primary Languages: ${languages.slice(0, 3).map((l) => l.lang || l.name || '').join(', ') || 'TypeScript, React'}
+- Flagship Projects: ${topRepos.slice(0, 2).map((r) => r.name).join(', ') || 'open-source tools'}
+- Current Bio: "${profile?.bio || 'Building software'}"
+
+Return ONLY the plain bio text (max 160 characters). Do not include quotes or surrounding formatting.`;
+
+  try {
+    const response = await window.anna.llm.complete(
+      {
+        messages: [{ role: 'user', content: prompt }],
+        systemPrompt:
+          'You are a developer branding specialist. Craft a memorable, executive 160-character GitHub profile bio.',
+        maxTokens: 100,
+        temperature: 0.7,
+      },
+      { timeoutMs: 20000 }
+    );
+    let bio = (response?.content?.text || '').trim().replace(/^["']|["']$/g, '');
+    if (bio.length > 160) bio = bio.substring(0, 157) + '...';
+    return bio;
   } catch (err) {
     throw handleLLMError(err);
   }

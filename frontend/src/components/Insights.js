@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, AlertTriangle, Lightbulb, ChevronRight } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Lightbulb, ChevronRight, ExternalLink } from 'lucide-react';
 
 const sectionConfig = {
   strengths: {
@@ -31,9 +31,20 @@ const sectionConfig = {
   },
 };
 
-function InsightCard({ type, items }) {
+function InsightCard({ type, items, username, topRepos = [] }) {
   const config = sectionConfig[type];
   const Icon = config.icon;
+
+  const getFixLink = () => {
+    if (!username) return null;
+    const firstRepo = topRepos?.[0]?.name;
+    if (firstRepo) {
+      return `https://github.com/${username}/${firstRepo}/settings`;
+    }
+    return `https://github.com/${username}?tab=repositories`;
+  };
+
+  const fixUrl = getFixLink();
 
   return (
     <div
@@ -66,11 +77,24 @@ function InsightCard({ type, items }) {
           {items.map((item, i) => (
             <li
               key={i}
-              className="flex items-start gap-2 text-sm animate-fade-in-up"
+              className="flex items-center justify-between gap-2 text-sm animate-fade-in-up"
               style={{ animationDelay: `${i * 0.05}s`, color: 'var(--text-secondary)' }}
             >
-              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: config.textColor }} />
-              <span>{item}</span>
+              <div className="flex items-start gap-2">
+                <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: config.textColor }} />
+                <span>{item}</span>
+              </div>
+              {/* Feature 10: Repository Fix Deep Links */}
+              {type === 'redFlags' && fixUrl && (
+                <a
+                  href={fixUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[11px] font-semibold text-rose-400 hover:text-rose-300 underline flex-shrink-0 ml-2"
+                >
+                  Fix <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              )}
             </li>
           ))}
         </ul>
@@ -79,16 +103,16 @@ function InsightCard({ type, items }) {
   );
 }
 
-function Insights({ strengths, redFlags, suggestions }) {
+function Insights({ strengths, redFlags, suggestions, username, topRepos }) {
   return (
     <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
       <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
         📋 Recruiter Insights
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 stagger-children">
-        <InsightCard type="strengths" items={strengths || []} />
-        <InsightCard type="redFlags" items={redFlags || []} />
-        <InsightCard type="suggestions" items={suggestions || []} />
+        <InsightCard type="strengths" items={strengths || []} username={username} topRepos={topRepos} />
+        <InsightCard type="redFlags" items={redFlags || []} username={username} topRepos={topRepos} />
+        <InsightCard type="suggestions" items={suggestions || []} username={username} topRepos={topRepos} />
       </div>
     </div>
   );

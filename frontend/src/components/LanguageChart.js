@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { Code2, Radar as RadarIcon, PieChart as PieIcon } from 'lucide-react';
+import { Code2, Radar as RadarIcon, PieChart as PieIcon, Sparkles } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#14b8a6', '#f97316', '#06b6d4'];
 
@@ -226,6 +226,24 @@ function LanguageChart({ languages }) {
             {lang.name} · {lang.value}%
           </span>
         ))}
+      </div>
+
+      {/* Phase 4, Feature 14: Tech Stack Gap Analysis */}
+      <div className="mt-4 p-3.5 rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-xs">
+        <div className="flex items-center gap-1.5 font-bold text-indigo-300 mb-1">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <span>2026 Tech Stack Gap Analysis</span>
+        </div>
+        <p className="text-gray-300 leading-relaxed">
+          <span className="text-indigo-200 font-semibold">Trending in 2026:</span> Rust, Go, AI Agent SDKs, TypeScript.
+        </p>
+        <p className="text-gray-400 mt-1">
+          <span className="text-gray-300 font-semibold">Your Stack:</span> {donutData.slice(0, 3).map((d) => d.name).join(', ') || 'General'}.{' '}
+          <span className="text-amber-300 font-semibold">Recommendation:</span>{' '}
+          {donutData.some((d) => d.name === 'JavaScript' || d.name === 'TypeScript')
+            ? 'Learn Rust or Go for high-throughput distributed systems & infrastructure.'
+            : 'Learn TypeScript and AI Agent orchestration for modern fullstack workflows.'}
+        </p>
       </div>
     </div>
   );

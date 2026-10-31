@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import TopRepos from '../components/TopRepos';
 import { axe, toHaveNoViolations } from 'jest-axe';
 
@@ -12,7 +12,11 @@ const repos = [
 
 describe('TopRepos accessibility', () => {
   it('has no a11y violations', async () => {
-    const { container } = render(<TopRepos repos={repos} />);
+    let container;
+    await act(async () => {
+      const res = render(<TopRepos repos={repos} />);
+      container = res.container;
+    });
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });

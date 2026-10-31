@@ -22,6 +22,8 @@ describe('llm.js - AI Career Coach & Error Handling', () => {
       { action: 'Add test coverage badges', rationale: 'Signals enterprise quality discipline' },
     ],
     shareText: 'Scored 85/100 on GitFolioScore with high documentation and language diversity!',
+    timeToHireWeeks: 6,
+    atsMissingKeywords: ['Docker', 'CI/CD Pipelines', 'Automated Testing', 'Cloud Deployment'],
   };
 
   beforeEach(() => {

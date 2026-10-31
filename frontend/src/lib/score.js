@@ -136,6 +136,7 @@ export function generateInsights({
   if (inactiveRepos > reposCount / 2) redFlags.push('High ratio of inactive repositories');
   if (topReposCount > 0 && consistentReposCount < topReposCount / 2) redFlags.push('Inconsistent commit activity');
   if (repos.filter(r => !r.description).length > 0) redFlags.push('Repositories missing description');
+  if (repos.length > 0 && repos.some(r => !r.license)) redFlags.push('Missing Open Source License');
 
   // Suggestions
   if (!isRepo && profile) {
@@ -206,10 +207,17 @@ export function calculateReport({ profile, repos = [], weights }) {
       inactiveRepos++;
     }
 
+    const license =
+      typeof repo.license === 'object' && repo.license !== null
+        ? repo.license.spdx_id || repo.license.name
+        : repo.license || null;
+
     return {
       name: repo.name,
       full_name: repo.full_name,
       description: repo.description,
+      homepage: repo.homepage || '',
+      license,
       stars,
       forks,
       language: repo.language,
@@ -282,8 +290,17 @@ export function calculateReport({ profile, repos = [], weights }) {
     commitActivity[repo.name] = [];
   });
 
+  // Feature 12: Open Source Contribution Score calculation
+  const licenseCount = repoStats.filter((r) => r.license).length;
+  const reposCount = repoStats.length || 1;
+  const openSourceScore = Math.min(
+    100,
+    Math.round((totalStars * 1.5) + (totalForks * 2.5) + ((licenseCount / reposCount) * 35))
+  );
+
   return {
     score,
+    openSourceScore,
     scoreBreakdown,
     strengths,
     redFlags,

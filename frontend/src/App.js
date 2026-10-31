@@ -13,7 +13,25 @@ import ShareScore from './components/ShareScore';
 import LinkedInBadge from './components/LinkedInBadge';
 import Tips from './components/Tips';
 import WeightsForm from './components/WeightsForm';
-import { Search, Moon, Sun, Sparkles, RefreshCw, AlertCircle, Copy, Check, Flame } from 'lucide-react';
+import CompareDashboard from './components/CompareDashboard';
+import JDMatcher from './components/JDMatcher';
+import {
+  Search,
+  Moon,
+  Sun,
+  Sparkles,
+  RefreshCw,
+  AlertCircle,
+  Copy,
+  Check,
+  Flame,
+  Volume2,
+  VolumeX,
+  Users2,
+  Clock,
+  Target,
+  UserCheck,
+} from 'lucide-react';
 import { fetchProfile, fetchRepos } from './lib/github';
 import { calculateReport } from './lib/score';
 import { generateAdvice } from './lib/llm';
@@ -30,11 +48,26 @@ const TARGET_ROLES = [
   'Mobile Engineer',
 ];
 
+const REVIEWER_PERSONAS = [
+  'Friendly Mentor',
+  'Strict FAANG Recruiter',
+  'Open Source Maintainer',
+];
+
 function App() {
   const [username, setUsername] = useState('');
+  const [friendUsername, setFriendUsername] = useState('');
+  const [compareData, setCompareData] = useState(null);
+  const [isComparing, setIsComparing] = useState(false);
+  const [showCompareInput, setShowCompareInput] = useState(false);
+
   const [targetRole, setTargetRole] = useState('Fullstack Engineer');
+  const [persona, setPersona] = useState('Friendly Mentor');
   const [roastMode, setRoastMode] = useState(false);
   const [previousScore, setPreviousScore] = useState(null);
+  const [recentProfiles, setRecentProfiles] = useState([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
   const [state, setState] = useState('idle'); // idle | fetching | scored | advising | advised | fetch_failed | llm_failed
   const [errorMessage, setErrorMessage] = useState('');
   const [llmError, setLlmError] = useState('');
@@ -104,11 +137,29 @@ function App() {
     }
   }, []);
 
-  const runLLMAdvice = async (report, role, isRoast = roastMode) => {
+  // Load recent profiles on mount
+  useEffect(() => {
+    const loadRecent = async () => {
+      try {
+        if (window.anna?.storage?.get) {
+          const res = await window.anna.storage.get({ key: 'recent_profiles' });
+          if (Array.isArray(res?.value)) setRecentProfiles(res.value);
+        } else if (typeof localStorage !== 'undefined') {
+          const stored = localStorage.getItem('recent_profiles');
+          if (stored) setRecentProfiles(JSON.parse(stored));
+        }
+      } catch {
+        // Storage is best effort
+      }
+    };
+    loadRecent();
+  }, []);
+
+  const runLLMAdvice = async (report, role, isRoast = roastMode, activePersona = persona) => {
     setState('advising');
     setLlmError('');
     try {
-      const result = await generateAdvice(report, role, { roastMode: isRoast });
+      const result = await generateAdvice(report, role, { roastMode: isRoast, persona: activePersona });
       setAdvice(result);
       setState('advised');
     } catch (err) {
@@ -119,18 +170,20 @@ function App() {
     }
   };
 
-  const handleAnalyze = async (overrideUsername, overrideRole, overrideRoast) => {
+  const handleAnalyze = async (overrideUsername, overrideRole, overrideRoast, overridePersona) => {
     const activeUsername = (overrideUsername !== undefined ? overrideUsername : username).trim();
     if (!activeUsername) return;
     if (overrideUsername !== undefined) setUsername(activeUsername);
 
     const activeRole = overrideRole !== undefined ? overrideRole : targetRole;
     const activeRoast = overrideRoast !== undefined ? overrideRoast : roastMode;
+    const activePersona = overridePersona !== undefined ? overridePersona : persona;
 
     setErrorMessage('');
     setLlmError('');
     setAdvice(null);
     setData(null);
+    setCompareData(null);
     setState('fetching');
 
     try {
@@ -160,7 +213,7 @@ function App() {
       if (cached && cached.report) {
         setData(cached.report);
         setState('scored');
-        await runLLMAdvice(cached.report, activeRole, activeRoast);
+        await runLLMAdvice(cached.report, activeRole, activeRoast, activePersona);
         return;
       }
 
@@ -187,11 +240,27 @@ function App() {
         // Storage save is best effort
       }
 
+      // Phase 4, Feature 13: Save to Multi-Profile Dashboard list
+      try {
+        setRecentProfiles((prev) => {
+          const filtered = prev.filter((p) => p.username.toLowerCase() !== activeUsername.toLowerCase());
+          const updated = [{ username: activeUsername, score: report.score }, ...filtered].slice(0, 3);
+          if (window.anna?.storage?.set) {
+            window.anna.storage.set({ key: 'recent_profiles', value: updated });
+          } else if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('recent_profiles', JSON.stringify(updated));
+          }
+          return updated;
+        });
+      } catch {
+        // Storage is best effort
+      }
+
       // 4. Save to client APS cache (best effort)
       await cacheSet(activeUsername, { profile, repos, report });
 
       // 5. Generate AI advice
-      await runLLMAdvice(report, activeRole, activeRoast);
+      await runLLMAdvice(report, activeRole, activeRoast, activePersona);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Analysis error:', err);
@@ -208,23 +277,79 @@ function App() {
     }
   };
 
+  // Phase 1, Feature 1: Compare with a Friend
+  const handleCompare = async () => {
+    const u1 = username.trim();
+    const u2 = friendUsername.trim();
+    if (!u1 || !u2) return;
+
+    setIsComparing(true);
+    setErrorMessage('');
+    try {
+      const [u1Data, u2Data] = await Promise.all([
+        Promise.all([fetchProfile(u1), fetchRepos(u1)]),
+        Promise.all([fetchProfile(u2), fetchRepos(u2)]),
+      ]);
+
+      const rep1 = calculateReport({ profile: u1Data[0], repos: u1Data[1], weights });
+      const rep2 = calculateReport({ profile: u2Data[0], repos: u2Data[1], weights });
+
+      setCompareData({
+        user1: { username: u1, report: rep1 },
+        user2: { username: u2, report: rep2 },
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Compare failed:', err);
+      setErrorMessage(err.message || 'Could not fetch profiles for comparison.');
+    } finally {
+      setIsComparing(false);
+    }
+  };
+
+  // Phase 4, Feature 15: Read Aloud (TTS)
+  const handleToggleSpeech = () => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!advice?.summary) return;
+    const textToRead = `${advice.summary}. Top priorities: ${advice.actions?.map((a) => a.action).join('. ')}`;
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  };
+
   // Part 2: Quick Try Click Handler
   const handleQuickTry = (uname) => {
     setUsername(uname);
-    handleAnalyze(uname, targetRole, roastMode);
+    handleAnalyze(uname, targetRole, roastMode, persona);
   };
 
   const handleToggleRoastMode = () => {
     const nextRoast = !roastMode;
     setRoastMode(nextRoast);
     if (data) {
-      runLLMAdvice(data, targetRole, nextRoast);
+      runLLMAdvice(data, targetRole, nextRoast, persona);
+    }
+  };
+
+  const handleChangePersona = (newPersona) => {
+    setPersona(newPersona);
+    if (data) {
+      runLLMAdvice(data, targetRole, roastMode, newPersona);
     }
   };
 
   const handleRetryLLM = () => {
     if (data) {
-      runLLMAdvice(data, targetRole, roastMode);
+      runLLMAdvice(data, targetRole, roastMode, persona);
     }
   };
 
@@ -300,6 +425,29 @@ function App() {
 
             {/* Inputs */}
             <div className="max-w-2xl mx-auto space-y-3">
+              {/* Phase 4, Feature 13: Multi-Profile Dashboard Recent Audits */}
+              {recentProfiles.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
+                  <span className="text-xs text-indigo-200/70 flex items-center gap-1 font-medium">
+                    <Clock className="w-3.5 h-3.5" /> Recent:
+                  </span>
+                  {recentProfiles.map((p) => (
+                    <button
+                      key={p.username}
+                      type="button"
+                      onClick={() => {
+                        setUsername(p.username);
+                        handleAnalyze(p.username);
+                      }}
+                      className="px-2.5 py-0.5 rounded-full text-xs bg-white/10 hover:bg-white/20 text-white border border-white/15 transition flex items-center gap-1 active:scale-95"
+                    >
+                      <span>@{p.username}</span>
+                      <b className="text-indigo-300">({p.score})</b>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300" />
@@ -329,20 +477,74 @@ function App() {
                 </select>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                {/* Feature 1: Roast My Profile Toggle */}
-                <button
-                  type="button"
-                  onClick={handleToggleRoastMode}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${
-                    roastMode
-                      ? 'bg-gradient-to-r from-orange-500/30 to-red-500/30 border-orange-500/60 text-orange-200 ring-2 ring-orange-400/40'
-                      : 'bg-white/10 hover:bg-white/15 border-white/20 text-indigo-200'
-                  }`}
-                >
-                  <Flame className={`w-4 h-4 ${roastMode ? 'text-orange-400 fill-orange-400' : 'text-gray-400'}`} />
-                  <span>{roastMode ? '🔥 Roast Mode: ACTIVE' : 'Roast My Profile'}</span>
-                </button>
+              {/* Phase 1, Feature 1: Friend Comparison Toggle & Input */}
+              {showCompareInput && (
+                <div className="flex flex-col sm:flex-row gap-2 p-3 rounded-xl bg-white/5 border border-white/10 animate-fade-in">
+                  <div className="relative flex-1">
+                    <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-300" />
+                    <input
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl text-white placeholder-purple-200/50 bg-white/10 border border-white/20 text-xs focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      type="text"
+                      placeholder="Friend's GitHub username to compare..."
+                      value={friendUsername}
+                      onChange={(e) => setFriendUsername(e.target.value)}
+                      disabled={isComparing}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCompare}
+                    disabled={isComparing || !username.trim() || !friendUsername.trim()}
+                    className="px-5 py-2.5 rounded-xl font-semibold text-xs text-white shadow transition-all disabled:opacity-40 active:scale-95 flex items-center justify-center gap-1.5"
+                    style={{ background: 'var(--gradient-primary)' }}
+                  >
+                    {isComparing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Users2 className="w-3.5 h-3.5" />}
+                    <span>{isComparing ? 'Comparing...' : 'Run Side-by-Side'}</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Feature 1: Roast My Profile Toggle */}
+                  <button
+                    type="button"
+                    onClick={handleToggleRoastMode}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                      roastMode
+                        ? 'bg-gradient-to-r from-orange-500/30 to-red-500/30 border-orange-500/60 text-orange-200 ring-2 ring-orange-400/40'
+                        : 'bg-white/10 hover:bg-white/15 border-white/20 text-indigo-200'
+                    }`}
+                  >
+                    <Flame className={`w-4 h-4 ${roastMode ? 'text-orange-400 fill-orange-400' : 'text-gray-400'}`} />
+                    <span>{roastMode ? '🔥 Roast ON' : 'Roast Me'}</span>
+                  </button>
+
+                  {/* Phase 4, Feature 11: Reviewer Persona Dropdown */}
+                  <select
+                    aria-label="Reviewer Persona"
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-slate-900/80 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+                    value={persona}
+                    onChange={(e) => handleChangePersona(e.target.value)}
+                    disabled={isAnalyzing}
+                  >
+                    {REVIEWER_PERSONAS.map((p) => (
+                      <option key={p} value={p} className="bg-slate-900 text-white">
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Feature 1: Toggle Comparison mode */}
+                  <button
+                    type="button"
+                    onClick={() => setShowCompareInput(!showCompareInput)}
+                    className="text-xs text-indigo-300 hover:text-white flex items-center gap-1 font-medium transition"
+                  >
+                    <Users2 className="w-3.5 h-3.5" />
+                    <span>{showCompareInput ? 'Hide Compare' : 'Compare vs Friend'}</span>
+                  </button>
+                </div>
 
                 <button
                   className="w-full sm:w-auto px-8 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 text-sm"
@@ -397,6 +599,17 @@ function App() {
         </div>
       </header>
 
+      {/* Comparison Dashboard */}
+      {compareData && (
+        <div className="max-w-6xl mx-auto px-4 mt-6 animate-fade-in-up">
+          <CompareDashboard
+            user1={compareData.user1}
+            user2={compareData.user2}
+            onClose={() => setCompareData(null)}
+          />
+        </div>
+      )}
+
       {/* Fetch Error Display */}
       {state === 'fetch_failed' && errorMessage && (
         <div className="max-w-4xl mx-auto px-4 mt-6 animate-fade-in-up">
@@ -432,7 +645,13 @@ function App() {
 
           <div ref={reportRef} className="space-y-8">
             {/* Score Card */}
-            <ScoreCard score={data.score} profile={data.profile} previousScore={previousScore} />
+            <ScoreCard
+              score={data.score}
+              profile={data.profile}
+              previousScore={previousScore}
+              topRepos={data.topRepos}
+              languages={data.mostUsedLanguages}
+            />
 
             {/* AI Advisor Panel */}
             <div
@@ -461,15 +680,30 @@ function App() {
                   )}
                 </div>
 
-                {/* Quick Toggle Roast Mode inside card */}
-                <button
-                  type="button"
-                  onClick={handleToggleRoastMode}
-                  className="text-xs px-3 py-1 rounded-lg border border-white/10 hover:bg-white/10 text-gray-300 flex items-center gap-1 transition"
-                >
-                  <Flame className="w-3 h-3 text-orange-400" />
-                  {roastMode ? 'Switch to Constructive' : 'Roast Me'}
-                </button>
+                {/* Right controls inside AI coach card */}
+                <div className="flex items-center gap-2">
+                  {advice && (
+                    <button
+                      type="button"
+                      onClick={handleToggleSpeech}
+                      aria-label={isSpeaking ? 'Stop read aloud' : 'Read aloud AI advice'}
+                      className={`text-xs px-3 py-1 rounded-lg border border-white/10 hover:bg-white/10 flex items-center gap-1.5 transition ${
+                        isSpeaking ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40' : 'text-gray-300'
+                      }`}
+                    >
+                      {isSpeaking ? <VolumeX className="w-3.5 h-3.5 text-indigo-400" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      <span>{isSpeaking ? 'Stop Audio' : 'Read Aloud'}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleToggleRoastMode}
+                    className="text-xs px-3 py-1 rounded-lg border border-white/10 hover:bg-white/10 text-gray-300 flex items-center gap-1 transition"
+                  >
+                    <Flame className="w-3 h-3 text-orange-400" />
+                    {roastMode ? 'Switch to Constructive' : 'Roast Me'}
+                  </button>
+                </div>
               </div>
 
               {state === 'advising' && (
@@ -509,6 +743,39 @@ function App() {
                       {advice.summary}
                     </p>
                   </div>
+
+                  {/* Phase 2, Feature 6: Time-to-Hire Estimator */}
+                  {advice.timeToHireWeeks !== undefined && (
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs">
+                      <Clock className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      <span className="text-gray-300">
+                        Estimated Time-to-Hire for <b className="text-purple-300">{targetRole}</b>:
+                      </span>
+                      <span className="font-bold text-white bg-purple-500/30 px-2 py-0.5 rounded-md">
+                        ~{advice.timeToHireWeeks} Weeks
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Phase 2, Feature 5: ATS Missing Keywords Scanner */}
+                  {advice.atsMissingKeywords && advice.atsMissingKeywords.length > 0 && (
+                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-indigo-300">
+                        <Target className="w-4 h-4 text-indigo-400" />
+                        <span>ATS Missing Keywords Scanner ({targetRole})</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {advice.atsMissingKeywords.map((kw, i) => (
+                          <span
+                            key={i}
+                            className="text-[11px] px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-rose-300 font-mono"
+                          >
+                            + {kw}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Prioritized Actions */}
                   <div>
@@ -564,14 +831,19 @@ function App() {
             {/* Score Breakdown */}
             <Breakdown breakdown={data.scoreBreakdown} />
 
+            {/* Phase 2, Feature 4: Job Description Matcher */}
+            <JDMatcher report={data} />
+
             {/* Commit Activity */}
             <CommitActivityGraph commitActivity={data.commitActivity} />
 
-            {/* Insights Section */}
+            {/* Insights Section with Phase 3 Deep Links */}
             <Insights
               strengths={data.strengths}
               redFlags={data.redFlags}
               suggestions={data.suggestions}
+              username={username}
+              topRepos={data.topRepos}
             />
 
             {/* Repo Insights for top repos */}

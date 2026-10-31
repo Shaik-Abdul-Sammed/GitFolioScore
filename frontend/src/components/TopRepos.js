@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Star,
   GitFork,
@@ -15,6 +15,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { generateReadme } from '../lib/llm';
+import { checkRepoDemoLinks } from '../lib/demoChecker';
 
 function TopRepos({ repos, username }) {
   const [search, setSearch] = useState('');
@@ -22,6 +23,21 @@ function TopRepos({ repos, username }) {
   const [langFilter, setLangFilter] = useState('');
   const [page, setPage] = useState(1);
   const perPage = 6;
+
+  // Phase 3, Feature 8: Live Demo Link Statuses
+  const [demoStatuses, setDemoStatuses] = useState({});
+
+  useEffect(() => {
+    let isMounted = true;
+    if (repos && repos.length > 0) {
+      checkRepoDemoLinks(repos).then((res) => {
+        if (isMounted) setDemoStatuses(res);
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [repos]);
 
   // State for README generation modal
   const [readmeModalRepo, setReadmeModalRepo] = useState(null);
@@ -191,6 +207,7 @@ function TopRepos({ repos, username }) {
             key={repo.name}
             repo={repo}
             username={username}
+            demoStatus={demoStatuses[repo.name]}
             onGenerateReadme={() => handleOpenReadmeModal(repo)}
           />
         ))}
@@ -317,11 +334,11 @@ function TopRepos({ repos, username }) {
   );
 }
 
-function RepoCard({ repo, username, onGenerateReadme }) {
+function RepoCard({ repo, username, demoStatus, onGenerateReadme }) {
   return (
     <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-indigo-500/40 group transition-all">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <a
             href={username ? `https://github.com/${username}/${repo.name}` : '#'}
             target="_blank"
@@ -332,6 +349,32 @@ function RepoCard({ repo, username, onGenerateReadme }) {
             {repo.name}
             <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--primary)' }} />
           </a>
+
+          {/* Phase 3, Feature 8: Live Demo Link Checker Badge */}
+          {demoStatus && demoStatus.checked && (
+            <a
+              href={demoStatus.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition ${
+                demoStatus.isLive
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
+              }`}
+            >
+              {demoStatus.isLive ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Demo OK
+                </>
+              ) : (
+                <>
+                  <X className="w-2.5 h-2.5 text-rose-400" />
+                  Broken Demo Link
+                </>
+              )}
+            </a>
+          )}
         </div>
         {repo.description && (
           <p className="text-xs line-clamp-2 mb-2" style={{ color: 'var(--text-muted)' }}>

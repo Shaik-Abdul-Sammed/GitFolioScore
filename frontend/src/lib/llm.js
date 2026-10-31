@@ -63,8 +63,22 @@ function handleLLMError(err) {
   const code = err.code || err.status || '';
   let userMessage = 'The AI advisor encountered an error. Please retry.';
 
-  if (code === 'APP_QUOTA_EXCEEDED') {
+  if (code === 'APP_QUOTA_EXCEEDED' || /quota/i.test(err?.message || '')) {
     userMessage = "You're out of Anna credits. Top up in Anna settings, then retry.";
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('anna_quota_exceeded', {
+            detail: {
+              title: 'Out of Anna Credits',
+              message: "You're out of Anna Credits. Please top up in your Anna OS settings to continue generating AI advice.",
+            },
+          })
+        );
+      } catch {
+        // best effort event dispatch
+      }
+    }
   } else if (code === 'APP_PROVIDER_ERROR') {
     userMessage = 'No AI model set up on your Anna account. Configure one in settings, then retry.';
   } else if (code === 'APP_NOT_GRANTED') {
@@ -227,7 +241,7 @@ Format cleanly in GitHub Flavored Markdown.`;
         maxTokens: 1200,
         temperature: 0.5,
       },
-      { timeoutMs: 30000 }
+      { timeoutMs: 45000 }
     );
     return response?.content?.text || '# ' + repo.name + '\n\n' + (repo.description || '');
   } catch (err) {
@@ -273,7 +287,7 @@ Return ONLY valid JSON:
         maxTokens: 800,
         temperature: 0.3,
       },
-      { timeoutMs: 35000 }
+      { timeoutMs: 45000 }
     );
     const text = response?.content?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -310,7 +324,7 @@ Return ONLY the plain bio text (max 160 characters). Do not include quotes or su
         maxTokens: 100,
         temperature: 0.7,
       },
-      { timeoutMs: 20000 }
+      { timeoutMs: 45000 }
     );
     let bio = (response?.content?.text || '').trim().replace(/^["']|["']$/g, '');
     if (bio.length > 160) bio = bio.substring(0, 157) + '...';
@@ -334,7 +348,7 @@ export async function generateResumeBullet(repo) {
   try {
     const response = await window.anna.llm.complete(
       { messages: [{ role: 'user', content: prompt }], systemPrompt: 'You are a professional resume writer specialising in software engineers. Write tight, metric-driven resume bullets.', maxTokens: 120, temperature: 0.5 },
-      { timeoutMs: 20000 }
+      { timeoutMs: 45000 }
     );
     return (response?.content?.text || '').trim().replace(/^[•-]\s*/, '');
   } catch (err) {
@@ -356,7 +370,7 @@ export async function suggestNetworkMatches(languages = [], targetRole = '') {
   try {
     const response = await window.anna.llm.complete(
       { messages: [{ role: 'user', content: prompt }], systemPrompt: 'You are an expert tech career coach with deep knowledge of 2026 hiring trends.', maxTokens: 400, temperature: 0.5 },
-      { timeoutMs: 30000 }
+      { timeoutMs: 45000 }
     );
     const text = response?.content?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -382,7 +396,7 @@ export async function compareProjects(user1, user2) {
   try {
     const response = await window.anna.llm.complete(
       { messages: [{ role: 'user', content: prompt }], systemPrompt: 'You are an expert code reviewer comparing GitHub developer portfolios.', maxTokens: 400, temperature: 0.4 },
-      { timeoutMs: 30000 }
+      { timeoutMs: 45000 }
     );
     const text = response?.content?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -439,7 +453,7 @@ Return ONLY valid JSON:
         maxTokens: 600,
         temperature: isRoast ? 0.7 : 0.3,
       },
-      { timeoutMs: 35000 }
+      { timeoutMs: 45000 }
     );
     const text = response?.content?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -488,7 +502,7 @@ Return ONLY valid JSON:
         maxTokens: 300,
         temperature: 0.6,
       },
-      { timeoutMs: 25000 }
+      { timeoutMs: 45000 }
     );
     const text = response?.content?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -542,7 +556,7 @@ Return ONLY valid JSON:
         maxTokens: 500,
         temperature: 0.4,
       },
-      { timeoutMs: 30000 }
+      { timeoutMs: 45000 }
     );
     const text = response?.content?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -579,7 +593,7 @@ Return ONLY markdown content.`;
         maxTokens: 700,
         temperature: 0.4,
       },
-      { timeoutMs: 25000 }
+      { timeoutMs: 45000 }
     );
     return response?.content?.text || `# [Project Name]\n\n## Overview\n\n## Features\n\n## Installation\n\n## License\n`;
   } catch (err) {

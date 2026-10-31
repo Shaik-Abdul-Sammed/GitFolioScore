@@ -44,7 +44,7 @@ function MessageModal({ username, repos, onClose }) {
             maxTokens: 150,
             temperature: 0.7,
           },
-          { timeoutMs: 20000 }
+          { timeoutMs: 45000 }
         );
         setMessage((response?.content?.text || '').trim());
       } catch (err) {
@@ -64,7 +64,7 @@ function MessageModal({ username, repos, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden"
+      <div className="w-full max-w-md rounded-2xl border shadow-2xl overflow-y-auto max-h-[85vh] pb-20"
         style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
         <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center gap-2">

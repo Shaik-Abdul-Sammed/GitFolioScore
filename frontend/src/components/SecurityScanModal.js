@@ -39,11 +39,14 @@ Generate a realistic cybersecurity hygiene report in ONLY valid JSON:
   ]
 }`;
 
-        const resp = await window.anna.llm.complete({
-          system: 'You are a cybersecurity penetration testing auditor. Output ONLY valid JSON.',
-          prompt,
-          temperature: 0.5,
-        });
+        const resp = await window.anna.llm.complete(
+          {
+            system: 'You are a cybersecurity penetration testing auditor. Output ONLY valid JSON.',
+            prompt,
+            temperature: 0.5,
+          },
+          { timeoutMs: 45000 }
+        );
 
         const raw = resp?.text || '';
         const match = raw.match(/\{[\s\S]*\}/);
@@ -123,7 +126,7 @@ Generate a realistic cybersecurity hygiene report in ONLY valid JSON:
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
           <div className="fixed inset-0" onClick={() => setIsOpen(false)} aria-hidden="true" />
-          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-slate-900 border border-white/15 p-6 shadow-2xl space-y-5 animate-fade-in-up">
+          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-slate-900 border border-white/15 p-6 shadow-2xl max-h-[85vh] overflow-y-auto pb-20 space-y-5 animate-fade-in-up">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-cyan-400" />

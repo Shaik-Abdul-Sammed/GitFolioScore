@@ -7,7 +7,7 @@ function QuickChipsBar({ recentProfiles = [], famousUsers = [], onSelect, disabl
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto pt-1 animate-fade-in">
+    <div className="w-full max-w-full overflow-hidden mx-auto pt-1 animate-fade-in">
       <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide py-1 px-1">
         <span className="text-[11px] font-semibold text-indigo-200/70 flex items-center gap-1 flex-shrink-0 pl-1">
           <Sparkles className="w-3 h-3 text-indigo-300" />

@@ -553,11 +553,22 @@ function CompareDashboard({ user1, user2, onClose }) {
         </div>
       )}
 
+      {/* Watermark Call To Action for Exported VS Image */}
+      <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-xs text-indigo-200/90 gap-2">
+        <div className="flex items-center gap-1.5 font-bold tracking-tight">
+          <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+          <span>GitFolioScore 1v1 Developer Battle</span>
+        </div>
+        <div className="font-mono text-[11px] text-indigo-300">
+          Analyze your GitHub at https://anna.partners/apps/gitfolioscore
+        </div>
+      </div>
+
       {/* Feature 10: Steal README Modal */}
       {showReadmeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
           <div
-            className="w-full max-w-2xl max-h-[80vh] rounded-2xl border shadow-2xl flex flex-col overflow-hidden"
+            className="w-full max-w-2xl max-h-[85vh] pb-20 rounded-2xl border shadow-2xl flex flex-col overflow-y-auto"
             style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
           >
             <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>

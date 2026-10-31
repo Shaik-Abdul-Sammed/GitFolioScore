@@ -7,6 +7,7 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
   const debounceRef = useRef(null);
+  const abortControllerRef = useRef(null);
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -16,11 +17,20 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      clearTimeout(debounceRef.current);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   useEffect(() => {
     clearTimeout(debounceRef.current);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     const clean = (value || '').trim().replace(/^@+/, '');
     if (!clean || clean.length < 2) {
       setAvatarUrl(null);
@@ -30,11 +40,16 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
     }
 
     debounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
       setLoading(true);
       try {
         const res = await fetch(
           `https://api.github.com/search/users?q=${encodeURIComponent(clean)}&per_page=6`,
-          { headers: { Accept: 'application/vnd.github.v3+json' } }
+          {
+            headers: { Accept: 'application/vnd.github.v3+json' },
+            signal: controller.signal,
+          }
         );
         if (res.ok) {
           const data = await res.json();
@@ -50,14 +65,21 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
             setAvatarUrl(items[0].avatar_url);
           }
         }
-      } catch {
-        // Best effort
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          // Best effort
+        }
       } finally {
         setLoading(false);
       }
-    }, 350);
+    }, 500);
 
-    return () => clearTimeout(debounceRef.current);
+    return () => {
+      clearTimeout(debounceRef.current);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [value, avatarUrl]);
 
   const handleSelect = (user) => {

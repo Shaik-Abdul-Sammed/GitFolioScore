@@ -118,10 +118,13 @@ function TerminalEasterEgg({ username, score, data, advice }) {
       try {
         let reply = "Okay. 🥪 [AI Privilege Granted: A magnificent sourdough sandwich with zero bugs, 100% test coverage, and a side of crisp documentation.]";
         if (window?.anna?.llm?.complete) {
-          const res = await window.anna.llm.complete({
-            system: 'You are a humorous Linux terminal kernel. The user typed "sudo make me a sandwich". Give a short witty response granting the sandwich.',
-            prompt: 'sudo make me a sandwich',
-          });
+          const res = await window.anna.llm.complete(
+            {
+              system: 'You are a humorous Linux terminal kernel. The user typed "sudo make me a sandwich". Give a short witty response granting the sandwich.',
+              prompt: 'sudo make me a sandwich',
+            },
+            { timeoutMs: 45000 }
+          );
           if (res?.text) reply = res.text.trim();
         }
         setHistory((prev) => [...prev, { text: reply, type: 'success' }]);
@@ -152,10 +155,13 @@ function TerminalEasterEgg({ username, score, data, advice }) {
     try {
       let aiText = `bash: ${cmd}: command not found. Type "help" for a list of commands.`;
       if (window?.anna?.llm?.complete) {
-        const resp = await window.anna.llm.complete({
-          system: 'You are a helpful UNIX CLI terminal assistant for a GitHub portfolio auditor. Answer very concisely in 1-2 sentences.',
-          prompt: cmd,
-        });
+        const resp = await window.anna.llm.complete(
+          {
+            system: 'You are a helpful UNIX CLI terminal assistant for a GitHub portfolio auditor. Answer very concisely in 1-2 sentences.',
+            prompt: cmd,
+          },
+          { timeoutMs: 45000 }
+        );
         if (resp?.text) {
           aiText = resp.text.trim();
         }

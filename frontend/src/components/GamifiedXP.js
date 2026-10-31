@@ -47,7 +47,7 @@ function GamifiedXP({ xp, onRewardXP }) {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
           <div className="fixed inset-0" onClick={() => setShowModal(false)} aria-hidden="true" />
-          <div className="relative z-10 w-full max-w-md rounded-2xl bg-slate-900 border border-white/15 p-6 shadow-2xl space-y-5 animate-fade-in-up">
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-slate-900 border border-white/15 p-6 shadow-2xl max-h-[85vh] overflow-y-auto pb-20 space-y-5 animate-fade-in-up">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">

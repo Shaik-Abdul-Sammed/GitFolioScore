@@ -63,7 +63,7 @@ const CustomTooltip = ({ active, payload }) => {
   );
 };
 
-function LanguageChart({ languages }) {
+function LanguageChart({ languages, showEmptyState = false }) {
   const [chartMode, setChartMode] = useState('radar'); // 'radar' | 'donut'
 
   if (
@@ -71,7 +71,20 @@ function LanguageChart({ languages }) {
     (Array.isArray(languages) && languages.length === 0) ||
     (!Array.isArray(languages) && Object.keys(languages).length === 0)
   ) {
-    return null;
+    if (!showEmptyState) return null;
+    return (
+      <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[300px]">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <Code2 className="w-6 h-6" />
+        </div>
+        <div className="space-y-1 max-w-xs">
+          <h4 className="text-sm font-bold text-white">No Language Distribution</h4>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Create a repository with detected code languages to generate your full-stack domain radar and breakdown.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // Normalize language data

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, FileText, Check } from 'lucide-react';
+import { Image, FileText, Check, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -265,17 +265,22 @@ function ExportReport({ targetRef, data, username, targetRole, advice }) {
       <button
         onClick={exportAsImage}
         disabled={exporting}
-        className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl hover:shadow-md transition-all active:scale-95"
+        className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl hover:shadow-md transition-all active:scale-95 disabled:opacity-50"
       >
-        <Image className="w-4 h-4" />
+        {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
         Export PNG
       </button>
       <button
         onClick={exportAsPDF}
         disabled={exporting}
-        className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl hover:shadow-md transition-all active:scale-95 text-indigo-400 font-semibold"
+        className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl hover:shadow-md transition-all active:scale-95 text-indigo-400 font-semibold disabled:opacity-50"
       >
-        {downloaded ? (
+        {exporting ? (
+          <>
+            <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
+            Generating PDF...
+          </>
+        ) : downloaded ? (
           <>
             <Check className="w-4 h-4 text-emerald-400" />
             Downloaded!

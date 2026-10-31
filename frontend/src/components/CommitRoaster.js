@@ -79,11 +79,14 @@ Produce a humorous and insightful JSON response in this exact format:
 
       let roastData = null;
       if (window?.anna?.llm?.complete) {
-        const resp = await window.anna.llm.complete({
-          system: 'You are a witty, senior tech lead roaster. Output ONLY valid raw JSON with keys: hygieneScore, headline, roastComment, worstOffenders, improvedSuggestion.',
-          prompt,
-          temperature: 0.7,
-        });
+        const resp = await window.anna.llm.complete(
+          {
+            system: 'You are a witty, senior tech lead roaster. Output ONLY valid raw JSON with keys: hygieneScore, headline, roastComment, worstOffenders, improvedSuggestion.',
+            prompt,
+            temperature: 0.7,
+          },
+          { timeoutMs: 45000 }
+        );
 
         const raw = resp?.text || '';
         const match = raw.match(/\{[\s\S]*\}/);

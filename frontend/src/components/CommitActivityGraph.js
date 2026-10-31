@@ -27,15 +27,43 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-function CommitActivityGraph({ commitActivity }) {
+function CommitActivityGraph({ commitActivity, showEmptyState = false }) {
   if (!commitActivity || typeof commitActivity !== 'object' || Object.keys(commitActivity).length === 0) {
-    return null;
+    if (!showEmptyState) return null;
+    return (
+      <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[200px]">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <Activity className="w-6 h-6" />
+        </div>
+        <div className="space-y-1 max-w-sm">
+          <h4 className="text-sm font-bold text-white">No Commit Velocity History</h4>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Push code to your repositories to track 52-week streak metrics, weekly velocity, and consistency waves.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // Transform data - each repo has weekly commit data
   const repoNames = Object.keys(commitActivity);
   const maxWeeks = Math.max(...repoNames.map((r) => (commitActivity[r] || []).length), 0);
-  if (maxWeeks === 0) return null;
+  if (maxWeeks === 0) {
+    if (!showEmptyState) return null;
+    return (
+      <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[200px]">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <Activity className="w-6 h-6" />
+        </div>
+        <div className="space-y-1 max-w-sm">
+          <h4 className="text-sm font-bold text-white">No Commit Velocity History</h4>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Push code to your repositories to track 52-week streak metrics, weekly velocity, and consistency waves.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const data = [];
   const weeklyTotals = [];

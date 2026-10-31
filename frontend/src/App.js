@@ -43,6 +43,8 @@ import VoiceOfGodAudio from './components/VoiceOfGodAudio';
 import LanguageTrendsPredictor from './components/LanguageTrendsPredictor';
 import TimeMachineView from './components/TimeMachineView';
 import OpenToWorkBanner from './components/OpenToWorkBanner';
+import OnboardingModal from './components/OnboardingModal';
+import QuotaModal from './components/QuotaModal';
 import { loadXP, addXPPoints } from './lib/xpStorage';
 import {
   Moon,
@@ -120,6 +122,9 @@ function App() {
   });
 
   const [dark, setDark] = useDarkMode();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
+  const currentRequestId = useRef(0);
   const reportRef = useRef();
   const mainInputRef = useRef();
   const compareRef = useRef();
@@ -129,6 +134,31 @@ function App() {
 
   useEffect(() => {
     loadXP().then(setXp);
+
+    const checkOnboarded = async () => {
+      try {
+        let onboarded = false;
+        if (window.anna?.storage?.get) {
+          const res = await window.anna.storage.get({ key: 'hasOnboarded' });
+          if (res?.value === true) onboarded = true;
+        }
+        if (!onboarded && typeof localStorage !== 'undefined') {
+          if (localStorage.getItem('hasOnboarded') === 'true') onboarded = true;
+        }
+        if (!onboarded && process.env.NODE_ENV !== 'test') {
+          setShowOnboarding(true);
+        }
+      } catch {
+        // best effort
+      }
+    };
+    checkOnboarded();
+
+    const handleQuotaExceeded = () => {
+      setShowQuotaModal(true);
+    };
+    window.addEventListener('anna_quota_exceeded', handleQuotaExceeded);
+    return () => window.removeEventListener('anna_quota_exceeded', handleQuotaExceeded);
   }, []);
 
   const handleRewardXP = async (amount, reason) => {
@@ -253,16 +283,36 @@ function App() {
     loadRecent();
   }, []);
 
-  const runLLMAdvice = async (report, role, isRoast = roastMode, activePersona = persona) => {
+  const handleCompleteOnboarding = async () => {
+    setShowOnboarding(false);
+    try {
+      if (window.anna?.storage?.set) {
+        await window.anna.storage.set({ key: 'hasOnboarded', value: true });
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('hasOnboarded', 'true');
+      }
+    } catch {
+      // best effort
+    }
+  };
+
+  const runLLMAdvice = async (report, role, isRoast = roastMode, activePersona = persona, reqId = currentRequestId.current) => {
+    if (currentRequestId.current !== reqId) return;
     setState('advising');
     setLlmError('');
     try {
       const result = await generateAdvice(report, role, { roastMode: isRoast, persona: activePersona });
+      if (currentRequestId.current !== reqId) return;
       setAdvice(result);
       setState('advised');
     } catch (err) {
+      if (currentRequestId.current !== reqId) return;
       // eslint-disable-next-line no-console
       console.error('LLM generation error:', err);
+      if (err.code === 'APP_QUOTA_EXCEEDED' || /quota/i.test(err.message || '')) {
+        setShowQuotaModal(true);
+      }
       setLlmError(err.userMessage || 'AI analysis could not be completed.');
       setState('llm_failed');
     }
@@ -273,6 +323,7 @@ function App() {
     if (!activeUsername) return;
     if (overrideUsername !== undefined) setUsername(activeUsername);
 
+    const reqId = ++currentRequestId.current;
     const activeRole = overrideRole !== undefined ? overrideRole : targetRole;
     const activeRoast = overrideRoast !== undefined ? overrideRoast : roastMode;
     const activePersona = overridePersona !== undefined ? overridePersona : persona;
@@ -282,6 +333,7 @@ function App() {
     setAdvice(null);
     setData(null);
     setCompareData(null);
+    setIsComparing(false);
     setState('fetching');
 
     try {
@@ -304,14 +356,16 @@ function App() {
       } catch {
         // Storage lookup is best effort
       }
+      if (currentRequestId.current !== reqId) return;
       setPreviousScore(prevScore);
 
       // 1. Check persistent cache
       const cached = await cacheGet(activeUsername);
+      if (currentRequestId.current !== reqId) return;
       if (cached && cached.report) {
         setData(cached.report);
         setState('scored');
-        await runLLMAdvice(cached.report, activeRole, activeRoast, activePersona);
+        await runLLMAdvice(cached.report, activeRole, activeRoast, activePersona, reqId);
         return;
       }
 
@@ -320,6 +374,7 @@ function App() {
         fetchProfile(activeUsername),
         fetchRepos(activeUsername),
       ]);
+      if (currentRequestId.current !== reqId) return;
 
       // 3. Pure scoring computation
       const report = calculateReport({ profile, repos, weights });
@@ -365,9 +420,12 @@ function App() {
         // leaderboard save is best effort
       }
 
+      if (currentRequestId.current !== reqId) return;
+
       // 5. Generate AI advice
-      await runLLMAdvice(report, activeRole, activeRoast, activePersona);
+      await runLLMAdvice(report, activeRole, activeRoast, activePersona, reqId);
     } catch (err) {
+      if (currentRequestId.current !== reqId) return;
       // eslint-disable-next-line no-console
       console.error('Analysis error:', err);
       setState('fetch_failed');
@@ -392,6 +450,7 @@ function App() {
       return;
     }
 
+    const reqId = ++currentRequestId.current;
     setIsComparing(true);
     setErrorMessage('');
     try {
@@ -399,6 +458,8 @@ function App() {
         Promise.all([fetchProfile(u1), fetchRepos(u1)]),
         Promise.all([fetchProfile(u2), fetchRepos(u2)]),
       ]);
+
+      if (currentRequestId.current !== reqId) return;
 
       const formatError = (uname, reason) => {
         if (reason?.code === 'NOT_FOUND') {
@@ -556,13 +617,17 @@ function App() {
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg"
+              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg border border-white/20"
               style={{ background: 'var(--gradient-primary)' }}
             >
-              <span className="text-white text-lg">⚡</span>
+              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" fillOpacity="0.3" />
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              GitFolio<span className="text-indigo-300">Score</span>
+            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-1.5">
+              GitFolio<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300">Score</span>
+              <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">AI OS</span>
             </h1>
           </div>
 
@@ -608,9 +673,32 @@ function App() {
                 Scored & AI-Advised
               </span>
             </h2>
-            <p className="text-indigo-200/80 text-base md:text-lg max-w-2xl mx-auto mb-8">
+            <p className="text-indigo-200/80 text-base md:text-lg max-w-2xl mx-auto mb-6">
               Objective evaluation with scoring breakdown, strengths, red flags, and personalized AI career coaching.
             </p>
+
+            {/* Phase 4, Item 2: Quick Audit Frictionless Hero Button */}
+            {!data && (
+              <div className="mb-6 animate-fade-in flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = recentProfiles[0]?.username || (username.trim() || 'torvalds');
+                    setUsername(target);
+                    handleAnalyze(target);
+                  }}
+                  className="inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl font-extrabold text-xs md:text-sm text-white shadow-2xl transition-all transform hover:scale-105 active:scale-95 animate-pulse border border-indigo-400/40"
+                  style={{
+                    background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+                    boxShadow: '0 0 25px rgba(168, 85, 247, 0.4)',
+                  }}
+                >
+                  <Sparkles className="w-4 h-4 text-yellow-300" />
+                  <span>Audit My GitHub Now {recentProfiles[0]?.username ? `(@${recentProfiles[0].username})` : ''}</span>
+                  <Zap className="w-4 h-4 fill-yellow-300 text-yellow-300" />
+                </button>
+              </div>
+            )}
 
             {/* Segmented Mode Selector: Single Audit vs VS Battle */}
             <div className="inline-flex items-center p-1 rounded-2xl bg-slate-900/90 border border-white/15 backdrop-blur-xl shadow-xl mb-6 select-none">
@@ -1088,7 +1176,7 @@ function App() {
             />
 
             {/* Commit Activity */}
-            <CommitActivityGraph commitActivity={data.commitActivity} />
+            <CommitActivityGraph commitActivity={data.commitActivity} showEmptyState={true} />
 
             {/* Insights Section with Phase 3 Deep Links */}
             <Insights
@@ -1124,7 +1212,7 @@ function App() {
             {/* Two column layout */}
             <div className="grid md:grid-cols-2 gap-6">
               <TopRepos repos={data.topRepos} username={username} />
-              <LanguageChart languages={data.mostUsedLanguages} />
+              <LanguageChart languages={data.mostUsedLanguages} showEmptyState={true} />
             </div>
 
             {/* Feature 13: Predictive Language Trends */}
@@ -1197,6 +1285,22 @@ function App() {
 
       {/* Feature 3: Interactive Terminal Mode Easter Egg */}
       <TerminalEasterEgg username={username} score={data?.score} data={data} advice={advice} />
+
+      {/* Phase 4, Item 1: First-Time User Onboarding Walkthrough */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={handleCompleteOnboarding}
+        onQuickTry={(uname) => {
+          setUsername(uname);
+          handleAnalyze(uname);
+        }}
+      />
+
+      {/* Phase 2, Item 2: Anna OS Credits Quota Exceeded Modal */}
+      <QuotaModal
+        isOpen={showQuotaModal}
+        onClose={() => setShowQuotaModal(false)}
+      />
     </div>
   );
 }

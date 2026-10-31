@@ -23,6 +23,7 @@ function UserSearchInput({
   const [showHistory, setShowHistory] = useState(false);
   const [listening, setListening] = useState(false);
   const debounceRef = useRef(null);
+  const abortControllerRef = useRef(null);
   const containerRef = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -91,11 +92,27 @@ function UserSearchInput({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      clearTimeout(debounceRef.current);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore abort error on unmount
+        }
+      }
+    };
   }, []);
 
   useEffect(() => {
     clearTimeout(debounceRef.current);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     const clean = (value || '').trim().replace(/^@+/, '');
     if (!clean || clean.length < 2) {
       setResults([]);
@@ -104,25 +121,37 @@ function UserSearchInput({
     }
 
     debounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
       setLoading(true);
       try {
         const res = await fetch(
           `https://api.github.com/search/users?q=${encodeURIComponent(clean)}&per_page=6`,
-          { headers: { Accept: 'application/vnd.github.v3+json' } }
+          {
+            headers: { Accept: 'application/vnd.github.v3+json' },
+            signal: controller.signal,
+          }
         );
         if (res.ok) {
           const data = await res.json();
           setResults(data.items || []);
           setOpen(true);
         }
-      } catch {
-        // Network error – silently ignore
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          // Network error – silently ignore
+        }
       } finally {
         setLoading(false);
       }
-    }, 350);
+    }, 500);
 
-    return () => clearTimeout(debounceRef.current);
+    return () => {
+      clearTimeout(debounceRef.current);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [value]);
 
   const handleSelect = (userLogin) => {

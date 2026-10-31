@@ -31,7 +31,7 @@ function WeightsForm({ weights, setWeights, dark = true, isModal = false, onClos
     <div
       className={`rounded-2xl border p-6 ${
         isModal
-          ? 'w-full max-w-lg bg-slate-900/95 border-white/10 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] shadow-2xl backdrop-blur-xl animate-fade-in-up'
+          ? 'w-full max-w-lg max-h-[85vh] overflow-y-auto pb-20 bg-slate-900/95 border-white/10 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] shadow-2xl backdrop-blur-xl animate-fade-in-up'
           : 'max-w-lg mx-auto'
       }`}
       style={

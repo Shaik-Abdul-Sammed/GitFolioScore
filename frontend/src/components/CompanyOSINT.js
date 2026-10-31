@@ -54,11 +54,14 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
     try {
       let result = null;
       if (window?.anna?.llm?.complete) {
-        const resp = await window.anna.llm.complete({
-          system: 'You are a staff technical hiring assessor. Return ONLY valid raw JSON with keys: matchPercent, barVerdict, companyFits, criticalGaps, actionPlan30Days.',
-          prompt,
-          temperature: 0.6,
-        });
+        const resp = await window.anna.llm.complete(
+          {
+            system: 'You are a staff technical hiring assessor. Return ONLY valid raw JSON with keys: matchPercent, barVerdict, companyFits, criticalGaps, actionPlan30Days.',
+            prompt,
+            temperature: 0.6,
+          },
+          { timeoutMs: 45000 }
+        );
 
         const raw = resp?.text || '';
         const match = raw.match(/\{[\s\S]*\}/);

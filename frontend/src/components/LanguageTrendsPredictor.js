@@ -37,11 +37,14 @@ Return ONLY valid JSON:
     try {
       let result = null;
       if (window?.anna?.llm?.complete) {
-        const resp = await window.anna.llm.complete({
-          system: 'You are a veteran Silicon Valley tech career architect. Return ONLY valid raw JSON with keys: obsolescenceRisk, surgingSkill, recommendedNext, recommendedReason, marketValueForecast.',
-          prompt,
-          temperature: 0.6,
-        });
+        const resp = await window.anna.llm.complete(
+          {
+            system: 'You are a veteran Silicon Valley tech career architect. Return ONLY valid raw JSON with keys: obsolescenceRisk, surgingSkill, recommendedNext, recommendedReason, marketValueForecast.',
+            prompt,
+            temperature: 0.6,
+          },
+          { timeoutMs: 45000 }
+        );
 
         const raw = resp?.text || '';
         const match = raw.match(/\{[\s\S]*\}/);

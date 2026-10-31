@@ -15,8 +15,10 @@ function VoiceOfGodAudio({ username, score, advice }) {
     }
 
     return () => {
-      if (synthRef.current && synthRef.current.speaking) {
-        synthRef.current.cancel();
+      try {
+        synthRef.current?.cancel();
+      } catch {
+        // cleanup safe
       }
     };
   }, []);

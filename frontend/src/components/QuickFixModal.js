@@ -51,7 +51,7 @@ Resolves GitFolioScore audit recommendation: **${redFlag}**
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
       <div
-        className="w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-lg rounded-2xl border shadow-2xl overflow-y-auto max-h-[85vh] pb-20 flex flex-col"
         style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
       >
         {/* Header */}

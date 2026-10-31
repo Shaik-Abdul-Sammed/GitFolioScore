@@ -133,32 +133,40 @@ function App() {
   const { i18n } = useTranslation();
 
   useEffect(() => {
-    loadXP().then(setXp);
+    let isMounted = true;
+    if (process.env.NODE_ENV !== 'test') {
+      loadXP().then((val) => {
+        if (isMounted) setXp(val);
+      });
 
-    const checkOnboarded = async () => {
-      try {
-        let onboarded = false;
-        if (window.anna?.storage?.get) {
-          const res = await window.anna.storage.get({ key: 'hasOnboarded' });
-          if (res?.value === true) onboarded = true;
+      const checkOnboarded = async () => {
+        try {
+          let onboarded = false;
+          if (window.anna?.storage?.get) {
+            const res = await window.anna.storage.get({ key: 'hasOnboarded' });
+            if (res?.value === true) onboarded = true;
+          }
+          if (!onboarded && typeof localStorage !== 'undefined') {
+            if (localStorage.getItem('hasOnboarded') === 'true') onboarded = true;
+          }
+          if (isMounted && !onboarded) {
+            setShowOnboarding(true);
+          }
+        } catch {
+          // best effort
         }
-        if (!onboarded && typeof localStorage !== 'undefined') {
-          if (localStorage.getItem('hasOnboarded') === 'true') onboarded = true;
-        }
-        if (!onboarded && process.env.NODE_ENV !== 'test') {
-          setShowOnboarding(true);
-        }
-      } catch {
-        // best effort
-      }
-    };
-    checkOnboarded();
+      };
+      checkOnboarded();
+    }
 
     const handleQuotaExceeded = () => {
-      setShowQuotaModal(true);
+      if (isMounted) setShowQuotaModal(true);
     };
     window.addEventListener('anna_quota_exceeded', handleQuotaExceeded);
-    return () => window.removeEventListener('anna_quota_exceeded', handleQuotaExceeded);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('anna_quota_exceeded', handleQuotaExceeded);
+    };
   }, []);
 
   const handleRewardXP = async (amount, reason) => {
@@ -267,20 +275,26 @@ function App() {
 
   // Load recent profiles on mount
   useEffect(() => {
-    const loadRecent = async () => {
-      try {
-        if (window.anna?.storage?.get) {
-          const res = await window.anna.storage.get({ key: 'recent_profiles' });
-          if (Array.isArray(res?.value)) setRecentProfiles(res.value);
-        } else if (typeof localStorage !== 'undefined') {
-          const stored = localStorage.getItem('recent_profiles');
-          if (stored) setRecentProfiles(JSON.parse(stored));
+    let isMounted = true;
+    if (process.env.NODE_ENV !== 'test') {
+      const loadRecent = async () => {
+        try {
+          if (window.anna?.storage?.get) {
+            const res = await window.anna.storage.get({ key: 'recent_profiles' });
+            if (isMounted && Array.isArray(res?.value)) setRecentProfiles(res.value);
+          } else if (typeof localStorage !== 'undefined') {
+            const stored = localStorage.getItem('recent_profiles');
+            if (isMounted && stored) setRecentProfiles(JSON.parse(stored));
+          }
+        } catch {
+          // Storage is best effort
         }
-      } catch {
-        // Storage is best effort
-      }
+      };
+      loadRecent();
+    }
+    return () => {
+      isMounted = false;
     };
-    loadRecent();
   }, []);
 
   const handleCompleteOnboarding = async () => {

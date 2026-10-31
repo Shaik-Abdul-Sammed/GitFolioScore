@@ -11,9 +11,9 @@ function getPercentile(score) {
   return 70;
 }
 
-function ShareScore({ score, username }) {
+function ShareScore({ score, username, onToast }) {
   const percentile = getPercentile(score);
-  const link = typeof window !== 'undefined' ? window.location.href.split('?')[0] : 'https://shaik-abdul-sammed.github.io/GitFolioScore/';
+  const link = 'https://anna.partners/apps/gitfolioscore';
   const text = `I just scored ${score}/100 on GitFolioScore! I'm in the top ${percentile}% of developers. Audit your GitHub here: ${link}`;
 
   const shareTwitter = () => {
@@ -21,12 +21,32 @@ function ShareScore({ score, username }) {
     window.open(tweetUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const shareLinkedIn = () => {
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`, '_blank', 'noopener,noreferrer');
+  const shareLinkedIn = async () => {
+    const linkedInPostText = `I just scored ${score}/100 on GitFolioScore! 🚀 It uses AI to audit GitHub portfolios against real hiring criteria. Check your score here: https://anna.partners/apps/gitfolioscore #softwareengineering #career`;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(linkedInPostText);
+      }
+    } catch {
+      // Best effort clipboard
+    }
+    window.open('https://www.linkedin.com/feed/?shareActive=true', '_blank', 'noopener,noreferrer');
+    if (onToast) {
+      onToast('Professional LinkedIn post copied to clipboard! Just press Ctrl+V to paste.', 'success');
+    }
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+      if (onToast) {
+        onToast('Score link copied to clipboard!', 'success');
+      }
+    } catch {
+      // Best effort clipboard
+    }
   };
 
   return (

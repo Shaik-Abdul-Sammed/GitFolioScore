@@ -164,26 +164,25 @@ function UserSearchInput({
       {/* Autocomplete Suggestions Dropdown */}
       {open && results.length > 0 && (
         <div
-          className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-white/15 shadow-2xl overflow-hidden animate-fade-in"
-          style={{ background: 'var(--bg-secondary, #0f172a)' }}
+          className="absolute top-full left-0 w-full z-50 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in"
         >
           {results.map((user) => (
             <button
               key={user.id}
               type="button"
               onClick={() => handleSelect(user.login)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-indigo-500/10 transition text-left border-b border-white/5 last:border-0"
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-indigo-500/10 transition text-left border-b border-gray-800 last:border-0"
             >
               <img
                 src={user.avatar_url}
                 alt={user.login}
-                className="w-7 h-7 rounded-full border border-white/10 object-cover"
+                className="w-7 h-7 rounded-full border border-gray-700 object-cover"
               />
-              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              <span className="text-sm font-medium text-white">
                 @{user.login}
               </span>
               {user.type === 'Organization' && (
-                <span className="ml-auto text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                <span className="ml-auto text-[10px] text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full border border-gray-700">
                   org
                 </span>
               )}
@@ -195,10 +194,9 @@ function UserSearchInput({
       {/* Recently Viewed Dropdown */}
       {showHistory && recentProfiles.length > 0 && !open && (
         <div
-          className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-white/15 shadow-2xl overflow-hidden animate-fade-in"
-          style={{ background: 'var(--bg-secondary, #0f172a)' }}
+          className="absolute top-full left-0 w-full z-50 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in"
         >
-          <div className="px-3.5 py-2 border-b border-white/10 flex items-center justify-between text-[11px] text-gray-400 font-semibold uppercase tracking-wider">
+          <div className="px-3.5 py-2 border-b border-gray-800 flex items-center justify-between text-[11px] text-gray-400 font-semibold uppercase tracking-wider bg-gray-900/90 sticky top-0 backdrop-blur-sm z-10">
             <span className="flex items-center gap-1.5">
               <History className="w-3.5 h-3.5 text-indigo-400" /> Recently Viewed
             </span>
@@ -209,9 +207,9 @@ function UserSearchInput({
               key={p.username}
               type="button"
               onClick={() => handleSelect(p.username)}
-              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-indigo-500/10 transition text-left border-b border-white/5 last:border-0"
+              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-indigo-500/10 transition text-left border-b border-gray-800 last:border-0"
             >
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+              <span className="text-xs font-semibold text-white">
                 @{p.username}
               </span>
               <span className="text-[11px] px-2 py-0.5 rounded-md font-bold text-indigo-300 bg-indigo-500/20 border border-indigo-500/30">

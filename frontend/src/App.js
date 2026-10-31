@@ -358,10 +358,44 @@ function App() {
     setIsComparing(true);
     setErrorMessage('');
     try {
-      const [u1Data, u2Data] = await Promise.all([
+      const [res1, res2] = await Promise.allSettled([
         Promise.all([fetchProfile(u1), fetchRepos(u1)]),
         Promise.all([fetchProfile(u2), fetchRepos(u2)]),
       ]);
+
+      const formatError = (uname, reason) => {
+        if (reason?.code === 'NOT_FOUND') {
+          return `User "${uname}" was not found. Please check the spelling and try again.`;
+        }
+        if (reason?.code === 'RATE_LIMIT') {
+          return `GitHub API rate limit exceeded while fetching "${uname}". Please wait a few moments.`;
+        }
+        return `Failed to fetch profile for "${uname}": ${reason?.message || 'Unknown error'}`;
+      };
+
+      if (res1.status === 'rejected' && res2.status === 'rejected') {
+        const msg = `Users "${u1}" and "${u2}" were not found. Please check the spelling and try again.`;
+        setErrorMessage(msg);
+        showToast(msg, 'error');
+        return;
+      }
+
+      if (res1.status === 'rejected') {
+        const msg = formatError(u1, res1.reason);
+        setErrorMessage(msg);
+        showToast(msg, 'error');
+        return;
+      }
+
+      if (res2.status === 'rejected') {
+        const msg = formatError(u2, res2.reason);
+        setErrorMessage(msg);
+        showToast(msg, 'error');
+        return;
+      }
+
+      const u1Data = res1.value;
+      const u2Data = res2.value;
 
       const rep1 = calculateReport({ profile: u1Data[0], repos: u1Data[1], weights });
       const rep2 = calculateReport({ profile: u2Data[0], repos: u2Data[1], weights });
@@ -377,15 +411,9 @@ function App() {
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Compare failed:', err);
-      setState('fetch_failed');
-      if (err.code === 'RATE_LIMIT') {
-        setErrorMessage('GitHub API rate limit exceeded during comparison. Please wait a few moments.');
-      } else if (err.code === 'NOT_FOUND') {
-        setErrorMessage(`One of the comparison profiles ("${u1}" or "${u2}") was not found on GitHub.`);
-      } else {
-        setErrorMessage(err.message || 'Could not fetch profiles for comparison.');
-      }
-      showToast('Comparison failed: verify usernames', 'error');
+      const msg = err.message || 'Could not fetch profiles for comparison.';
+      setErrorMessage(msg);
+      showToast(msg, 'error');
     } finally {
       setIsComparing(false);
     }
@@ -483,7 +511,7 @@ function App() {
       <ToastContainer toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
 
       {/* Sticky Navigation Bar */}
-      <nav className="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-white/10 transition-all duration-300">
+      <nav className="sticky top-0 z-40 backdrop-blur-md bg-slate-950/80 border-b border-white/10 transition-all duration-300">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div
             className="flex items-center gap-3 cursor-pointer select-none"
@@ -524,8 +552,8 @@ function App() {
       </nav>
 
       {/* Hero Header */}
-      <header className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
+      <header className="relative" style={{ background: 'var(--gradient-hero)' }}>
+        <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
           <div className="absolute top-10 left-10 w-72 h-72 bg-purple-500 rounded-full blur-3xl"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-500 rounded-full blur-3xl"></div>
           <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-violet-500 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
@@ -547,7 +575,7 @@ function App() {
             {/* Inputs */}
             <div className="max-w-2xl mx-auto space-y-3">
               {!showCompareInput ? (
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex flex-col sm:flex-row gap-3 z-30">
                   <UserSearchInput
                     inputRef={mainInputRef}
                     value={username}
@@ -577,8 +605,8 @@ function App() {
                   </select>
                 </div>
               ) : (
-                <div className="flex flex-col md:flex-row items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xl animate-fade-in shadow-2xl">
-                  <div className="flex-1 w-full">
+                <div className="relative flex flex-col md:flex-row items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xl animate-fade-in shadow-2xl z-30">
+                  <div className="relative flex-1 w-full">
                     <UserSearchInput
                       inputRef={mainInputRef}
                       value={username}
@@ -599,7 +627,7 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="flex-1 w-full">
+                  <div className="relative flex-1 w-full">
                     <FriendCompareInput
                       value={friendUsername}
                       onChange={setFriendUsername}
@@ -762,7 +790,7 @@ function App() {
               targetRole={targetRole}
               advice={advice}
             />
-            <ShareScore score={data.score} username={username} />
+            <ShareScore score={data.score} username={username} onToast={showToast} />
             <button
               onClick={handleCopyPortfolioJSON}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-semibold transition active:scale-95"

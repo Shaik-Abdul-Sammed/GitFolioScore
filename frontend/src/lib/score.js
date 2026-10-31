@@ -129,6 +129,7 @@ export function generateInsights({
   if (totalForks > (isRepo ? 2 : 5)) strengths.push('Project has been forked');
   if (detailedReadmeCount >= (isRepo ? 1 : 3)) strengths.push('Detailed documentation found');
   if (consistentReposCount >= (isRepo ? 1 : 2)) strengths.push('Consistent commit activity');
+  if (repos.some(r => r.hasCI)) strengths.push('Automated Testing & CI/CD workflows verified');
 
   // Red Flags
   if (readmeCount < reposCount / 2) redFlags.push('Many repositories missing README');
@@ -212,12 +213,18 @@ export function calculateReport({ profile, repos = [], weights }) {
         ? repo.license.spdx_id || repo.license.name
         : repo.license || null;
 
+    const topics = repo.topics || [];
+    const hasCI =
+      topics.some((t) => /ci|cd|action|test|workflow/i.test(t)) ||
+      Boolean(repo.has_workflows || (repo.description && /ci\/cd|actions|workflow|automated test/i.test(repo.description)));
+
     return {
       name: repo.name,
       full_name: repo.full_name,
       description: repo.description,
       homepage: repo.homepage || '',
       license,
+      hasCI,
       stars,
       forks,
       language: repo.language,

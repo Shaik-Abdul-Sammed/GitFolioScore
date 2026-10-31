@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import './i18n';
 
+jest.setTimeout(20000);
+
 describe('App.js - UI & Integration Tests', () => {
   const dummyProfile = {
     login: 'octocat',

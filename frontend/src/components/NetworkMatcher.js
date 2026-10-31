@@ -3,9 +3,9 @@ import { Network, Building2, GitFork, Users2, RefreshCw, AlertCircle } from 'luc
 import { suggestNetworkMatches } from '../lib/llm';
 
 const TYPE_CONFIG = {
-  company: { icon: Building2, color: '#6366f1', label: 'Company' },
-  opensource: { icon: GitFork, color: '#10b981', label: 'Open Source' },
-  community: { icon: Users2, color: '#f59e0b', label: 'Community' },
+  company: { icon: Building2, color: '#6366f1', label: 'Company Tier Match' },
+  opensource: { icon: GitFork, color: '#10b981', label: 'Target Open Source' },
+  community: { icon: Users2, color: '#f59e0b', label: 'Tech Community' },
 };
 
 function NetworkMatcher({ languages = [], targetRole = '' }) {
@@ -30,12 +30,12 @@ function NetworkMatcher({ languages = [], targetRole = '' }) {
     <div className="premium-card p-6 animate-fade-in-up">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Network className="w-5 h-5 text-indigo-400" />
+          <Building2 className="w-5 h-5 text-indigo-400" />
           <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            AI Networking Matcher
+            Company & Career Matcher
           </h3>
           <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">
-            2026 Trends
+            Startups · FinTech · FAANG
           </span>
         </div>
         <button
@@ -45,12 +45,12 @@ function NetworkMatcher({ languages = [], targetRole = '' }) {
           style={{ background: 'var(--gradient-primary)' }}
         >
           {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Network className="w-3.5 h-3.5" />}
-          {suggestions ? 'Refresh' : 'Find My Matches'}
+          {suggestions ? 'Refresh Matches' : 'Match Companies'}
         </button>
       </div>
 
       <p className="text-xs text-gray-400 mb-4">
-        Based on your top languages, we suggest the best companies, open-source projects, and communities right now for a <b className="text-indigo-300">{targetRole || 'Software Engineer'}</b> role.
+        Based on your top languages and activity, our AI evaluates which company types (e.g. <b>Product Startups</b>, <b>FinTech</b>, <b>FAANG/Big Tech</b>) you are best suited for right now.
       </p>
 
       {error && (

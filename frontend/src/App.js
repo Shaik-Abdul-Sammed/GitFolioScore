@@ -20,6 +20,11 @@ import ResumeGenerator from './components/ResumeGenerator';
 import NetworkMatcher from './components/NetworkMatcher';
 import UserSearchInput from './components/UserSearchInput';
 import PortfolioWebGraph from './components/PortfolioWebGraph';
+import ThemeCustomizer from './components/ThemeCustomizer';
+import FriendCompareInput from './components/FriendCompareInput';
+import HackerRankResume from './components/HackerRankResume';
+import LinkedInSync from './components/LinkedInSync';
+import HiringReadinessGauge from './components/HiringReadinessGauge';
 import {
   Moon,
   Sun,
@@ -34,8 +39,8 @@ import {
   Users2,
   Clock,
   Target,
-  UserCheck,
   Download,
+  Zap,
 } from 'lucide-react';
 import { fetchProfile, fetchRepos } from './lib/github';
 import { calculateReport } from './lib/score';
@@ -74,6 +79,7 @@ function App() {
   const [previousScore, setPreviousScore] = useState(null);
   const [recentProfiles, setRecentProfiles] = useState([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [linkedInConsistencyScore, setLinkedInConsistencyScore] = useState(null);
 
   const [state, setState] = useState('idle'); // idle | fetching | scored | advising | advised | fetch_failed | llm_failed
   const [errorMessage, setErrorMessage] = useState('');
@@ -430,7 +436,7 @@ function App() {
               </h1>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <select
                 className="px-3 py-1.5 rounded-lg text-xs font-medium border border-white/20 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 value={i18n.language}
@@ -439,6 +445,8 @@ function App() {
                 <option value="en" className="text-gray-900">EN</option>
                 <option value="es" className="text-gray-900">ES</option>
               </select>
+
+              <ThemeCustomizer />
 
               <button
                 className="p-2 rounded-lg border border-white/20 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 transition-all"
@@ -487,53 +495,71 @@ function App() {
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <UserSearchInput
-                  value={username}
-                  onChange={setUsername}
-                  onSelect={(uname) => { setUsername(uname); handleAnalyze(uname, targetRole, roastMode, persona); }}
-                  onSubmit={() => handleAnalyze()}
-                  disabled={isAnalyzing}
-                />
-                {/* Feature 2: Role Benchmarking Dropdown */}
-                <select
-                  aria-label="Target Role Benchmark"
-                  className="sm:w-56 px-4 py-3 rounded-xl text-white bg-slate-900/80 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm cursor-pointer"
-                  value={targetRole}
-                  onChange={(e) => setTargetRole(e.target.value)}
-                  disabled={isAnalyzing}
-                >
-                  {TARGET_ROLES.map((r) => (
-                    <option key={r} value={r} className="bg-slate-900 text-white">
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Phase 1, Feature 1: Friend Comparison Toggle & Input */}
-              {showCompareInput && (
-                <div className="flex flex-col sm:flex-row gap-2 p-3 rounded-xl bg-white/5 border border-white/10 animate-fade-in">
-                  <div className="relative flex-1">
-                    <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-300" />
-                    <input
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl text-white placeholder-purple-200/50 bg-white/10 border border-white/20 text-xs focus:outline-none focus:ring-2 focus:ring-purple-400"
-                      type="text"
-                      placeholder="Friend's GitHub username to compare..."
-                      value={friendUsername}
-                      onChange={(e) => setFriendUsername(e.target.value)}
+              {!showCompareInput ? (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <UserSearchInput
+                    value={username}
+                    onChange={setUsername}
+                    onSelect={(uname) => { setUsername(uname); handleAnalyze(uname, targetRole, roastMode, persona); }}
+                    onSubmit={() => handleAnalyze()}
+                    disabled={isAnalyzing}
+                  />
+                  {/* Feature 2: Role Benchmarking Dropdown */}
+                  <select
+                    aria-label="Target Role Benchmark"
+                    className="sm:w-56 px-4 py-3 rounded-xl text-white bg-slate-900/80 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm cursor-pointer"
+                    value={targetRole}
+                    onChange={(e) => setTargetRole(e.target.value)}
+                    disabled={isAnalyzing}
+                  >
+                    {TARGET_ROLES.map((r) => (
+                      <option key={r} value={r} className="bg-slate-900 text-white">
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="flex flex-col md:flex-row items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xl animate-fade-in shadow-2xl">
+                  <div className="flex-1 w-full">
+                    <UserSearchInput
+                      value={username}
+                      onChange={setUsername}
+                      placeholder="Your GitHub username..."
+                      onSelect={(uname) => setUsername(uname)}
+                      onSubmit={handleCompare}
                       disabled={isComparing}
                     />
                   </div>
+
+                  <div className="flex items-center justify-center -my-1 md:my-0 flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-500 text-white font-black flex items-center justify-center shadow-lg shadow-purple-500/25 text-xs tracking-wider gap-0.5 border border-white/20 select-none">
+                      <Zap className="w-4 h-4 fill-white text-white" />
+                      <span>VS</span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 w-full">
+                    <FriendCompareInput
+                      value={friendUsername}
+                      onChange={setFriendUsername}
+                      disabled={isComparing}
+                    />
+                  </div>
+
                   <button
                     type="button"
                     onClick={handleCompare}
                     disabled={isComparing || !username.trim() || !friendUsername.trim()}
-                    className="px-5 py-2.5 rounded-xl font-semibold text-xs text-white shadow transition-all disabled:opacity-40 active:scale-95 flex items-center justify-center gap-1.5"
+                    className="w-full md:w-auto px-6 py-3 rounded-xl font-bold text-xs text-white shadow-lg transition-all disabled:opacity-40 active:scale-95 flex items-center justify-center gap-1.5 flex-shrink-0"
                     style={{ background: 'var(--gradient-primary)' }}
                   >
-                    {isComparing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Users2 className="w-3.5 h-3.5" />}
-                    <span>{isComparing ? 'Comparing...' : 'Run Side-by-Side'}</span>
+                    {isComparing ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Users2 className="w-4 h-4" />
+                    )}
+                    <span>{isComparing ? 'Battling...' : 'Run VS Battle'}</span>
                   </button>
                 </div>
               )}
@@ -695,6 +721,12 @@ function App() {
               previousScore={previousScore}
               topRepos={data.topRepos}
               languages={data.mostUsedLanguages}
+            />
+
+            {/* Hiring Readiness Gauge (70% GitHub + 30% LinkedIn) */}
+            <HiringReadinessGauge
+              githubScore={data.score}
+              linkedInScore={linkedInConsistencyScore}
             />
 
             {/* AI Advisor Panel */}
@@ -878,6 +910,12 @@ function App() {
             {/* Phase 2, Feature 4: Job Description Matcher */}
             <JDMatcher report={data} />
 
+            {/* Simulated LinkedIn Sync & Consistency Audit */}
+            <LinkedInSync
+              report={data}
+              onUpdateHiringReadiness={(score) => setLinkedInConsistencyScore(score)}
+            />
+
             {/* Commit Activity */}
             <CommitActivityGraph commitActivity={data.commitActivity} />
 
@@ -914,6 +952,9 @@ function App() {
 
             {/* Resume Generator */}
             <ResumeGenerator report={data} advice={advice} />
+
+            {/* HackerRank Style Black-and-White Resume */}
+            <HackerRankResume report={data} advice={advice} />
 
             {/* AI Networking Matcher */}
             <NetworkMatcher languages={data.mostUsedLanguages} targetRole={targetRole} />

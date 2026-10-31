@@ -13,9 +13,12 @@ import {
   X,
   RefreshCw,
   FileText,
+  CheckCircle2,
+  Eye,
 } from 'lucide-react';
 import { generateReadme } from '../lib/llm';
 import { checkRepoDemoLinks } from '../lib/demoChecker';
+import IframePreviewModal from './IframePreviewModal';
 
 function TopRepos({ repos, username }) {
   const [search, setSearch] = useState('');
@@ -24,8 +27,9 @@ function TopRepos({ repos, username }) {
   const [page, setPage] = useState(1);
   const perPage = 6;
 
-  // Phase 3, Feature 8: Live Demo Link Statuses
+  // Phase 3, Feature 8 & Feature 7: Live Demo Link Statuses & Iframe Preview Modal
   const [demoStatuses, setDemoStatuses] = useState({});
+  const [previewModal, setPreviewModal] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -209,6 +213,7 @@ function TopRepos({ repos, username }) {
             username={username}
             demoStatus={demoStatuses[repo.name]}
             onGenerateReadme={() => handleOpenReadmeModal(repo)}
+            onOpenPreview={(url) => setPreviewModal({ url, name: repo.name })}
           />
         ))}
       </div>
@@ -330,11 +335,19 @@ function TopRepos({ repos, username }) {
           </div>
         </div>
       )}
+      {/* Feature 7: Live Demo Iframe Preview Modal */}
+      {previewModal && (
+        <IframePreviewModal
+          url={previewModal.url}
+          repoName={previewModal.name}
+          onClose={() => setPreviewModal(null)}
+        />
+      )}
     </div>
   );
 }
 
-function RepoCard({ repo, username, demoStatus, onGenerateReadme }) {
+function RepoCard({ repo, username, demoStatus, onGenerateReadme, onOpenPreview }) {
   return (
     <div className="glass-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-indigo-500/40 group transition-all">
       <div className="flex-1 min-w-0">
@@ -350,31 +363,42 @@ function RepoCard({ repo, username, demoStatus, onGenerateReadme }) {
             <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--primary)' }} />
           </a>
 
-          {/* Deployment URL Extractor: Live Demo / Broken Link */}
+          {/* Feature 11: GitHub Actions / CI-CD Check Badge */}
+          {repo.hasCI && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
+              <CheckCircle2 className="w-2.5 h-2.5 text-cyan-400" /> CI/CD Verified
+            </span>
+          )}
+
+          {/* Feature 7: Live Demo Open Preview / Broken Link */}
           {demoStatus && demoStatus.checked && (
-            <a
-              href={demoStatus.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border shadow-sm transition active:scale-95 ${
-                demoStatus.isLive
-                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30'
-                  : 'bg-rose-500/20 border-rose-500/50 text-rose-300 hover:bg-rose-500/30'
-              }`}
-            >
-              {demoStatus.isLive ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Live Demo</span>
-                  <ExternalLink className="w-2.5 h-2.5" />
-                </>
-              ) : (
-                <>
-                  <X className="w-3 h-3 text-rose-400" />
-                  <span>Broken Link</span>
-                </>
-              )}
-            </a>
+            demoStatus.isLive ? (
+              <div className="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onOpenPreview && onOpenPreview(demoStatus.url)}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border shadow-sm bg-emerald-500/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30 transition active:scale-95"
+                  title="Open live iframe preview"
+                >
+                  <Eye className="w-3 h-3 text-emerald-400" />
+                  <span>Open Preview</span>
+                </button>
+                <a
+                  href={demoStatus.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1 rounded-md text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition"
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border shadow-sm bg-rose-500/20 border-rose-500/50 text-rose-300">
+                <X className="w-3 h-3 text-rose-400" />
+                <span>Broken Link</span>
+              </span>
+            )
           )}
         </div>
         {repo.description && (

@@ -30,8 +30,8 @@ describe('CompareDashboard', () => {
     const onClose = jest.fn();
     render(<CompareDashboard user1={user1} user2={user2} onClose={onClose} />);
 
-    expect(screen.getByText('Head-to-Head Developer Comparison')).toBeInTheDocument();
-    expect(screen.getByText('Winner: @alice')).toBeInTheDocument();
+    expect(screen.getByText(/Head-to-Head Developer Battle/i)).toBeInTheDocument();
+    expect(screen.getByText(/Winner: @alice/i)).toBeInTheDocument();
     expect(screen.getByText('Alice Smith')).toBeInTheDocument();
     expect(screen.getByText('Bob Jones')).toBeInTheDocument();
     expect(screen.getByText('88')).toBeInTheDocument();
@@ -42,9 +42,12 @@ describe('CompareDashboard', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('renders Add to Network and Compare Similar Projects buttons', () => {
+  it('renders Add to Network, Peer Review, Steal README and Compare Similar Projects buttons', () => {
     render(<CompareDashboard user1={user1} user2={user2} />);
     expect(screen.getByText('Add @bob to My Network')).toBeInTheDocument();
     expect(screen.getByText('Compare Similar Projects')).toBeInTheDocument();
+    expect(screen.getByText(/Senior Peer Review/i)).toBeInTheDocument();
+    expect(screen.getByText(/Copy User B's README Structure/i)).toBeInTheDocument();
+    expect(screen.getByText(/Export VS Card/i)).toBeInTheDocument();
   });
 });

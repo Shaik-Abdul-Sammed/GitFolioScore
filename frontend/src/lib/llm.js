@@ -392,3 +392,197 @@ export async function compareProjects(user1, user2) {
     throw handleLLMError(err);
   }
 }
+
+
+/**
+ * Feature 5 & 15: Simulated LinkedIn Audit with optional Roast Mode.
+ */
+export async function auditLinkedIn(profile, topRepos = [], languages = [], linkedInText = '', isRoast = false) {
+  if (!window.anna?.llm?.complete) {
+    const error = new Error('Anna Host API not available.');
+    error.code = 'API_UNAVAILABLE';
+    throw error;
+  }
+
+  const repoList = topRepos.slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`).join('\n');
+  const langList = languages.slice(0, 5).map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name)).join(', ');
+
+  const systemPrompt = isRoast
+    ? 'You are a brutally sarcastic tech recruiter. Roast the developer\'s LinkedIn claims harshly, mocking buzzwords and pointing out every inconsistency with their actual GitHub code.'
+    : 'You are an executive tech recruiter and technical auditor. Analyze alignment between a candidate\'s LinkedIn profile text and their verified GitHub repositories.';
+
+  const userPrompt = `Developer GitHub Data:
+- Username: @${profile?.login || 'dev'}
+- Top Languages: ${langList}
+- Real Repositories:
+${repoList}
+
+Candidate Pasted LinkedIn About / Headline:
+"""
+${linkedInText.slice(0, 2000)}
+"""
+
+Evaluate consistency between their LinkedIn claims and real GitHub code.
+Return ONLY valid JSON:
+{
+  "consistencyScore": 75,
+  "verdict": "Clear alignment on frontend stack, but claims around cloud architecture are unsupported by code.",
+  "discrepancies": ["Claims to be a cloud architect but has 0 Docker/Kubernetes repos", "Highlights Python experience which represents < 5% of codebase"],
+  "recommendations": ["Feature your TypeScript monorepo prominently in your LinkedIn featured section", "Clarify your primary stack around React & Node"]
+}`;
+
+  try {
+    const response = await window.anna.llm.complete(
+      {
+        messages: [{ role: 'user', content: userPrompt }],
+        systemPrompt,
+        maxTokens: 600,
+        temperature: isRoast ? 0.7 : 0.3,
+      },
+      { timeoutMs: 35000 }
+    );
+    const text = response?.content?.text || '';
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    const parsed = JSON.parse(cleaned);
+    if (typeof parsed.consistencyScore !== 'number') parsed.consistencyScore = 75;
+    return parsed;
+  } catch (err) {
+    throw handleLLMError(err);
+  }
+}
+
+/**
+ * Feature 6: Auto-generate catchy LinkedIn headlines based on GitHub score and repos.
+ */
+export async function generateLinkedInHeadlines(profile, score = 85, topRepos = [], languages = []) {
+  if (!window.anna?.llm?.complete) {
+    const error = new Error('Anna Host API not available.');
+    error.code = 'API_UNAVAILABLE';
+    throw error;
+  }
+
+  const topLangs = languages.slice(0, 3).map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name)).join(' & ');
+  const topProject = topRepos[0]?.name || 'Open Source';
+
+  const prompt = `Generate 3 catchy, high-converting LinkedIn headline variations for a software developer:
+- Score: ${score}/100 on GitFolioScore
+- Primary Stack: ${topLangs || 'Fullstack Engineering'}
+- Flagship Project: ${topProject}
+- GitHub: @${profile?.login || 'dev'}
+
+Return ONLY valid JSON:
+{
+  "headlines": [
+    "Fullstack Engineer | TypeScript & React | Building scalable systems | Top 10% GitHub Portfolio",
+    "Software Engineer @ Open Source | Creator of ${topProject} | Node.js & Cloud Architecture",
+    "Problem Solver & Engineer | ${topLangs} Specialist | Verified GitHub Score: ${score}/100"
+  ]
+}`;
+
+  try {
+    const response = await window.anna.llm.complete(
+      {
+        messages: [{ role: 'user', content: prompt }],
+        systemPrompt: 'You are a career branding expert specializing in viral, executive LinkedIn headlines for engineers.',
+        maxTokens: 300,
+        temperature: 0.6,
+      },
+      { timeoutMs: 25000 }
+    );
+    const text = response?.content?.text || '';
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    return JSON.parse(cleaned);
+  } catch (err) {
+    throw handleLLMError(err);
+  }
+}
+
+/**
+ * Feature 8: Senior Engineer Peer Code Review in Compare Mode.
+ */
+export async function peerCodeReview(user1, user2) {
+  if (!window.anna?.llm?.complete) {
+    const error = new Error('Anna Host API not available.');
+    error.code = 'API_UNAVAILABLE';
+    throw error;
+  }
+
+  const u1Repos = (user1.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
+  const u2Repos = (user2.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
+
+  const prompt = `Act as a Staff/Senior Software Engineer conducting an objective technical comparison between two developers:
+
+Developer A (@${user1.username}): Score ${user1.report?.score}/100
+Repos:
+${u1Repos}
+
+Developer B (@${user2.username}): Score ${user2.report?.score}/100
+Repos:
+${u2Repos}
+
+Provide a candid, balanced comparison:
+1. Who has the stronger architectural maturity or modern stack
+2. Who has better documentation and testing discipline
+3. Summary verdict comparing their hiring readiness
+
+Return ONLY valid JSON:
+{
+  "verdict": "User A demonstrates higher production engineering standards with comprehensive documentation, while User B showcases modern ecosystem experimentation with Next.js.",
+  "strengthsA": ["Strong documentation hygiene", "Higher star traction"],
+  "strengthsB": ["Modern framework selection", "Diverse repository experimentation"]
+}`;
+
+  try {
+    const response = await window.anna.llm.complete(
+      {
+        messages: [{ role: 'user', content: prompt }],
+        systemPrompt: 'You are an objective Staff Engineer reviewing peer developer portfolios.',
+        maxTokens: 500,
+        temperature: 0.4,
+      },
+      { timeoutMs: 30000 }
+    );
+    const text = response?.content?.text || '';
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    return JSON.parse(cleaned);
+  } catch (err) {
+    throw handleLLMError(err);
+  }
+}
+
+/**
+ * Feature 10: Extract clean README template structure from competitor's repo.
+ */
+export async function stealReadmeStructure(repo) {
+  if (!window.anna?.llm?.complete) {
+    const error = new Error('Anna Host API not available.');
+    error.code = 'API_UNAVAILABLE';
+    throw error;
+  }
+
+  const prompt = `Analyze this top-rated repository and extract a clean, reusable README markdown template skeleton that another developer can use for their own project:
+- Repo Name: ${repo.name}
+- Language: ${repo.language || 'Any'}
+- Description: ${repo.description || ''}
+
+Create a boilerplate template with placeholders like [Project Name], [Architecture Overview], [Installation], [Features], [Badges], [License].
+Return ONLY markdown content.`;
+
+  try {
+    const response = await window.anna.llm.complete(
+      {
+        messages: [{ role: 'user', content: prompt }],
+        systemPrompt: 'You are an open source maintainer extracting clean README templates in markdown.',
+        maxTokens: 700,
+        temperature: 0.4,
+      },
+      { timeoutMs: 25000 }
+    );
+    return response?.content?.text || `# [Project Name]\n\n## Overview\n\n## Features\n\n## Installation\n\n## License\n`;
+  } catch (err) {
+    throw handleLLMError(err);
+  }
+}

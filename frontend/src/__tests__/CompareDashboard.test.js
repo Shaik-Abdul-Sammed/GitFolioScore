@@ -41,4 +41,10 @@ describe('CompareDashboard', () => {
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('renders Add to Network and Compare Similar Projects buttons', () => {
+    render(<CompareDashboard user1={user1} user2={user2} />);
+    expect(screen.getByText('Add @bob to My Network')).toBeInTheDocument();
+    expect(screen.getByText('Compare Similar Projects')).toBeInTheDocument();
+  });
 });

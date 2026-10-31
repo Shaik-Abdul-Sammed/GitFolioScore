@@ -1,8 +1,34 @@
-import React from 'react';
-import { AlertCircle, GitPullRequest, Users, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertCircle, GitPullRequest, Users, ExternalLink, FileText, Copy, Check, RefreshCw } from 'lucide-react';
+import { generateResumeBullet } from '../lib/llm';
 
 function RepoInsights({ repo, insights }) {
+  const [bullet, setBullet] = useState('');
+  const [bulletLoading, setBulletLoading] = useState(false);
+  const [bulletError, setBulletError] = useState('');
+  const [copied, setCopied] = useState(false);
+
   if (!insights) return null;
+
+  const handleGenerateBullet = async () => {
+    setBulletLoading(true);
+    setBulletError('');
+    setBullet('');
+    try {
+      const result = await generateResumeBullet(repo);
+      setBullet(result);
+    } catch (err) {
+      setBulletError(err.userMessage || 'Could not generate bullet. Please retry.');
+    } finally {
+      setBulletLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(`• ${bullet}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="glass-card p-5 animate-fade-in-up">
@@ -59,6 +85,55 @@ function RepoInsights({ repo, insights }) {
           )}
         </div>
       )}
+
+      {/* Resume Bullet Generator */}
+      <div className="mt-4 pt-3 border-t border-white/8">
+        {!bullet && !bulletLoading && (
+          <button
+            onClick={handleGenerateBullet}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 transition active:scale-95"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Generate Resume Bullet
+          </button>
+        )}
+        {bulletLoading && (
+          <div className="flex items-center gap-2 text-xs text-indigo-300">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            Drafting resume bullet...
+          </div>
+        )}
+        {bulletError && (
+          <p className="text-xs text-red-400">{bulletError}</p>
+        )}
+        {bullet && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-purple-300">Resume Bullet:</p>
+            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-purple-500/8 border border-purple-500/20">
+              <span className="text-purple-400 text-sm flex-shrink-0">•</span>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-primary)' }}>{bullet}</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button
+                onClick={handleGenerateBullet}
+                className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <RefreshCw className="w-3 h-3" />
+                Regenerate
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,17 @@
-import React from 'react';
-import { Trophy, Star, GitBranch, Users, X, ArrowUpRight, Award } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Trophy, Star, GitBranch, Users, X, ArrowUpRight, Award,
+  UserPlus, Check, Sparkles, RefreshCw, Layers,
+} from 'lucide-react';
+import { addToNetwork } from '../lib/leaderboard';
+import { compareProjects } from '../lib/llm';
 
 function CompareDashboard({ user1, user2, onClose }) {
+  const [addedNetwork, setAddedNetwork] = useState(false);
+  const [comparingProjects, setComparingProjects] = useState(false);
+  const [similarityData, setSimilarityData] = useState(null);
+  const [compareError, setCompareError] = useState('');
+
   if (!user1?.report || !user2?.report) return null;
 
   const r1 = user1.report;
@@ -20,6 +30,29 @@ function CompareDashboard({ user1, user2, onClose }) {
 
   const winner =
     r1.score > r2.score ? u1Name : r2.score > r1.score ? u2Name : 'Tie';
+
+  const handleAddToNetwork = async () => {
+    try {
+      await addToNetwork(u2Name, r2.score);
+      setAddedNetwork(true);
+      setTimeout(() => setAddedNetwork(false), 2500);
+    } catch {
+      // best effort
+    }
+  };
+
+  const handleCompareSimilar = async () => {
+    setComparingProjects(true);
+    setCompareError('');
+    try {
+      const res = await compareProjects(user1, user2);
+      setSimilarityData(res);
+    } catch (err) {
+      setCompareError(err.userMessage || 'Could not analyze project similarities.');
+    } finally {
+      setComparingProjects(false);
+    }
+  };
 
   return (
     <div className="premium-card p-6 border-indigo-500/40 bg-gradient-to-b from-indigo-950/40 to-slate-900/60 shadow-2xl animate-fade-in-up">
@@ -208,6 +241,103 @@ function CompareDashboard({ user1, user2, onClose }) {
           </tbody>
         </table>
       </div>
+
+      {/* Part 2, Feature 3 & 5: Social actions & AI Similar Project Analysis */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
+        <button
+          type="button"
+          onClick={handleAddToNetwork}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600/40 hover:bg-indigo-600/60 border border-indigo-500/40 transition active:scale-95"
+        >
+          {addedNetwork ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Added @{u2Name} to Network!</span>
+            </>
+          ) : (
+            <>
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Add @{u2Name} to My Network</span>
+            </>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCompareSimilar}
+          disabled={comparingProjects}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition active:scale-95 disabled:opacity-40"
+          style={{ background: 'var(--gradient-primary)' }}
+        >
+          {comparingProjects ? (
+            <>
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <span>Analyzing Projects...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Compare Similar Projects</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {compareError && (
+        <p className="mt-3 text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl">
+          {compareError}
+        </p>
+      )}
+
+      {/* Similar Projects Result */}
+      {similarityData && (
+        <div className="mt-4 p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 space-y-3 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-indigo-400" />
+            <h5 className="text-xs font-bold text-indigo-200">
+              Project Comparison & Overlap Analysis
+            </h5>
+          </div>
+
+          {similarityData.verdict && (
+            <p className="text-xs text-gray-200 font-medium leading-relaxed bg-black/20 p-2.5 rounded-lg border border-white/5">
+              💡 {similarityData.verdict}
+            </p>
+          )}
+
+          {similarityData.stackOverlap && similarityData.stackOverlap.length > 0 && (
+            <div>
+              <span className="text-[11px] font-semibold text-gray-400">Tech Stack Overlap: </span>
+              <div className="inline-flex flex-wrap gap-1 mt-1">
+                {similarityData.stackOverlap.map((tech, i) => (
+                  <span
+                    key={i}
+                    className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300"
+                  >
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {similarityData.similarProjects && similarityData.similarProjects.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[11px] font-semibold text-gray-400">Direct Project Matches:</span>
+              {similarityData.similarProjects.map((p, idx) => (
+                <div key={idx} className="text-xs p-2 rounded-lg bg-white/5 border border-white/10 flex flex-col gap-1">
+                  <div className="flex items-center gap-2 text-indigo-300 font-medium">
+                    <span>@{u1Name}: <b>{p.user1Repo}</b></span>
+                    <span>⇄</span>
+                    <span>@{u2Name}: <b>{p.user2Repo}</b></span>
+                  </div>
+                  <p className="text-[11px] text-gray-400">{p.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

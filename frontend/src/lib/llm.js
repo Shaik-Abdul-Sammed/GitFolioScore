@@ -15,7 +15,11 @@ const PERSONA_PROMPTS = {
     'You are an elite, highly demanding FAANG staff technical recruiter. You evaluate candidates with uncompromising standards around high-scale system design, code quality, testing rigor, and documentation. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
   'Open Source Maintainer':
     'You are a veteran open-source maintainer. You judge portfolios by architectural clarity, reproducible build setups, explicit licensing, contribution hygiene, and clean README standards. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
+  'Tough FAANG Hiring Manager':
+    'You are a tough FAANG Hiring Manager conducting a harsh technical review. Simulate grilling the candidate on their repo choices, missing tests, poor documentation, and lack of system design. Be brutally honest but constructive. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
 };
+
+export { PERSONA_PROMPTS };
 
 /**
  * Clean and parse JSON from LLM text response.
@@ -311,6 +315,79 @@ Return ONLY the plain bio text (max 160 characters). Do not include quotes or su
     let bio = (response?.content?.text || '').trim().replace(/^["']|["']$/g, '');
     if (bio.length > 160) bio = bio.substring(0, 157) + '...';
     return bio;
+  } catch (err) {
+    throw handleLLMError(err);
+  }
+}
+
+
+/**
+ * Generate a strong, metric-driven resume bullet point from a repo.
+ */
+export async function generateResumeBullet(repo) {
+  if (!window.anna?.llm?.complete) {
+    const error = new Error('Anna Host API not available.');
+    error.code = 'API_UNAVAILABLE';
+    throw error;
+  }
+  const prompt = `Convert this GitHub repository into a single, strong, metric-driven resume bullet point (1-2 sentences max):\n- Name: ${repo.name}\n- Language: ${repo.language || 'JavaScript'}\n- Description: ${repo.description || 'Software project'}\n- Stars: ${repo.stars ?? 0}, Forks: ${repo.forks ?? 0}\n\nWrite like a senior engineer's resume: start with a strong action verb, include technologies, and estimate impact/metrics where possible.\nReturn ONLY the bullet point text (no "•" prefix, no quotes).`;
+  try {
+    const response = await window.anna.llm.complete(
+      { messages: [{ role: 'user', content: prompt }], systemPrompt: 'You are a professional resume writer specialising in software engineers. Write tight, metric-driven resume bullets.', maxTokens: 120, temperature: 0.5 },
+      { timeoutMs: 20000 }
+    );
+    return (response?.content?.text || '').trim().replace(/^[•-]\s*/, '');
+  } catch (err) {
+    throw handleLLMError(err);
+  }
+}
+
+/**
+ * Suggest 3 specific companies or open-source projects based on top languages.
+ */
+export async function suggestNetworkMatches(languages = [], targetRole = '') {
+  if (!window.anna?.llm?.complete) {
+    const error = new Error('Anna Host API not available.');
+    error.code = 'API_UNAVAILABLE';
+    throw error;
+  }
+  const langList = languages.slice(0, 5).map((l) => l.lang || l.name || l).join(', ');
+  const prompt = `Based on a developer proficient in [${langList}] targeting a "${targetRole || 'Software Engineer'}" role in 2026, suggest exactly 3 highly specific items:\n1. A company actively hiring this stack RIGHT NOW (name + why they match)\n2. An open-source project they should contribute to (name + why)\n3. A developer community or conference to join (name + platform)\n\nReturn ONLY valid JSON:\n{"suggestions": [{"type": "company|opensource|community", "name": "...", "reason": "..."}]}`;
+  try {
+    const response = await window.anna.llm.complete(
+      { messages: [{ role: 'user', content: prompt }], systemPrompt: 'You are an expert tech career coach with deep knowledge of 2026 hiring trends.', maxTokens: 400, temperature: 0.5 },
+      { timeoutMs: 30000 }
+    );
+    const text = response?.content?.text || '';
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    return JSON.parse(cleaned);
+  } catch (err) {
+    throw handleLLMError(err);
+  }
+}
+
+/**
+ * Compare two users' top repos to find similar projects or superior versions.
+ */
+export async function compareProjects(user1, user2) {
+  if (!window.anna?.llm?.complete) {
+    const error = new Error('Anna Host API not available.');
+    error.code = 'API_UNAVAILABLE';
+    throw error;
+  }
+  const repos1 = (user1.report?.topRepos || []).slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`);
+  const repos2 = (user2.report?.topRepos || []).slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`);
+  const prompt = `Compare these two GitHub developers' top projects:\n\n@${user1.username} repos:\n${repos1.join('\n')}\n\n@${user2.username} repos:\n${repos2.join('\n')}\n\nIdentify: similar projects, overlapping tech stacks, who has a more polished version of the same type of project.\nReturn ONLY valid JSON:\n{"similarProjects": [{"description": "...", "user1Repo": "...", "user2Repo": "..."}], "stackOverlap": ["language or tech"], "verdict": "1-sentence comparison"}`;
+  try {
+    const response = await window.anna.llm.complete(
+      { messages: [{ role: 'user', content: prompt }], systemPrompt: 'You are an expert code reviewer comparing GitHub developer portfolios.', maxTokens: 400, temperature: 0.4 },
+      { timeoutMs: 30000 }
+    );
+    const text = response?.content?.text || '';
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    return JSON.parse(cleaned);
   } catch (err) {
     throw handleLLMError(err);
   }

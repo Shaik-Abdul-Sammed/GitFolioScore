@@ -4,11 +4,11 @@ import { Award, Copy, CheckCircle } from 'lucide-react';
 function LinkedInBadge({ username, score }) {
   const [copied, setCopied] = useState(false);
 
-  const badgeUrl = `${window.location.origin}/badge/${username}`;
-  const badgeMarkdown = `[![GitFolioScore](${badgeUrl})](${window.location.origin})`;
-
   const scoreColor = score >= 80 ? '#10b981' : score >= 60 ? '#3b82f6' : score >= 40 ? '#f59e0b' : '#ef4444';
   const scoreLabel = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work';
+
+  const appUrl = 'https://anna.partners/apps/gitfolioscore';
+  const badgeMarkdown = `[![GitFolioScore: ${score}/100](https://img.shields.io/badge/GitFolioScore-${score}%2F100-${scoreColor.replace('#', '')}?style=for-the-badge&logo=github)](${appUrl})`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(badgeMarkdown);

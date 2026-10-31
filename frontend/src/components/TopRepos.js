@@ -350,27 +350,28 @@ function RepoCard({ repo, username, demoStatus, onGenerateReadme }) {
             <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--primary)' }} />
           </a>
 
-          {/* Phase 3, Feature 8: Live Demo Link Checker Badge */}
+          {/* Deployment URL Extractor: Live Demo / Broken Link */}
           {demoStatus && demoStatus.checked && (
             <a
               href={demoStatus.url}
               target="_blank"
               rel="noopener noreferrer"
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border shadow-sm transition active:scale-95 ${
                 demoStatus.isLive
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                  : 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30'
+                  : 'bg-rose-500/20 border-rose-500/50 text-rose-300 hover:bg-rose-500/30'
               }`}
             >
               {demoStatus.isLive ? (
                 <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Live Demo OK
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Live Demo</span>
+                  <ExternalLink className="w-2.5 h-2.5" />
                 </>
               ) : (
                 <>
-                  <X className="w-2.5 h-2.5 text-rose-400" />
-                  Broken Demo Link
+                  <X className="w-3 h-3 text-rose-400" />
+                  <span>Broken Link</span>
                 </>
               )}
             </a>

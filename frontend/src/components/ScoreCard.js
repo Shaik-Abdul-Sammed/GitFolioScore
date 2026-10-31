@@ -2,10 +2,11 @@ import React, { useMemo, useRef, useState } from 'react';
 import {
   MapPin, Users, GitBranch, Calendar, Award,
   Mail, Link as LinkIcon, Building, ExternalLink, Download, Sparkles, CheckCircle2,
-  Trophy, Copy, Check, X, User
+  Trophy, Copy, Check, X, User, UserPlus
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { generateBio } from '../lib/llm';
+import { addToNetwork } from '../lib/leaderboard';
 
 const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare, topRepos = [], languages = [] }) => {
   const cardRef = useRef(null);
@@ -15,6 +16,7 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
   const [bioCopied, setBioCopied] = useState(false);
   const [showBioModal, setShowBioModal] = useState(false);
   const [bioError, setBioError] = useState('');
+  const [addedToNetwork, setAddedToNetwork] = useState(false);
 
   const scoreColor = useMemo(() => {
     if (score >= 80) return '#10b981';
@@ -63,6 +65,33 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
     setBioCopied(true);
     setTimeout(() => setBioCopied(false), 2000);
   };
+
+  // Feature 3: Add Profile to My Network
+  const handleAddToNetwork = async () => {
+    if (!profile?.login) return;
+    try {
+      await addToNetwork(profile.login, score);
+      setAddedToNetwork(true);
+      setTimeout(() => setAddedToNetwork(false), 2500);
+    } catch {
+      // best effort
+    }
+  };
+
+  // Feature 15: Global Tech Trend Overlay calculation
+  const trendingComparison = useMemo(() => {
+    if (!languages || languages.length === 0) return null;
+    const first = languages[0];
+    const primary = Array.isArray(first) ? first[0] : first.lang || first.name;
+    if (!primary) return null;
+    const TRENDING_2026 = ['Rust', 'Go', 'TypeScript', 'Python', 'Zig'];
+    const isTrending = TRENDING_2026.some((t) => t.toLowerCase() === primary.toLowerCase());
+    return {
+      primary,
+      isTrending,
+      trendingBenchmark: 'Rust, Go, TypeScript',
+    };
+  }, [languages]);
 
   // Feature 8: Score History Tracking & Badge
   const scoreHistoryBadge = useMemo(() => {
@@ -234,6 +263,15 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Feature 3: Add to Network Button */}
+                <button
+                  onClick={handleAddToNetwork}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-semibold shadow transition-all active:scale-95"
+                >
+                  {addedToNetwork ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <UserPlus className="w-3.5 h-3.5" />}
+                  <span>{addedToNetwork ? 'In Network!' : 'Add to Network'}</span>
+                </button>
+
                 {/* Feature 7: Generate GitHub Bio Button */}
                 <button
                   onClick={handleGenerateBio}
@@ -266,6 +304,16 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
                 <Trophy className="w-3.5 h-3.5 text-amber-400" />
                 {percentile} of Developers
               </span>
+
+              {/* Feature 15: Global Tech Trend Overlay Badge */}
+              {trendingComparison && (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>
+                    Stack: <b>{trendingComparison.primary}</b> {trendingComparison.isTrending ? '🔥 (2026 High Demand)' : `| Benchmark: ${trendingComparison.trendingBenchmark}`}
+                  </span>
+                </span>
+              )}
 
               {/* Feature 8: Score History Badge */}
               {scoreHistoryBadge && (

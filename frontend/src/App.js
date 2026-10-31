@@ -15,8 +15,12 @@ import Tips from './components/Tips';
 import WeightsForm from './components/WeightsForm';
 import CompareDashboard from './components/CompareDashboard';
 import JDMatcher from './components/JDMatcher';
+import Leaderboard from './components/Leaderboard';
+import ResumeGenerator from './components/ResumeGenerator';
+import NetworkMatcher from './components/NetworkMatcher';
+import UserSearchInput from './components/UserSearchInput';
+import PortfolioWebGraph from './components/PortfolioWebGraph';
 import {
-  Search,
   Moon,
   Sun,
   Sparkles,
@@ -31,11 +35,13 @@ import {
   Clock,
   Target,
   UserCheck,
+  Download,
 } from 'lucide-react';
 import { fetchProfile, fetchRepos } from './lib/github';
 import { calculateReport } from './lib/score';
 import { generateAdvice } from './lib/llm';
 import { cacheGet, cacheSet } from './lib/cache';
+import { addLeaderboardEntry } from './lib/leaderboard';
 
 const FAMOUS_USERS = ['torvalds', 'gaearon', 'sindresorhus', 'yyx990803'];
 
@@ -52,6 +58,7 @@ const REVIEWER_PERSONAS = [
   'Friendly Mentor',
   'Strict FAANG Recruiter',
   'Open Source Maintainer',
+  'Tough FAANG Hiring Manager',
 ];
 
 function App() {
@@ -259,6 +266,13 @@ function App() {
       // 4. Save to client APS cache (best effort)
       await cacheSet(activeUsername, { profile, repos, report });
 
+      // Save to leaderboard (best effort)
+      try {
+        await addLeaderboardEntry(activeUsername, report.score, report.mostUsedLanguages || []);
+      } catch {
+        // leaderboard save is best effort
+      }
+
       // 5. Generate AI advice
       await runLLMAdvice(report, activeRole, activeRoast, activePersona);
     } catch (err) {
@@ -351,6 +365,31 @@ function App() {
     if (data) {
       runLLMAdvice(data, targetRole, roastMode, persona);
     }
+  };
+
+  const handleCopyPortfolioJSON = () => {
+    if (!data) return;
+    const payload = {
+      username,
+      score: data.score,
+      scoreBreakdown: data.scoreBreakdown,
+      profile: data.profile,
+      topRepos: data.topRepos,
+      mostUsedLanguages: data.mostUsedLanguages,
+      strengths: data.strengths,
+      redFlags: data.redFlags,
+      suggestions: data.suggestions,
+      advice: advice || null,
+      exportedAt: new Date().toISOString(),
+      source: 'https://anna.partners/apps/gitfolioscore',
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${username}_gitfolioscore.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleCopyShareText = () => {
@@ -449,18 +488,13 @@ function App() {
               )}
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-indigo-300" />
-                  <input
-                    className="w-full pl-12 pr-4 py-3 rounded-xl text-white placeholder-indigo-300/60 bg-white/10 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
-                    type="text"
-                    placeholder="GitHub username (e.g. torvalds)..."
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-                    disabled={isAnalyzing}
-                  />
-                </div>
+                <UserSearchInput
+                  value={username}
+                  onChange={setUsername}
+                  onSelect={(uname) => { setUsername(uname); handleAnalyze(uname, targetRole, roastMode, persona); }}
+                  onSubmit={() => handleAnalyze()}
+                  disabled={isAnalyzing}
+                />
                 {/* Feature 2: Role Benchmarking Dropdown */}
                 <select
                   aria-label="Target Role Benchmark"
@@ -510,12 +544,13 @@ function App() {
                   <button
                     type="button"
                     onClick={handleToggleRoastMode}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                    className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
                       roastMode
                         ? 'bg-gradient-to-r from-orange-500/30 to-red-500/30 border-orange-500/60 text-orange-200 ring-2 ring-orange-400/40'
-                        : 'bg-white/10 hover:bg-white/15 border-white/20 text-indigo-200'
+                        : 'bg-white/10 hover:bg-white/15 border-white/20 text-indigo-200 ring-1 ring-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
                     }`}
                   >
+                    {!roastMode && <span className="absolute -top-1 -right-1 text-[8px] font-black text-purple-300 bg-purple-500/30 px-1 rounded-full border border-purple-500/40">✦</span>}
                     <Flame className={`w-4 h-4 ${roastMode ? 'text-orange-400 fill-orange-400' : 'text-gray-400'}`} />
                     <span>{roastMode ? '🔥 Roast ON' : 'Roast Me'}</span>
                   </button>
@@ -539,8 +574,9 @@ function App() {
                   <button
                     type="button"
                     onClick={() => setShowCompareInput(!showCompareInput)}
-                    className="text-xs text-indigo-300 hover:text-white flex items-center gap-1 font-medium transition"
+                    className="relative text-xs text-indigo-300 hover:text-white flex items-center gap-1 font-medium transition ring-1 ring-indigo-400/20 px-2.5 py-1.5 rounded-lg shadow-[0_0_10px_rgba(99,102,241,0.2)]"
                   >
+                    <span className="absolute -top-1 -right-1 text-[8px] font-black text-indigo-300 bg-indigo-500/30 px-1 rounded-full border border-indigo-500/40">✦</span>
                     <Users2 className="w-3.5 h-3.5" />
                     <span>{showCompareInput ? 'Hide Compare' : 'Compare vs Friend'}</span>
                   </button>
@@ -641,6 +677,14 @@ function App() {
               advice={advice}
             />
             <ShareScore score={data.score} username={username} />
+            <button
+              onClick={handleCopyPortfolioJSON}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-semibold transition active:scale-95"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              <Download className="w-4 h-4 text-indigo-400" />
+              Copy Portfolio JSON
+            </button>
           </div>
 
           <div ref={reportRef} className="space-y-8">
@@ -864,7 +908,23 @@ function App() {
               <TopRepos repos={data.topRepos} username={username} />
               <LanguageChart languages={data.mostUsedLanguages} />
             </div>
+
+            {/* Feature 12: Portfolio Web Connectivity Graph */}
+            <PortfolioWebGraph repos={data.topRepos} languages={data.mostUsedLanguages} />
+
+            {/* Resume Generator */}
+            <ResumeGenerator report={data} advice={advice} />
+
+            {/* AI Networking Matcher */}
+            <NetworkMatcher languages={data.mostUsedLanguages} targetRole={targetRole} />
           </div>
+
+          {/* Leaderboard & Network (outside reportRef for performance) */}
+          <Leaderboard
+            currentUsername={username}
+            currentScore={data.score}
+            currentRepos={data.topRepos}
+          />
 
           {/* Social Badging */}
           <div className="max-w-md mx-auto">

@@ -1,5 +1,6 @@
-import React from 'react';
-import { CheckCircle, AlertTriangle, Lightbulb, ChevronRight, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, AlertTriangle, Lightbulb, ChevronRight, ExternalLink, Wrench } from 'lucide-react';
+import QuickFixModal from './QuickFixModal';
 
 const sectionConfig = {
   strengths: {
@@ -31,7 +32,7 @@ const sectionConfig = {
   },
 };
 
-function InsightCard({ type, items, username, topRepos = [] }) {
+function InsightCard({ type, items, username, topRepos = [], onSelectRedFlag }) {
   const config = sectionConfig[type];
   const Icon = config.icon;
 
@@ -80,20 +81,33 @@ function InsightCard({ type, items, username, topRepos = [] }) {
               className="flex items-center justify-between gap-2 text-sm animate-fade-in-up"
               style={{ animationDelay: `${i * 0.05}s`, color: 'var(--text-secondary)' }}
             >
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2 flex-1 min-w-0">
                 <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: config.textColor }} />
-                <span>{item}</span>
+                <span className="break-words">{item}</span>
               </div>
-              {/* Feature 10: Repository Fix Deep Links */}
-              {type === 'redFlags' && fixUrl && (
-                <a
-                  href={fixUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] font-semibold text-rose-400 hover:text-rose-300 underline flex-shrink-0 ml-2"
-                >
-                  Fix <ExternalLink className="w-2.5 h-2.5" />
-                </a>
+              {/* Feature 10 & 16: Quick Fix Modal and Repo Settings Deep Links */}
+              {type === 'redFlags' && (
+                <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                  <button
+                    type="button"
+                    onClick={() => onSelectRedFlag && onSelectRedFlag(item)}
+                    className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition"
+                    title="Open Issue / PR Quick Fix Template"
+                  >
+                    <Wrench className="w-2.5 h-2.5" /> Quick Fix
+                  </button>
+                  {fixUrl && (
+                    <a
+                      href={fixUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-0.5 text-[11px] font-semibold text-rose-400 hover:text-rose-300 underline"
+                      title="Open Settings"
+                    >
+                      Fix <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                </div>
               )}
             </li>
           ))}
@@ -104,6 +118,8 @@ function InsightCard({ type, items, username, topRepos = [] }) {
 }
 
 function Insights({ strengths, redFlags, suggestions, username, topRepos }) {
+  const [activeFix, setActiveFix] = useState(null);
+
   return (
     <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
       <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
@@ -111,9 +127,24 @@ function Insights({ strengths, redFlags, suggestions, username, topRepos }) {
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 stagger-children">
         <InsightCard type="strengths" items={strengths || []} username={username} topRepos={topRepos} />
-        <InsightCard type="redFlags" items={redFlags || []} username={username} topRepos={topRepos} />
+        <InsightCard
+          type="redFlags"
+          items={redFlags || []}
+          username={username}
+          topRepos={topRepos}
+          onSelectRedFlag={(flag) => setActiveFix(flag)}
+        />
         <InsightCard type="suggestions" items={suggestions || []} username={username} topRepos={topRepos} />
       </div>
+
+      {activeFix && (
+        <QuickFixModal
+          redFlag={activeFix}
+          username={username}
+          topRepos={topRepos}
+          onClose={() => setActiveFix(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Target } from 'lucide-react';
+import { Target, HelpCircle } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
   // If LinkedIn not synced yet, default baseline linkedInScore to githubScore * 0.9
@@ -26,6 +27,9 @@ function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
           <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
             Hiring Readiness Index
           </h3>
+          <Tooltip content="Weighted career readiness index combining verified GitHub codebase quality (70%) and declared LinkedIn career alignment (30%).">
+            <HelpCircle className="w-3.5 h-3.5 text-gray-400 hover:text-indigo-400 cursor-pointer" />
+          </Tooltip>
           <span className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold border" style={{ background: status.bg, borderColor: status.border, color: status.color }}>
             {status.label}
           </span>

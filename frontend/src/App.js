@@ -25,6 +25,10 @@ import FriendCompareInput from './components/FriendCompareInput';
 import HackerRankResume from './components/HackerRankResume';
 import LinkedInSync from './components/LinkedInSync';
 import HiringReadinessGauge from './components/HiringReadinessGauge';
+import QuickChipsBar from './components/QuickChipsBar';
+import SkeletonLoader from './components/SkeletonLoader';
+import ScrollToTopFAB from './components/ScrollToTopFAB';
+import ToastContainer from './components/Toast';
 import {
   Moon,
   Sun,
@@ -100,7 +104,52 @@ function App() {
 
   const [dark, setDark] = useDarkMode();
   const reportRef = useRef();
+  const mainInputRef = useRef();
+  const compareRef = useRef();
+  const [toasts, setToasts] = useState([]);
   const { i18n } = useTranslation();
+
+  const showToast = (message, type = 'success') => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3000);
+  };
+
+  // Part 2, Feature 5: Keyboard Shortcuts (/ focuses search, Esc closes compare/modals)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+        e.preventDefault();
+        mainInputRef.current?.focus();
+        showToast('Search input focused (Shortcut: /)', 'info');
+      }
+      if (e.key === 'Escape') {
+        if (showCompareInput) setShowCompareInput(false);
+        if (compareData) setCompareData(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showCompareInput, compareData]);
+
+  // Part 2, Feature 8: Smart Scroll to Results when scored
+  useEffect(() => {
+    if (state === 'scored' && reportRef.current) {
+      reportRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [state]);
+
+  const handleClearSearch = () => {
+    setUsername('');
+    setData(null);
+    setAdvice(null);
+    setCompareData(null);
+    setState('idle');
+    setErrorMessage('');
+    showToast('Search reset', 'info');
+  };
 
   // Test mode initialization from URL (?test=1)
   useEffect(() => {
@@ -297,11 +346,14 @@ function App() {
     }
   };
 
-  // Phase 1, Feature 1: Compare with a Friend
+  // Phase 1, Feature 1 & 11: Compare with a Friend (Battle Mode)
   const handleCompare = async () => {
-    const u1 = username.trim();
-    const u2 = friendUsername.trim();
-    if (!u1 || !u2) return;
+    const u1 = (username || '').trim().replace(/^@+/, '');
+    const u2 = (friendUsername || '').trim().replace(/^@+/, '');
+    if (!u1 || !u2) {
+      showToast('Please enter both GitHub usernames to compare', 'error');
+      return;
+    }
 
     setIsComparing(true);
     setErrorMessage('');
@@ -318,10 +370,22 @@ function App() {
         user1: { username: u1, report: rep1 },
         user2: { username: u2, report: rep2 },
       });
+      showToast(`VS Battle: @${u1} vs @${u2} ready!`);
+      setTimeout(() => {
+        compareRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Compare failed:', err);
-      setErrorMessage(err.message || 'Could not fetch profiles for comparison.');
+      setState('fetch_failed');
+      if (err.code === 'RATE_LIMIT') {
+        setErrorMessage('GitHub API rate limit exceeded during comparison. Please wait a few moments.');
+      } else if (err.code === 'NOT_FOUND') {
+        setErrorMessage(`One of the comparison profiles ("${u1}" or "${u2}") was not found on GitHub.`);
+      } else {
+        setErrorMessage(err.message || 'Could not fetch profiles for comparison.');
+      }
+      showToast('Comparison failed: verify usernames', 'error');
     } finally {
       setIsComparing(false);
     }
@@ -396,12 +460,14 @@ function App() {
     a.download = `${username}_gitfolioscore.json`;
     a.click();
     URL.revokeObjectURL(url);
+    showToast('Portfolio JSON downloaded & ready!');
   };
 
   const handleCopyShareText = () => {
     if (!advice?.shareText) return;
     navigator.clipboard.writeText(advice.shareText);
     setCopiedShareText(true);
+    showToast('Share text copied to clipboard!');
     setTimeout(() => setCopiedShareText(false), 2000);
   };
 
@@ -413,6 +479,50 @@ function App() {
       className="min-h-screen transition-colors duration-300"
       style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
     >
+      {/* Global Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
+
+      {/* Sticky Navigation Bar */}
+      <nav className="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-white/10 transition-all duration-300">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div
+            className="flex items-center gap-3 cursor-pointer select-none"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg"
+              style={{ background: 'var(--gradient-primary)' }}
+            >
+              <span className="text-white text-lg">⚡</span>
+            </div>
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              GitFolio<span className="text-indigo-300">Score</span>
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-white/20 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              value={i18n.language}
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+            >
+              <option value="en" className="text-gray-900">EN</option>
+              <option value="es" className="text-gray-900">ES</option>
+            </select>
+
+            <ThemeCustomizer />
+
+            <button
+              className="p-2 rounded-lg border border-white/20 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 transition-all"
+              onClick={() => setDark((d) => !d)}
+              aria-label="Toggle theme"
+            >
+              {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Header */}
       <header className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -421,45 +531,9 @@ function App() {
           <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-violet-500 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
-                style={{ background: 'var(--gradient-primary)' }}
-              >
-                <span className="text-white text-xl">⚡</span>
-              </div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">
-                GitFolio<span className="text-indigo-300">Score</span>
-              </h1>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <select
-                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-white/20 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                value={i18n.language}
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
-              >
-                <option value="en" className="text-gray-900">EN</option>
-                <option value="es" className="text-gray-900">ES</option>
-              </select>
-
-              <ThemeCustomizer />
-
-              <button
-                className="p-2 rounded-lg border border-white/20 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 transition-all"
-                onClick={() => setDark((d) => !d)}
-                aria-label="Toggle theme"
-              >
-                {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
+        <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
           {/* Hero content */}
-          <div className="text-center py-6 animate-fade-in-up">
+          <div className="text-center py-4 animate-fade-in-up">
             <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
               Your GitHub Portfolio,<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300">
@@ -472,36 +546,19 @@ function App() {
 
             {/* Inputs */}
             <div className="max-w-2xl mx-auto space-y-3">
-              {/* Phase 4, Feature 13: Multi-Profile Dashboard Recent Audits */}
-              {recentProfiles.length > 0 && (
-                <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
-                  <span className="text-xs text-indigo-200/70 flex items-center gap-1 font-medium">
-                    <Clock className="w-3.5 h-3.5" /> Recent:
-                  </span>
-                  {recentProfiles.map((p) => (
-                    <button
-                      key={p.username}
-                      type="button"
-                      onClick={() => {
-                        setUsername(p.username);
-                        handleAnalyze(p.username);
-                      }}
-                      className="px-2.5 py-0.5 rounded-full text-xs bg-white/10 hover:bg-white/20 text-white border border-white/15 transition flex items-center gap-1 active:scale-95"
-                    >
-                      <span>@{p.username}</span>
-                      <b className="text-indigo-300">({p.score})</b>
-                    </button>
-                  ))}
-                </div>
-              )}
-
               {!showCompareInput ? (
                 <div className="flex flex-col sm:flex-row gap-3">
                   <UserSearchInput
+                    inputRef={mainInputRef}
                     value={username}
                     onChange={setUsername}
-                    onSelect={(uname) => { setUsername(uname); handleAnalyze(uname, targetRole, roastMode, persona); }}
+                    onSelect={(uname) => {
+                      setUsername(uname);
+                      handleAnalyze(uname, targetRole, roastMode, persona);
+                    }}
                     onSubmit={() => handleAnalyze()}
+                    onClear={handleClearSearch}
+                    recentProfiles={recentProfiles}
                     disabled={isAnalyzing}
                   />
                   {/* Feature 2: Role Benchmarking Dropdown */}
@@ -523,11 +580,14 @@ function App() {
                 <div className="flex flex-col md:flex-row items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xl animate-fade-in shadow-2xl">
                   <div className="flex-1 w-full">
                     <UserSearchInput
+                      inputRef={mainInputRef}
                       value={username}
                       onChange={setUsername}
                       placeholder="Your GitHub username..."
                       onSelect={(uname) => setUsername(uname)}
                       onSubmit={handleCompare}
+                      onClear={handleClearSearch}
+                      recentProfiles={recentProfiles}
                       disabled={isComparing}
                     />
                   </div>
@@ -543,6 +603,9 @@ function App() {
                     <FriendCompareInput
                       value={friendUsername}
                       onChange={setFriendUsername}
+                      onSelect={(uname) => setFriendUsername(uname)}
+                      onSubmit={handleCompare}
+                      onClear={() => setFriendUsername('')}
                       disabled={isComparing}
                     />
                   </div>
@@ -608,38 +671,32 @@ function App() {
                   </button>
                 </div>
 
-                <button
-                  className="w-full sm:w-auto px-8 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 text-sm"
-                  style={{ background: 'var(--gradient-primary)' }}
-                  onClick={() => handleAnalyze()}
-                  disabled={isAnalyzing || !username.trim()}
-                >
-                  {isAnalyzing ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <RefreshCw className="animate-spin h-4 w-4" />
-                      Analyzing Portfolio...
-                    </span>
-                  ) : (
-                    'Analyze & Coach'
-                  )}
-                </button>
+                {!showCompareInput && (
+                  <button
+                    className="w-full sm:w-auto px-8 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 text-sm"
+                    style={{ background: 'var(--gradient-primary)' }}
+                    onClick={() => handleAnalyze()}
+                    disabled={isAnalyzing || !username.trim()}
+                  >
+                    {isAnalyzing ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <RefreshCw className="animate-spin h-4 w-4" />
+                        Analyzing Portfolio...
+                      </span>
+                    ) : (
+                      'Analyze & Coach'
+                    )}
+                  </button>
+                )}
               </div>
 
-              {/* Part 2: Quick Try Row */}
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                <span className="text-xs text-indigo-200/80 font-medium">Quick Try:</span>
-                {FAMOUS_USERS.map((uname) => (
-                  <button
-                    key={uname}
-                    type="button"
-                    onClick={() => handleQuickTry(uname)}
-                    disabled={isAnalyzing}
-                    className="px-3 py-1 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20 text-indigo-100 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    @{uname}
-                  </button>
-                ))}
-              </div>
+              {/* Part 1, Item 1: Sleek Horizontal Scrolling Chips Bar */}
+              <QuickChipsBar
+                recentProfiles={recentProfiles}
+                famousUsers={FAMOUS_USERS}
+                onSelect={handleQuickTry}
+                disabled={isAnalyzing}
+              />
             </div>
 
             {/* Custom weights toggle */}
@@ -661,9 +718,12 @@ function App() {
         </div>
       </header>
 
+      {/* Skeletons while fetching */}
+      {state === 'fetching' && <SkeletonLoader />}
+
       {/* Comparison Dashboard */}
       {compareData && (
-        <div className="max-w-6xl mx-auto px-4 mt-6 animate-fade-in-up">
+        <div ref={compareRef} className="max-w-6xl mx-auto px-4 mt-6 animate-fade-in-up">
           <CompareDashboard
             user1={compareData.user1}
             user2={compareData.user2}
@@ -987,6 +1047,9 @@ function App() {
           GitFolioScore on Anna AI OS — Evaluates GitHub portfolios like real hiring teams do.
         </p>
       </footer>
+
+      {/* Floating Scroll to Top Action Button */}
+      <ScrollToTopFAB />
     </div>
   );
 }

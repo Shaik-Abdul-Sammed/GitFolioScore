@@ -55,7 +55,7 @@ async function handleResponse(response) {
  * @returns {Promise<object>} Parsed profile JSON.
  */
 export async function fetchProfile(username) {
-  const cleanUsername = username.trim();
+  const cleanUsername = (username || '').trim().replace(/^@+/, '');
   const url = `${GITHUB_API_BASE}/users/${encodeURIComponent(cleanUsername)}`;
 
   try {
@@ -82,7 +82,7 @@ export async function fetchProfile(username) {
  * @returns {Promise<Array<object>>} Parsed repos JSON.
  */
 export async function fetchRepos(username) {
-  const cleanUsername = username.trim();
+  const cleanUsername = (username || '').trim().replace(/^@+/, '');
   const url = `${GITHUB_API_BASE}/users/${encodeURIComponent(cleanUsername)}/repos?per_page=100&sort=updated`;
 
   try {

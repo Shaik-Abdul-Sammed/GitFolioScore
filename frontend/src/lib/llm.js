@@ -22,6 +22,42 @@ const PERSONA_PROMPTS = {
 export { PERSONA_PROMPTS };
 
 /**
+ * Wait for the Anna Host API bridge (window.anna.llm.complete) to be injected.
+ * Checks every 100ms until available or timeoutMs is exceeded.
+ * @param {number} [timeoutMs=5000]
+ * @returns {Promise<object>} The window.anna object
+ */
+export async function waitForAnna(timeoutMs = 5000) {
+  if (typeof window === 'undefined') {
+    const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
+    error.code = 'API_UNAVAILABLE';
+    error.userMessage = 'Anna AI environment not detected. Please run within Anna AI OS.';
+    throw error;
+  }
+
+  if (window.anna?.llm?.complete) {
+    return window.anna;
+  }
+
+  const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+  const effectiveTimeout = isTest && timeoutMs === 5000 ? 150 : timeoutMs;
+  const pollInterval = isTest ? 25 : 100;
+
+  const startTime = Date.now();
+  while (Date.now() - startTime < effectiveTimeout) {
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    if (window.anna?.llm?.complete) {
+      return window.anna;
+    }
+  }
+
+  const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
+  error.code = 'API_UNAVAILABLE';
+  error.userMessage = 'Anna AI environment not detected. Please run within Anna AI OS.';
+  throw error;
+}
+
+/**
  * Clean and parse JSON from LLM text response.
  */
 function extractJSON(rawText) {
@@ -110,12 +146,7 @@ function handleLLMError(err) {
  * @returns {Promise<{summary: string, actions: Array<{action: string, rationale: string}>, shareText: string}>}
  */
 export async function generateAdvice(report, targetRole = '', options = {}) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
-    error.code = 'API_UNAVAILABLE';
-    error.userMessage = 'Anna AI environment not detected. Please run within Anna AI OS.';
-    throw error;
-  }
+  await waitForAnna();
 
   let activeSystemPrompt = SYSTEM_PROMPT;
   if (options?.roastMode) {
@@ -159,9 +190,9 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
         maxTokens: 800,
         temperature: options?.roastMode ? 0.7 : 0.4,
         modelPreferences: {
-          speedPriority: 0.9,
-          costPriority: 0.7,
-          intelligencePriority: 0.5,
+          speedPriority: 0.8,
+          costPriority: 0.5,
+          intelligencePriority: 0.85,
         },
       },
       { timeoutMs: maxTotalBudget }
@@ -207,12 +238,7 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
  * @returns {Promise<string>} - Markdown string for the generated README.
  */
 export async function generateReadme(repo) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
-    error.code = 'API_UNAVAILABLE';
-    error.userMessage = 'Anna AI environment not detected. Please run within Anna AI OS.';
-    throw error;
-  }
+  await waitForAnna();
 
   const prompt = `Write a production-ready, beautiful GitHub README.md for this repository:
 - Repository Name: ${repo.name}
@@ -240,6 +266,11 @@ Format cleanly in GitHub Flavored Markdown.`;
           'You are a staff open-source engineer and technical writer. Generate a comprehensive, beautiful GitHub README.md in markdown format.',
         maxTokens: 1200,
         temperature: 0.5,
+        modelPreferences: {
+          intelligencePriority: 0.85,
+          speedPriority: 0.75,
+          costPriority: 0.5,
+        },
       },
       { timeoutMs: 45000 }
     );
@@ -253,11 +284,7 @@ Format cleanly in GitHub Flavored Markdown.`;
  * Match portfolio against a pasted Job Description.
  */
 export async function matchJobDescription(report, jdText) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
-    error.code = 'API_UNAVAILABLE';
-    throw error;
-  }
+  await waitForAnna();
 
   const prompt = `Candidate Portfolio Data:
 - Top Languages: ${JSON.stringify(report.mostUsedLanguages?.slice(0, 5) || [])}
@@ -286,6 +313,11 @@ Return ONLY valid JSON:
           'You are an AI Technical Hiring Evaluator and ATS Matcher. Analyze job descriptions against developer GitHub portfolios and output only valid JSON.',
         maxTokens: 800,
         temperature: 0.3,
+        modelPreferences: {
+          intelligencePriority: 0.9,
+          speedPriority: 0.7,
+          costPriority: 0.5,
+        },
       },
       { timeoutMs: 45000 }
     );
@@ -302,11 +334,7 @@ Return ONLY valid JSON:
  * Generate a high-converting, professional 160-character GitHub bio.
  */
 export async function generateBio(profile, topRepos = [], languages = []) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
-    error.code = 'API_UNAVAILABLE';
-    throw error;
-  }
+  await waitForAnna();
 
   const prompt = `Write a catchy, modern, professional GitHub bio (strictly MAXIMUM 160 characters) for developer @${profile?.login || 'dev'}:
 - Primary Languages: ${languages.slice(0, 3).map((l) => l.lang || l.name || '').join(', ') || 'TypeScript, React'}
@@ -323,6 +351,11 @@ Return ONLY the plain bio text (max 160 characters). Do not include quotes or su
           'You are a developer branding specialist. Craft a memorable, executive 160-character GitHub profile bio.',
         maxTokens: 100,
         temperature: 0.7,
+        modelPreferences: {
+          intelligencePriority: 0.75,
+          speedPriority: 0.9,
+          costPriority: 0.6,
+        },
       },
       { timeoutMs: 45000 }
     );
@@ -334,20 +367,25 @@ Return ONLY the plain bio text (max 160 characters). Do not include quotes or su
   }
 }
 
-
 /**
  * Generate a strong, metric-driven resume bullet point from a repo.
  */
 export async function generateResumeBullet(repo) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API not available.');
-    error.code = 'API_UNAVAILABLE';
-    throw error;
-  }
+  await waitForAnna();
   const prompt = `Convert this GitHub repository into a single, strong, metric-driven resume bullet point (1-2 sentences max):\n- Name: ${repo.name}\n- Language: ${repo.language || 'JavaScript'}\n- Description: ${repo.description || 'Software project'}\n- Stars: ${repo.stars ?? 0}, Forks: ${repo.forks ?? 0}\n\nWrite like a senior engineer's resume: start with a strong action verb, include technologies, and estimate impact/metrics where possible.\nReturn ONLY the bullet point text (no "•" prefix, no quotes).`;
   try {
     const response = await window.anna.llm.complete(
-      { messages: [{ role: 'user', content: prompt }], systemPrompt: 'You are a professional resume writer specialising in software engineers. Write tight, metric-driven resume bullets.', maxTokens: 120, temperature: 0.5 },
+      {
+        messages: [{ role: 'user', content: prompt }],
+        systemPrompt: 'You are a professional resume writer specialising in software engineers. Write tight, metric-driven resume bullets.',
+        maxTokens: 120,
+        temperature: 0.5,
+        modelPreferences: {
+          intelligencePriority: 0.8,
+          speedPriority: 0.8,
+          costPriority: 0.6,
+        },
+      },
       { timeoutMs: 45000 }
     );
     return (response?.content?.text || '').trim().replace(/^[•-]\s*/, '');
@@ -360,16 +398,22 @@ export async function generateResumeBullet(repo) {
  * Suggest 3 specific companies or open-source projects based on top languages.
  */
 export async function suggestNetworkMatches(languages = [], targetRole = '') {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API not available.');
-    error.code = 'API_UNAVAILABLE';
-    throw error;
-  }
+  await waitForAnna();
   const langList = languages.slice(0, 5).map((l) => l.lang || l.name || l).join(', ');
   const prompt = `Based on a developer proficient in [${langList}] targeting a "${targetRole || 'Software Engineer'}" role in 2026, suggest exactly 3 highly specific items:\n1. A company actively hiring this stack RIGHT NOW (name + why they match)\n2. An open-source project they should contribute to (name + why)\n3. A developer community or conference to join (name + platform)\n\nReturn ONLY valid JSON:\n{"suggestions": [{"type": "company|opensource|community", "name": "...", "reason": "..."}]}`;
   try {
     const response = await window.anna.llm.complete(
-      { messages: [{ role: 'user', content: prompt }], systemPrompt: 'You are an expert tech career coach with deep knowledge of 2026 hiring trends.', maxTokens: 400, temperature: 0.5 },
+      {
+        messages: [{ role: 'user', content: prompt }],
+        systemPrompt: 'You are an expert tech career coach with deep knowledge of 2026 hiring trends.',
+        maxTokens: 400,
+        temperature: 0.5,
+        modelPreferences: {
+          intelligencePriority: 0.8,
+          speedPriority: 0.8,
+          costPriority: 0.6,
+        },
+      },
       { timeoutMs: 45000 }
     );
     const text = response?.content?.text || '';
@@ -385,17 +429,23 @@ export async function suggestNetworkMatches(languages = [], targetRole = '') {
  * Compare two users' top repos to find similar projects or superior versions.
  */
 export async function compareProjects(user1, user2) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API not available.');
-    error.code = 'API_UNAVAILABLE';
-    throw error;
-  }
+  await waitForAnna();
   const repos1 = (user1.report?.topRepos || []).slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`);
   const repos2 = (user2.report?.topRepos || []).slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`);
   const prompt = `Compare these two GitHub developers' top projects:\n\n@${user1.username} repos:\n${repos1.join('\n')}\n\n@${user2.username} repos:\n${repos2.join('\n')}\n\nIdentify: similar projects, overlapping tech stacks, who has a more polished version of the same type of project.\nReturn ONLY valid JSON:\n{"similarProjects": [{"description": "...", "user1Repo": "...", "user2Repo": "..."}], "stackOverlap": ["language or tech"], "verdict": "1-sentence comparison"}`;
   try {
     const response = await window.anna.llm.complete(
-      { messages: [{ role: 'user', content: prompt }], systemPrompt: 'You are an expert code reviewer comparing GitHub developer portfolios.', maxTokens: 400, temperature: 0.4 },
+      {
+        messages: [{ role: 'user', content: prompt }],
+        systemPrompt: 'You are an expert code reviewer comparing GitHub developer portfolios.',
+        maxTokens: 400,
+        temperature: 0.4,
+        modelPreferences: {
+          intelligencePriority: 0.85,
+          speedPriority: 0.75,
+          costPriority: 0.5,
+        },
+      },
       { timeoutMs: 45000 }
     );
     const text = response?.content?.text || '';
@@ -407,16 +457,11 @@ export async function compareProjects(user1, user2) {
   }
 }
 
-
 /**
  * Feature 5 & 15: Simulated LinkedIn Audit with optional Roast Mode.
  */
 export async function auditLinkedIn(profile, topRepos = [], languages = [], linkedInText = '', isRoast = false) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API not available.');
-    error.code = 'API_UNAVAILABLE';
-    throw error;
-  }
+  await waitForAnna();
 
   const repoList = topRepos.slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`).join('\n');
   const langList = languages.slice(0, 5).map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name)).join(', ');
@@ -452,6 +497,11 @@ Return ONLY valid JSON:
         systemPrompt,
         maxTokens: 600,
         temperature: isRoast ? 0.7 : 0.3,
+        modelPreferences: {
+          intelligencePriority: 0.85,
+          speedPriority: 0.75,
+          costPriority: 0.5,
+        },
       },
       { timeoutMs: 45000 }
     );
@@ -470,11 +520,7 @@ Return ONLY valid JSON:
  * Feature 6: Auto-generate catchy LinkedIn headlines based on GitHub score and repos.
  */
 export async function generateLinkedInHeadlines(profile, score = 85, topRepos = [], languages = []) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API not available.');
-    error.code = 'API_UNAVAILABLE';
-    throw error;
-  }
+  await waitForAnna();
 
   const topLangs = languages.slice(0, 3).map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name)).join(' & ');
   const topProject = topRepos[0]?.name || 'Open Source';
@@ -501,6 +547,11 @@ Return ONLY valid JSON:
         systemPrompt: 'You are a career branding expert specializing in viral, executive LinkedIn headlines for engineers.',
         maxTokens: 300,
         temperature: 0.6,
+        modelPreferences: {
+          intelligencePriority: 0.75,
+          speedPriority: 0.9,
+          costPriority: 0.6,
+        },
       },
       { timeoutMs: 45000 }
     );
@@ -517,11 +568,7 @@ Return ONLY valid JSON:
  * Feature 8: Senior Engineer Peer Code Review in Compare Mode.
  */
 export async function peerCodeReview(user1, user2) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API not available.');
-    error.code = 'API_UNAVAILABLE';
-    throw error;
-  }
+  await waitForAnna();
 
   const u1Repos = (user1.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
   const u2Repos = (user2.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
@@ -555,6 +602,11 @@ Return ONLY valid JSON:
         systemPrompt: 'You are an objective Staff Engineer reviewing peer developer portfolios.',
         maxTokens: 500,
         temperature: 0.4,
+        modelPreferences: {
+          intelligencePriority: 0.9,
+          speedPriority: 0.7,
+          costPriority: 0.5,
+        },
       },
       { timeoutMs: 45000 }
     );
@@ -571,11 +623,7 @@ Return ONLY valid JSON:
  * Feature 10: Extract clean README template structure from competitor's repo.
  */
 export async function stealReadmeStructure(repo) {
-  if (!window.anna?.llm?.complete) {
-    const error = new Error('Anna Host API not available.');
-    error.code = 'API_UNAVAILABLE';
-    throw error;
-  }
+  await waitForAnna();
 
   const prompt = `Analyze this top-rated repository and extract a clean, reusable README markdown template skeleton that another developer can use for their own project:
 - Repo Name: ${repo.name}
@@ -592,6 +640,11 @@ Return ONLY markdown content.`;
         systemPrompt: 'You are an open source maintainer extracting clean README templates in markdown.',
         maxTokens: 700,
         temperature: 0.4,
+        modelPreferences: {
+          intelligencePriority: 0.8,
+          speedPriority: 0.8,
+          costPriority: 0.6,
+        },
       },
       { timeoutMs: 45000 }
     );

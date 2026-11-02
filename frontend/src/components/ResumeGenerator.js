@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Download, RefreshCw, AlertCircle } from 'lucide-react';
+import { waitForAnna } from '../lib/llm';
 
 /**
  * PDF Resume Generator – uses jsPDF (already in package.json) to export a
@@ -44,25 +45,35 @@ function ResumeGenerator({ report, advice }) {
     setError('');
     try {
       let resumeText;
-      if (window.anna?.llm?.complete) {
-        const repoSummaries = topRepos.slice(0, 4).map(
-          (r) => `${r.name} (${r.language || 'N/A'}): ${r.description || 'No description.'} [${r.stars ?? 0} ★]`
-        ).join('\n');
+      try {
+        await waitForAnna();
+        if (window.anna?.llm?.complete) {
+          const repoSummaries = topRepos.slice(0, 4).map(
+            (r) => `${r.name} (${r.language || 'N/A'}): ${r.description || 'No description.'} [${r.stars ?? 0} ★]`
+          ).join('\n');
 
-        const response = await window.anna.llm.complete(
-          {
-            messages: [{
-              role: 'user',
-              content: `Generate a concise 1-page developer resume for @${profile.login}. Bio: "${profile.bio || 'Software developer'}". Score: ${report.score}/100. Top repos:\n${repoSummaries}\n\nLanguages: ${languages.slice(0, 6).map((l) => l.lang || l.name || l).join(', ')}\n\nFormat as plain text with clear SKILLS, EXPERIENCE/PROJECTS, and SUMMARY sections.`,
-            }],
-            systemPrompt: 'You are a professional technical recruiter and resume writer. Generate clean, ATS-friendly resume content in plain text. Do NOT use markdown or brackets.',
-            maxTokens: 900,
-            temperature: 0.4,
-          },
-          { timeoutMs: 40000 }
-        );
-        resumeText = (response?.content?.text || '').trim() || buildResumeText();
-      } else {
+          const response = await window.anna.llm.complete(
+            {
+              messages: [{
+                role: 'user',
+                content: `Generate a concise 1-page developer resume for @${profile.login}. Bio: "${profile.bio || 'Software developer'}". Score: ${report.score}/100. Top repos:\n${repoSummaries}\n\nLanguages: ${languages.slice(0, 6).map((l) => l.lang || l.name || l).join(', ')}\n\nFormat as plain text with clear SKILLS, EXPERIENCE/PROJECTS, and SUMMARY sections.`,
+              }],
+              systemPrompt: 'You are a professional technical recruiter and resume writer. Generate clean, ATS-friendly resume content in plain text. Do NOT use markdown or brackets.',
+              maxTokens: 900,
+              temperature: 0.4,
+              modelPreferences: {
+                intelligencePriority: 0.85,
+                speedPriority: 0.75,
+                costPriority: 0.5,
+              },
+            },
+            { timeoutMs: 40000 }
+          );
+          resumeText = (response?.content?.text || response?.text || '').trim() || buildResumeText();
+        } else {
+          resumeText = buildResumeText();
+        }
+      } catch {
         resumeText = buildResumeText();
       }
 

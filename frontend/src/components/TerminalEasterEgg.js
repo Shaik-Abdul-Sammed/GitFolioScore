@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Terminal, X, Minimize2, Maximize2, Send } from 'lucide-react';
+import { waitForAnna } from '../lib/llm';
 
 function TerminalEasterEgg({ username, score, data, advice }) {
   const [open, setOpen] = useState(false);
@@ -117,15 +118,17 @@ function TerminalEasterEgg({ username, score, data, advice }) {
       setLoading(true);
       try {
         let reply = "Okay. 🥪 [AI Privilege Granted: A magnificent sourdough sandwich with zero bugs, 100% test coverage, and a side of crisp documentation.]";
+        await waitForAnna(2000).catch(() => {});
         if (window?.anna?.llm?.complete) {
           const res = await window.anna.llm.complete(
             {
               system: 'You are a humorous Linux terminal kernel. The user typed "sudo make me a sandwich". Give a short witty response granting the sandwich.',
               prompt: 'sudo make me a sandwich',
+              modelPreferences: { speedPriority: 0.95, costPriority: 0.8, intelligencePriority: 0.6 },
             },
             { timeoutMs: 45000 }
           );
-          if (res?.text) reply = res.text.trim();
+          if (res?.text || res?.content?.text) reply = (res.text || res.content.text).trim();
         }
         setHistory((prev) => [...prev, { text: reply, type: 'success' }]);
       } catch {
@@ -154,16 +157,18 @@ function TerminalEasterEgg({ username, score, data, advice }) {
     setLoading(true);
     try {
       let aiText = `bash: ${cmd}: command not found. Type "help" for a list of commands.`;
+      await waitForAnna(2000).catch(() => {});
       if (window?.anna?.llm?.complete) {
         const resp = await window.anna.llm.complete(
           {
             system: 'You are a helpful UNIX CLI terminal assistant for a GitHub portfolio auditor. Answer very concisely in 1-2 sentences.',
             prompt: cmd,
+            modelPreferences: { speedPriority: 0.95, costPriority: 0.8, intelligencePriority: 0.6 },
           },
           { timeoutMs: 45000 }
         );
-        if (resp?.text) {
-          aiText = resp.text.trim();
+        if (resp?.text || resp?.content?.text) {
+          aiText = (resp.text || resp.content.text).trim();
         }
       }
       setHistory((prev) => [...prev, { text: aiText, type: 'output' }]);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Flame, RefreshCw, GitCommit, AlertTriangle, CheckCircle } from 'lucide-react';
+import { waitForAnna } from '../lib/llm';
 
 function CommitRoaster({ username, repos = [] }) {
   const [loading, setLoading] = useState(false);
@@ -78,21 +79,31 @@ Produce a humorous and insightful JSON response in this exact format:
 }`;
 
       let roastData = null;
-      if (window?.anna?.llm?.complete) {
-        const resp = await window.anna.llm.complete(
-          {
-            system: 'You are a witty, senior tech lead roaster. Output ONLY valid raw JSON with keys: hygieneScore, headline, roastComment, worstOffenders, improvedSuggestion.',
-            prompt,
-            temperature: 0.7,
-          },
-          { timeoutMs: 45000 }
-        );
+      try {
+        await waitForAnna();
+        if (window?.anna?.llm?.complete) {
+          const resp = await window.anna.llm.complete(
+            {
+              system: 'You are a witty, senior tech lead roaster. Output ONLY valid raw JSON with keys: hygieneScore, headline, roastComment, worstOffenders, improvedSuggestion.',
+              prompt,
+              temperature: 0.7,
+              modelPreferences: {
+                intelligencePriority: 0.8,
+                speedPriority: 0.85,
+                costPriority: 0.6,
+              },
+            },
+            { timeoutMs: 45000 }
+          );
 
-        const raw = resp?.text || '';
-        const match = raw.match(/\{[\s\S]*\}/);
-        if (match) {
-          roastData = JSON.parse(match[0]);
+          const raw = resp?.text || resp?.content?.text || '';
+          const match = raw.match(/\{[\s\S]*\}/);
+          if (match) {
+            roastData = JSON.parse(match[0]);
+          }
         }
+      } catch {
+        // Fallback to heuristic
       }
 
       if (!roastData) {

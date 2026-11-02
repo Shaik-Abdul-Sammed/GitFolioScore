@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TrendingUp, AlertTriangle, Sparkles, RefreshCw, Compass } from 'lucide-react';
+import { waitForAnna } from '../lib/llm';
 
 function LanguageTrendsPredictor({ repos = [], username }) {
   const [loading, setLoading] = useState(false);
@@ -36,21 +37,31 @@ Return ONLY valid JSON:
 
     try {
       let result = null;
-      if (window?.anna?.llm?.complete) {
-        const resp = await window.anna.llm.complete(
-          {
-            system: 'You are a veteran Silicon Valley tech career architect. Return ONLY valid raw JSON with keys: obsolescenceRisk, surgingSkill, recommendedNext, recommendedReason, marketValueForecast.',
-            prompt,
-            temperature: 0.6,
-          },
-          { timeoutMs: 45000 }
-        );
+      try {
+        await waitForAnna();
+        if (window?.anna?.llm?.complete) {
+          const resp = await window.anna.llm.complete(
+            {
+              system: 'You are a veteran Silicon Valley tech career architect. Return ONLY valid raw JSON with keys: obsolescenceRisk, surgingSkill, recommendedNext, recommendedReason, marketValueForecast.',
+              prompt,
+              temperature: 0.6,
+              modelPreferences: {
+                intelligencePriority: 0.85,
+                speedPriority: 0.75,
+                costPriority: 0.5,
+              },
+            },
+            { timeoutMs: 45000 }
+          );
 
-        const raw = resp?.text || '';
-        const match = raw.match(/\{[\s\S]*\}/);
-        if (match) {
-          result = JSON.parse(match[0]);
+          const raw = resp?.text || resp?.content?.text || '';
+          const match = raw.match(/\{[\s\S]*\}/);
+          if (match) {
+            result = JSON.parse(match[0]);
+          }
         }
+      } catch {
+        // Fallback gracefully if Anna host API times out or is unavailable
       }
 
       if (!result) {

@@ -6,6 +6,7 @@ import {
 import {
   loadLeaderboard, loadNetwork, addToNetwork, removeFromNetwork,
 } from '../lib/leaderboard';
+import { waitForAnna } from '../lib/llm';
 
 const SCORE_COLOR = (s) => {
   if (s >= 80) return '#10b981';
@@ -32,7 +33,7 @@ function MessageModal({ username, repos, onClose }) {
       setLoading(true);
       setError('');
       try {
-        if (!window.anna?.llm?.complete) throw new Error('Anna LLM not available');
+        await waitForAnna();
         const repoList = (repos || []).slice(0, 3).map((r) => r.name || r).join(', ');
         const response = await window.anna.llm.complete(
           {
@@ -43,10 +44,15 @@ function MessageModal({ username, repos, onClose }) {
             systemPrompt: 'You are a professional networking coach. Write warm, specific, non-generic connection requests.',
             maxTokens: 150,
             temperature: 0.7,
+            modelPreferences: {
+              speedPriority: 0.9,
+              intelligencePriority: 0.7,
+              costPriority: 0.6,
+            },
           },
           { timeoutMs: 45000 }
         );
-        setMessage((response?.content?.text || '').trim());
+        setMessage(((response?.content?.text || response?.text) || '').trim());
       } catch (err) {
         setError(err.userMessage || err.message || 'Could not draft message.');
       } finally {

@@ -16,7 +16,8 @@
       "entry": "index.html",
       "format": "static-spa",
       "external_origins": [
-        "https://api.github.com"
+        "https://api.github.com",
+        "https://avatars.githubusercontent.com"
       ]
     },
     "views": [

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, ShieldCheck, Lock, RefreshCw, X, AlertTriangle, CheckCircle } from 'lucide-react';
+import { waitForAnna } from '../lib/llm';
 
 function SecurityScanModal({ username, repos = [], profile = {}, onToast, onRewardXP }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,8 +18,10 @@ function SecurityScanModal({ username, repos = [], profile = {}, onToast, onRewa
 
     try {
       let scanResult = null;
-      if (window?.anna?.llm?.complete) {
-        const prompt = `Simulate an ethical OSINT Dark Web & Repository Secret Exposure audit for GitHub user @${username}.
+      try {
+        await waitForAnna();
+        if (window?.anna?.llm?.complete) {
+          const prompt = `Simulate an ethical OSINT Dark Web & Repository Secret Exposure audit for GitHub user @${username}.
 Profile email: ${profile?.email || 'hidden / noreply'}
 Public repos count: ${repos.length}
 
@@ -39,20 +42,28 @@ Generate a realistic cybersecurity hygiene report in ONLY valid JSON:
   ]
 }`;
 
-        const resp = await window.anna.llm.complete(
-          {
-            system: 'You are a cybersecurity penetration testing auditor. Output ONLY valid JSON.',
-            prompt,
-            temperature: 0.5,
-          },
-          { timeoutMs: 45000 }
-        );
+          const resp = await window.anna.llm.complete(
+            {
+              system: 'You are a cybersecurity penetration testing auditor. Output ONLY valid JSON.',
+              prompt,
+              temperature: 0.5,
+              modelPreferences: {
+                intelligencePriority: 0.85,
+                speedPriority: 0.75,
+                costPriority: 0.5,
+              },
+            },
+            { timeoutMs: 45000 }
+          );
 
-        const raw = resp?.text || '';
-        const match = raw.match(/\{[\s\S]*\}/);
-        if (match) {
-          scanResult = JSON.parse(match[0]);
+          const raw = resp?.text || resp?.content?.text || '';
+          const match = raw.match(/\{[\s\S]*\}/);
+          if (match) {
+            scanResult = JSON.parse(match[0]);
+          }
         }
+      } catch {
+        // Fallback to simulation
       }
 
       if (!scanResult) {

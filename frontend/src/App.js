@@ -267,6 +267,21 @@ function App() {
   useEffect(() => {
     let isMounted = true;
     if (process.env.NODE_ENV !== 'test') {
+      // Force one-time reset of any cached/stale legacy XP key so everyone starts fresh at Level 1 (0 XP)
+      const XP_RESET_KEY = 'gitfolioscore_xp_reset_to_zero_v2';
+      try {
+        if (typeof localStorage !== 'undefined' && !localStorage.getItem(XP_RESET_KEY)) {
+          localStorage.setItem(XP_RESET_KEY, 'true');
+          localStorage.removeItem('gitfolioscore_xp');
+          localStorage.setItem('gitfolioscore_xp', '0');
+          if (window?.anna?.storage?.set) {
+            window.anna.storage.set('gitfolioscore_xp', 0).catch(() => {});
+          }
+        }
+      } catch {
+        // ignore legacy storage reset errors
+      }
+
       loadXP().then((val) => {
         if (isMounted) setXp(val || 0);
       });
@@ -833,29 +848,6 @@ function App() {
             <p className="text-indigo-200/80 text-base md:text-lg max-w-2xl mx-auto mb-6">
               Objective evaluation with scoring breakdown, strengths, red flags, and personalized AI career coaching.
             </p>
-
-            {/* Phase 4, Item 2: Quick Audit Frictionless Hero Button */}
-            {!data && (
-              <div className="mb-6 animate-fade-in flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const target = recentProfiles[0]?.username || (username.trim() || 'torvalds');
-                    setUsername(target);
-                    handleAnalyze(target);
-                  }}
-                  className="btn-neon-glow inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl font-extrabold text-xs md:text-sm text-white shadow-2xl transition-all transform hover:scale-105 active:scale-95 animate-pulse border border-indigo-400/40"
-                  style={{
-                    background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
-                    boxShadow: '0 0 25px rgba(168, 85, 247, 0.4)',
-                  }}
-                >
-                  <Sparkles className="w-4 h-4 text-yellow-300" />
-                  <span>Audit My GitHub Now {recentProfiles[0]?.username ? `(@${recentProfiles[0].username})` : ''}</span>
-                  <Zap className="w-4 h-4 fill-yellow-300 text-yellow-300" />
-                </button>
-              </div>
-            )}
 
             {/* Segmented Mode Selector: Single Audit vs VS Battle */}
             <div className="inline-flex items-center p-1 rounded-2xl bg-slate-900/90 border border-white/15 backdrop-blur-xl shadow-xl mb-6 select-none">

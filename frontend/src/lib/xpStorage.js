@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY = 'gitfolioscore_xp';
-const RESET_FLAG = 'gitfolioscore_xp_v1_cleared';
+const RESET_FLAG = 'gitfolioscore_xp_reset_to_zero_v2';
 
 export const LEVELS = [
   { level: 1, title: 'Code Initiate', minXP: 0, maxXP: 50, icon: '🌱' },
@@ -51,18 +51,16 @@ export async function clearStoredXP() {
 }
 
 export async function loadXP() {
-  // Clear any stale legacy default 50/20 XP from pre-release testing
+  // One-time cleanup: force-clear any old cached XP key so user resets to Level 1 (0 XP)
   try {
     if (typeof localStorage !== 'undefined' && !localStorage.getItem(RESET_FLAG)) {
       localStorage.setItem(RESET_FLAG, 'true');
-      const val = localStorage.getItem(STORAGE_KEY);
-      if (val === '20' || val === '50') {
-        localStorage.removeItem(STORAGE_KEY);
-        if (window?.anna?.storage?.set) {
-          window.anna.storage.set(STORAGE_KEY, 0).catch(() => {});
-        }
-        return 0;
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(STORAGE_KEY, '0');
+      if (window?.anna?.storage?.set) {
+        window.anna.storage.set(STORAGE_KEY, 0).catch(() => {});
       }
+      return 0;
     }
   } catch {
     // Ignore

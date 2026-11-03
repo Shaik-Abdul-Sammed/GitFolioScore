@@ -225,7 +225,7 @@ function UserSearchInput({
   };
 
   return (
-    <div className="relative flex-1" ref={containerRef}>
+    <div className={`relative flex-1 ${open || showHistory ? 'z-40' : 'z-20'}`} ref={containerRef}>
       <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-indigo-300 pointer-events-none" />
 
       <input
@@ -313,7 +313,7 @@ function UserSearchInput({
       {open && results.length > 0 && (
         <div
           className="absolute top-full left-0 w-full z-50 mt-2 bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in ring-1 ring-white/10"
-          style={{ backgroundColor: '#090d16', zIndex: 100 }}
+          style={{ backgroundColor: '#090d16', zIndex: 9999 }}
         >
           {results.map((user, idx) => (
             <button
@@ -367,7 +367,7 @@ function UserSearchInput({
       {showHistory && recentProfiles.length > 0 && !open && (
         <div
           className="absolute top-full left-0 w-full z-50 mt-2 bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in ring-1 ring-white/10"
-          style={{ backgroundColor: '#090d16', zIndex: 100 }}
+          style={{ backgroundColor: '#090d16', zIndex: 9999 }}
         >
           <div
             className="px-3.5 py-2 border-b border-gray-800 flex items-center justify-between text-[11px] text-gray-400 font-semibold uppercase tracking-wider sticky top-0 backdrop-blur-sm z-10"

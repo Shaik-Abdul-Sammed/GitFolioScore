@@ -151,7 +151,7 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
   };
 
   return (
-    <div className="relative flex-1" ref={containerRef}>
+    <div className={`relative flex-1 ${open ? 'z-40' : 'z-20'}`} ref={containerRef}>
       <div className="absolute left-3.5 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
         {avatarUrl ? (
           <img
@@ -208,7 +208,7 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
       {open && results.length > 0 && (
         <div
           className="absolute top-full left-0 w-full z-50 mt-2 bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in ring-1 ring-white/10"
-          style={{ backgroundColor: '#090d16', zIndex: 100 }}
+          style={{ backgroundColor: '#090d16', zIndex: 9999 }}
         >
           {results.map((user, idx) => (
             <button

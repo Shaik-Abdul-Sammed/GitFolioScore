@@ -141,6 +141,14 @@ function extractJSON(rawText) {
  * Map Anna Host API errors to user-friendly error objects with userMessage.
  */
 function handleLLMError(err) {
+  if (err?.code === 'API_UNAVAILABLE') {
+    const error = new Error(err.userMessage || err.message || 'Anna AI environment not detected. Please run within Anna AI OS.');
+    error.code = 'API_UNAVAILABLE';
+    error.userMessage = err.userMessage || 'Anna AI environment not detected. Please run within Anna AI OS.';
+    error.originalError = err;
+    return error;
+  }
+
   const code = err.code || err.status || '';
   let userMessage = 'The AI advisor encountered an error. Please retry.';
 
@@ -191,43 +199,43 @@ function handleLLMError(err) {
  * @returns {Promise<{summary: string, actions: Array<{action: string, rationale: string}>, shareText: string}>}
  */
 export async function generateAdvice(report, targetRole = '', options = {}) {
-  await waitForAnna();
-
-  let activeSystemPrompt = SYSTEM_PROMPT;
-  if (options?.roastMode) {
-    activeSystemPrompt = ROAST_SYSTEM_PROMPT;
-  } else if (options?.persona && PERSONA_PROMPTS[options.persona]) {
-    activeSystemPrompt = PERSONA_PROMPTS[options.persona];
-  }
-
-  // Build condensed report payload to avoid context bloat
-  const condensedReport = {
-    username: report.profile?.login,
-    targetRole: targetRole || 'Software Engineer',
-    roastMode: !!options?.roastMode,
-    overallScore: report.score,
-    scoreBreakdown: report.scoreBreakdown,
-    topStrengths: report.strengths?.slice(0, 4),
-    topRedFlags: report.redFlags?.slice(0, 4),
-    topSuggestions: report.suggestions?.slice(0, 4),
-    languages: report.mostUsedLanguages?.slice(0, 5),
-    topRepositories: report.topRepos?.map((r) => ({
-      name: r.name,
-      stars: r.stars,
-      forks: r.forks,
-      language: r.language,
-      hasReadme: r.hasReadme,
-    })),
-  };
-
-  const userPrompt = `Target Role: ${targetRole || 'Software Engineer'}\nRoast Mode: ${
-    options?.roastMode ? 'ACTIVE (harsh, sarcastic, constructive)' : 'OFF'
-  }\n\nPortfolio Report Data:\n${JSON.stringify(condensedReport, null, 2)}`;
-
-  const startTime = Date.now();
-  const maxTotalBudget = 45000;
-
   try {
+    await waitForAnna();
+
+    let activeSystemPrompt = SYSTEM_PROMPT;
+    if (options?.roastMode) {
+      activeSystemPrompt = ROAST_SYSTEM_PROMPT;
+    } else if (options?.persona && PERSONA_PROMPTS[options.persona]) {
+      activeSystemPrompt = PERSONA_PROMPTS[options.persona];
+    }
+
+    // Build condensed report payload to avoid context bloat
+    const condensedReport = {
+      username: report.profile?.login,
+      targetRole: targetRole || 'Software Engineer',
+      roastMode: !!options?.roastMode,
+      overallScore: report.score,
+      scoreBreakdown: report.scoreBreakdown,
+      topStrengths: report.strengths?.slice(0, 4),
+      topRedFlags: report.redFlags?.slice(0, 4),
+      topSuggestions: report.suggestions?.slice(0, 4),
+      languages: report.mostUsedLanguages?.slice(0, 5),
+      topRepositories: report.topRepos?.map((r) => ({
+        name: r.name,
+        stars: r.stars,
+        forks: r.forks,
+        language: r.language,
+        hasReadme: r.hasReadme,
+      })),
+    };
+
+    const userPrompt = `Target Role: ${targetRole || 'Software Engineer'}\nRoast Mode: ${
+      options?.roastMode ? 'ACTIVE (harsh, sarcastic, constructive)' : 'OFF'
+    }\n\nPortfolio Report Data:\n${JSON.stringify(condensedReport, null, 2)}`;
+
+    const startTime = Date.now();
+    const maxTotalBudget = 45000;
+
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: userPrompt }],
@@ -243,7 +251,7 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
       { timeoutMs: maxTotalBudget }
     );
 
-    const rawText = response?.content?.text || '';
+    const rawText = response?.content?.text || response?.text || (typeof response === 'string' ? response : '');
     try {
       return extractJSON(rawText);
     } catch {
@@ -270,11 +278,20 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
         { timeoutMs: remainingTime }
       );
 
-      return extractJSON(retryResponse?.content?.text || '');
+      return extractJSON(retryResponse?.content?.text || retryResponse?.text || (typeof retryResponse === 'string' ? retryResponse : ''));
     }
   } catch (err) {
     throw handleLLMError(err);
   }
+}
+
+/**
+ * Generate a harsh roast advice report for a portfolio.
+ * @param {object} report
+ * @param {string} [targetRole]
+ */
+export async function generateRoast(report, targetRole = '') {
+  return generateAdvice(report, targetRole, { roastMode: true });
 }
 
 /**
@@ -283,9 +300,10 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
  * @returns {Promise<string>} - Markdown string for the generated README.
  */
 export async function generateReadme(repo) {
-  await waitForAnna();
+  try {
+    await waitForAnna();
 
-  const prompt = `Write a production-ready, beautiful GitHub README.md for this repository:
+    const prompt = `Write a production-ready, beautiful GitHub README.md for this repository:
 - Repository Name: ${repo.name}
 - Primary Language: ${repo.language || 'JavaScript/TypeScript'}
 - Description: ${repo.description || 'Modern open-source development project.'}
@@ -303,7 +321,6 @@ Include:
 
 Format cleanly in GitHub Flavored Markdown.`;
 
-  try {
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -319,7 +336,7 @@ Format cleanly in GitHub Flavored Markdown.`;
       },
       { timeoutMs: 45000 }
     );
-    return response?.content?.text || '# ' + repo.name + '\n\n' + (repo.description || '');
+    return response?.content?.text || response?.text || '# ' + repo.name + '\n\n' + (repo.description || '');
   } catch (err) {
     throw handleLLMError(err);
   }
@@ -329,9 +346,10 @@ Format cleanly in GitHub Flavored Markdown.`;
  * Match portfolio against a pasted Job Description.
  */
 export async function matchJobDescription(report, jdText) {
-  await waitForAnna();
+  try {
+    await waitForAnna();
 
-  const prompt = `Candidate Portfolio Data:
+    const prompt = `Candidate Portfolio Data:
 - Top Languages: ${JSON.stringify(report.mostUsedLanguages?.slice(0, 5) || [])}
 - Top Repositories: ${JSON.stringify(report.topRepos?.map((r) => ({ name: r.name, desc: r.description, lang: r.language })) || [])}
 - Portfolio Score: ${report.score}
@@ -350,7 +368,6 @@ Return ONLY valid JSON:
   "verdict": "Strong match on frontend fundamentals and state management, but requires cloud deployment and containerization artifacts to meet senior requirements."
 }`;
 
-  try {
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -366,7 +383,7 @@ Return ONLY valid JSON:
       },
       { timeoutMs: 45000 }
     );
-    const text = response?.content?.text || '';
+    const text = response?.content?.text || response?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
     return JSON.parse(cleaned);
@@ -379,16 +396,16 @@ Return ONLY valid JSON:
  * Generate a high-converting, professional 160-character GitHub bio.
  */
 export async function generateBio(profile, topRepos = [], languages = []) {
-  await waitForAnna();
+  try {
+    await waitForAnna();
 
-  const prompt = `Write a catchy, modern, professional GitHub bio (strictly MAXIMUM 160 characters) for developer @${profile?.login || 'dev'}:
+    const prompt = `Write a catchy, modern, professional GitHub bio (strictly MAXIMUM 160 characters) for developer @${profile?.login || 'dev'}:
 - Primary Languages: ${languages.slice(0, 3).map((l) => l.lang || l.name || '').join(', ') || 'TypeScript, React'}
 - Flagship Projects: ${topRepos.slice(0, 2).map((r) => r.name).join(', ') || 'open-source tools'}
 - Current Bio: "${profile?.bio || 'Building software'}"
 
 Return ONLY the plain bio text (max 160 characters). Do not include quotes or surrounding formatting.`;
 
-  try {
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -404,7 +421,7 @@ Return ONLY the plain bio text (max 160 characters). Do not include quotes or su
       },
       { timeoutMs: 45000 }
     );
-    let bio = (response?.content?.text || '').trim().replace(/^["']|["']$/g, '');
+    let bio = (response?.content?.text || response?.text || '').trim().replace(/^["']|["']$/g, '');
     if (bio.length > 160) bio = bio.substring(0, 157) + '...';
     return bio;
   } catch (err) {
@@ -416,9 +433,9 @@ Return ONLY the plain bio text (max 160 characters). Do not include quotes or su
  * Generate a strong, metric-driven resume bullet point from a repo.
  */
 export async function generateResumeBullet(repo) {
-  await waitForAnna();
-  const prompt = `Convert this GitHub repository into a single, strong, metric-driven resume bullet point (1-2 sentences max):\n- Name: ${repo.name}\n- Language: ${repo.language || 'JavaScript'}\n- Description: ${repo.description || 'Software project'}\n- Stars: ${repo.stars ?? 0}, Forks: ${repo.forks ?? 0}\n\nWrite like a senior engineer's resume: start with a strong action verb, include technologies, and estimate impact/metrics where possible.\nReturn ONLY the bullet point text (no "•" prefix, no quotes).`;
   try {
+    await waitForAnna();
+    const prompt = `Convert this GitHub repository into a single, strong, metric-driven resume bullet point (1-2 sentences max):\n- Name: ${repo.name}\n- Language: ${repo.language || 'JavaScript'}\n- Description: ${repo.description || 'Software project'}\n- Stars: ${repo.stars ?? 0}, Forks: ${repo.forks ?? 0}\n\nWrite like a senior engineer's resume: start with a strong action verb, include technologies, and estimate impact/metrics where possible.\nReturn ONLY the bullet point text (no "•" prefix, no quotes).`;
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -433,7 +450,7 @@ export async function generateResumeBullet(repo) {
       },
       { timeoutMs: 45000 }
     );
-    return (response?.content?.text || '').trim().replace(/^[•-]\s*/, '');
+    return (response?.content?.text || response?.text || '').trim().replace(/^[•-]\s*/, '');
   } catch (err) {
     throw handleLLMError(err);
   }
@@ -443,10 +460,10 @@ export async function generateResumeBullet(repo) {
  * Suggest 3 specific companies or open-source projects based on top languages.
  */
 export async function suggestNetworkMatches(languages = [], targetRole = '') {
-  await waitForAnna();
-  const langList = languages.slice(0, 5).map((l) => l.lang || l.name || l).join(', ');
-  const prompt = `Based on a developer proficient in [${langList}] targeting a "${targetRole || 'Software Engineer'}" role in 2026, suggest exactly 3 highly specific items:\n1. A company actively hiring this stack RIGHT NOW (name + why they match)\n2. An open-source project they should contribute to (name + why)\n3. A developer community or conference to join (name + platform)\n\nReturn ONLY valid JSON:\n{"suggestions": [{"type": "company|opensource|community", "name": "...", "reason": "..."}]}`;
   try {
+    await waitForAnna();
+    const langList = languages.slice(0, 5).map((l) => l.lang || l.name || l).join(', ');
+    const prompt = `Based on a developer proficient in [${langList}] targeting a "${targetRole || 'Software Engineer'}" role in 2026, suggest exactly 3 highly specific items:\n1. A company actively hiring this stack RIGHT NOW (name + why they match)\n2. An open-source project they should contribute to (name + why)\n3. A developer community or conference to join (name + platform)\n\nReturn ONLY valid JSON:\n{"suggestions": [{"type": "company|opensource|community", "name": "...", "reason": "..."}]}`;
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -461,7 +478,7 @@ export async function suggestNetworkMatches(languages = [], targetRole = '') {
       },
       { timeoutMs: 45000 }
     );
-    const text = response?.content?.text || '';
+    const text = response?.content?.text || response?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
     return JSON.parse(cleaned);
@@ -474,11 +491,11 @@ export async function suggestNetworkMatches(languages = [], targetRole = '') {
  * Compare two users' top repos to find similar projects or superior versions.
  */
 export async function compareProjects(user1, user2) {
-  await waitForAnna();
-  const repos1 = (user1.report?.topRepos || []).slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`);
-  const repos2 = (user2.report?.topRepos || []).slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`);
-  const prompt = `Compare these two GitHub developers' top projects:\n\n@${user1.username} repos:\n${repos1.join('\n')}\n\n@${user2.username} repos:\n${repos2.join('\n')}\n\nIdentify: similar projects, overlapping tech stacks, who has a more polished version of the same type of project.\nReturn ONLY valid JSON:\n{"similarProjects": [{"description": "...", "user1Repo": "...", "user2Repo": "..."}], "stackOverlap": ["language or tech"], "verdict": "1-sentence comparison"}`;
   try {
+    await waitForAnna();
+    const repos1 = (user1.report?.topRepos || []).slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`);
+    const repos2 = (user2.report?.topRepos || []).slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`);
+    const prompt = `Compare these two GitHub developers' top projects:\n\n@${user1.username} repos:\n${repos1.join('\n')}\n\n@${user2.username} repos:\n${repos2.join('\n')}\n\nIdentify: similar projects, overlapping tech stacks, who has a more polished version of the same type of project.\nReturn ONLY valid JSON:\n{"similarProjects": [{"description": "...", "user1Repo": "...", "user2Repo": "..."}], "stackOverlap": ["language or tech"], "verdict": "1-sentence comparison"}`;
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -493,7 +510,7 @@ export async function compareProjects(user1, user2) {
       },
       { timeoutMs: 45000 }
     );
-    const text = response?.content?.text || '';
+    const text = response?.content?.text || response?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
     return JSON.parse(cleaned);
@@ -506,16 +523,17 @@ export async function compareProjects(user1, user2) {
  * Feature 5 & 15: Simulated LinkedIn Audit with optional Roast Mode.
  */
 export async function auditLinkedIn(profile, topRepos = [], languages = [], linkedInText = '', isRoast = false) {
-  await waitForAnna();
+  try {
+    await waitForAnna();
 
-  const repoList = topRepos.slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`).join('\n');
-  const langList = languages.slice(0, 5).map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name)).join(', ');
+    const repoList = topRepos.slice(0, 5).map((r) => `${r.name} (${r.language || 'N/A'}): ${r.description || ''}`).join('\n');
+    const langList = languages.slice(0, 5).map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name)).join(', ');
 
-  const systemPrompt = isRoast
-    ? 'You are a brutally sarcastic tech recruiter. Roast the developer\'s LinkedIn claims harshly, mocking buzzwords and pointing out every inconsistency with their actual GitHub code.'
-    : 'You are an executive tech recruiter and technical auditor. Analyze alignment between a candidate\'s LinkedIn profile text and their verified GitHub repositories.';
+    const systemPrompt = isRoast
+      ? 'You are a brutally sarcastic tech recruiter. Roast the developer\'s LinkedIn claims harshly, mocking buzzwords and pointing out every inconsistency with their actual GitHub code.'
+      : 'You are an executive tech recruiter and technical auditor. Analyze alignment between a candidate\'s LinkedIn profile text and their verified GitHub repositories.';
 
-  const userPrompt = `Developer GitHub Data:
+    const userPrompt = `Developer GitHub Data:
 - Username: @${profile?.login || 'dev'}
 - Top Languages: ${langList}
 - Real Repositories:
@@ -535,7 +553,6 @@ Return ONLY valid JSON:
   "recommendations": ["Feature your TypeScript monorepo prominently in your LinkedIn featured section", "Clarify your primary stack around React & Node"]
 }`;
 
-  try {
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: userPrompt }],
@@ -550,7 +567,7 @@ Return ONLY valid JSON:
       },
       { timeoutMs: 45000 }
     );
-    const text = response?.content?.text || '';
+    const text = response?.content?.text || response?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
     const parsed = JSON.parse(cleaned);
@@ -565,12 +582,13 @@ Return ONLY valid JSON:
  * Feature 6: Auto-generate catchy LinkedIn headlines based on GitHub score and repos.
  */
 export async function generateLinkedInHeadlines(profile, score = 85, topRepos = [], languages = []) {
-  await waitForAnna();
+  try {
+    await waitForAnna();
 
-  const topLangs = languages.slice(0, 3).map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name)).join(' & ');
-  const topProject = topRepos[0]?.name || 'Open Source';
+    const topLangs = languages.slice(0, 3).map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name)).join(' & ');
+    const topProject = topRepos[0]?.name || 'Open Source';
 
-  const prompt = `Generate 3 catchy, high-converting LinkedIn headline variations for a software developer:
+    const prompt = `Generate 3 catchy, high-converting LinkedIn headline variations for a software developer:
 - Score: ${score}/100 on GitFolioScore
 - Primary Stack: ${topLangs || 'Fullstack Engineering'}
 - Flagship Project: ${topProject}
@@ -585,7 +603,6 @@ Return ONLY valid JSON:
   ]
 }`;
 
-  try {
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -600,7 +617,7 @@ Return ONLY valid JSON:
       },
       { timeoutMs: 45000 }
     );
-    const text = response?.content?.text || '';
+    const text = response?.content?.text || response?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
     return JSON.parse(cleaned);
@@ -613,12 +630,13 @@ Return ONLY valid JSON:
  * Feature 8: Senior Engineer Peer Code Review in Compare Mode.
  */
 export async function peerCodeReview(user1, user2) {
-  await waitForAnna();
+  try {
+    await waitForAnna();
 
-  const u1Repos = (user1.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
-  const u2Repos = (user2.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
+    const u1Repos = (user1.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
+    const u2Repos = (user2.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
 
-  const prompt = `Act as a Staff/Senior Software Engineer conducting an objective technical comparison between two developers:
+    const prompt = `Act as a Staff/Senior Software Engineer conducting an objective technical comparison between two developers:
 
 Developer A (@${user1.username}): Score ${user1.report?.score}/100
 Repos:
@@ -640,7 +658,6 @@ Return ONLY valid JSON:
   "strengthsB": ["Modern framework selection", "Diverse repository experimentation"]
 }`;
 
-  try {
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -655,7 +672,7 @@ Return ONLY valid JSON:
       },
       { timeoutMs: 45000 }
     );
-    const text = response?.content?.text || '';
+    const text = response?.content?.text || response?.text || '';
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     const cleaned = fenceMatch ? fenceMatch[1].trim() : text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
     return JSON.parse(cleaned);
@@ -668,9 +685,10 @@ Return ONLY valid JSON:
  * Feature 10: Extract clean README template structure from competitor's repo.
  */
 export async function stealReadmeStructure(repo) {
-  await waitForAnna();
+  try {
+    await waitForAnna();
 
-  const prompt = `Analyze this top-rated repository and extract a clean, reusable README markdown template skeleton that another developer can use for their own project:
+    const prompt = `Analyze this top-rated repository and extract a clean, reusable README markdown template skeleton that another developer can use for their own project:
 - Repo Name: ${repo.name}
 - Language: ${repo.language || 'Any'}
 - Description: ${repo.description || ''}
@@ -678,7 +696,6 @@ export async function stealReadmeStructure(repo) {
 Create a boilerplate template with placeholders like [Project Name], [Architecture Overview], [Installation], [Features], [Badges], [License].
 Return ONLY markdown content.`;
 
-  try {
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -693,7 +710,7 @@ Return ONLY markdown content.`;
       },
       { timeoutMs: 45000 }
     );
-    return response?.content?.text || `# [Project Name]\n\n## Overview\n\n## Features\n\n## Installation\n\n## License\n`;
+    return response?.content?.text || response?.text || `# [Project Name]\n\n## Overview\n\n## Features\n\n## Installation\n\n## License\n`;
   } catch (err) {
     throw handleLLMError(err);
   }

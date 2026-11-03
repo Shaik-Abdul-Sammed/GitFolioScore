@@ -49,7 +49,7 @@ function InsightCard({ type, items, username, topRepos = [], onSelectRedFlag }) 
 
   return (
     <div
-      className="rounded-2xl border p-5 transition-all hover:shadow-lg"
+      className="rounded-2xl border p-5 transition-all hover:shadow-lg manga-halftone-card"
       style={{ background: config.bgColor, borderColor: config.borderColor }}
     >
       <div className="flex items-center gap-3 mb-4">
@@ -101,8 +101,24 @@ function InsightCard({ type, items, username, topRepos = [], onSelectRedFlag }) 
                 style={{ animationDelay: `${i * 0.05}s`, color: 'var(--text-secondary)' }}
               >
                 <div className="flex items-start gap-2 flex-1 min-w-0">
-                  <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: config.textColor }} />
+                  {type === 'strengths' ? (
+                    <span className="animate-draw-check text-emerald-400 flex-shrink-0">
+                      <CheckCircle className="w-4 h-4 mt-0.5" />
+                    </span>
+                  ) : (
+                    <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: config.textColor }} />
+                  )}
                   <span className="break-words font-medium">{questLabel}</span>
+                  {type === 'redFlags' && (
+                    <span className="flex items-center gap-1 flex-shrink-0 ml-1">
+                      <span className="animate-damage-number text-[10px] font-bold text-rose-400 font-mono select-none">
+                        -5 HP
+                      </span>
+                      <span className="anime-anger-vein text-xs select-none" role="img" aria-label="Critical issue" title="Critical Issue">
+                        💢
+                      </span>
+                    </span>
+                  )}
                 </div>
               {/* Feature 10 & 16: Quick Fix Modal and Repo Settings Deep Links */}
               {type === 'redFlags' && (

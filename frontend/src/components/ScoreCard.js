@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   MapPin, Users, GitBranch, Calendar, Award,
   Mail, Link as LinkIcon, Building, ExternalLink, Download, Sparkles, CheckCircle2,
@@ -20,6 +20,64 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
   const [showBioModal, setShowBioModal] = useState(false);
   const [bioError, setBioError] = useState('');
   const [addedToNetwork, setAddedToNetwork] = useState(false);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [displayScore, setDisplayScore] = useState(() => (process.env.NODE_ENV === 'test' ? (score || 0) : 0));
+  const [showImpactFlash, setShowImpactFlash] = useState(false);
+
+  // 4. Anime Impact Frame on High Score (>= 85)
+  useEffect(() => {
+    if (score >= 85 && process.env.NODE_ENV !== 'test') {
+      setShowImpactFlash(true);
+      const timer = setTimeout(() => setShowImpactFlash(false), 90);
+      return () => clearTimeout(timer);
+    }
+  }, [score]);
+
+  // 6. Odometer Count-Up Animation
+  useEffect(() => {
+    const end = Math.min(100, Math.max(0, score || 0));
+    if (process.env.NODE_ENV === 'test') {
+      setDisplayScore(end);
+      return;
+    }
+    let start = 0;
+    if (end === 0) {
+      setDisplayScore(0);
+      return;
+    }
+    const duration = 1200;
+    const startTime = performance.now();
+    let frameId;
+
+    const updateCount = (currentTime) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutExpo
+      const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const currentVal = Math.round(start + (end - start) * ease);
+      setDisplayScore(currentVal);
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(updateCount);
+      }
+    };
+
+    frameId = requestAnimationFrame(updateCount);
+    return () => cancelAnimationFrame(frameId);
+  }, [score]);
+
+  // 3. 3D Card Tilt Mouse Handlers
+  const handleMouseMove = (e) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: -y * 6, y: x * 6 });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+  };
 
   const scoreColor = useMemo(() => {
     if (score >= 80) return '#10b981';
@@ -179,77 +237,98 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference - (score / 100) * circumference;
+  const neonPulseClass = score >= 80 ? 'neon-pulse-green' : score < 50 ? 'neon-pulse-red' : 'neon-pulse-amber';
+  const kiAuraClass = score >= 80 ? 'ki-aura-green' : score < 50 ? 'ki-aura-red' : 'ki-aura-amber';
 
   return (
-    <div ref={cardRef} className="premium-card overflow-hidden animate-fade-in-up">
-      {/* Feature 7: Profile Completion Progress Bar */}
-      <div className="px-8 pt-5 pb-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-glass)' }}>
-        <div className="flex items-center justify-between text-xs mb-2">
-          <div className="flex items-center gap-1.5 font-semibold" style={{ color: 'var(--text-primary)' }}>
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Profile Completion Index</span>
+    <>
+      {showImpactFlash && (
+        <div className="fixed inset-0 z-50 bg-white pointer-events-none anime-impact-flash" aria-hidden="true" />
+      )}
+      <div
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          transform: tilt.x === 0 && tilt.y === 0 ? 'none' : `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+          transition: tilt.x === 0 && tilt.y === 0 ? 'transform 0.4s ease-out' : 'transform 0.08s ease-out',
+        }}
+        className={`premium-card manga-halftone-card overflow-hidden animate-fade-in-up transition-shadow duration-300 hover:shadow-[0_20px_40px_rgba(99,102,241,0.15)] ${
+          score >= 85 ? 'animate-anime-impact' : ''
+        }`}
+      >
+        {/* Feature 7: Profile Completion Progress Bar */}
+        <div className="px-8 pt-5 pb-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-glass)' }}>
+          <div className="flex items-center justify-between text-xs mb-2">
+            <div className="flex items-center gap-1.5 font-semibold" style={{ color: 'var(--text-primary)' }}>
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Profile Completion Index</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-indigo-400">{profileCompletion}%</span>
+              <span style={{ color: 'var(--text-muted)' }}>towards Perfect 100</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-indigo-400">{profileCompletion}%</span>
-            <span style={{ color: 'var(--text-muted)' }}>towards Perfect 100</span>
+          <div className="rpg-health-bar w-full">
+            <div
+              className="rpg-health-bar-fill transition-all duration-1000 ease-out"
+              style={{
+                width: `${profileCompletion}%`,
+                background: 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #10b981 100%)',
+              }}
+            />
           </div>
         </div>
-        <div className="rpg-health-bar w-full">
-          <div
-            className="rpg-health-bar-fill transition-all duration-1000 ease-out"
-            style={{
-              width: `${profileCompletion}%`,
-              background: 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #10b981 100%)',
-            }}
-          />
-        </div>
-      </div>
 
-      <div className="p-8">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-          {/* Avatar */}
-          <div className="relative flex-shrink-0">
-            <div className="relative">
-              <img
-                src={profile.avatar_url || DEFAULT_AVATAR}
-                alt={`${profile.name || profile.login || 'User'}'s avatar`}
-                crossOrigin="anonymous"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = DEFAULT_AVATAR;
-                }}
-                className="w-28 h-28 rounded-2xl border-4 shadow-lg object-cover"
-                style={{ borderColor: scoreColor }}
-              />
-              {profile.hireable && (
-                <span className="absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg" style={{ background: '#10b981' }}>
-                  Hireable
+        <div className="p-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+            {/* Avatar with Neon Pulse & Glowing Ki Aura */}
+            <div className="relative flex-shrink-0">
+              <div className={`relative rounded-2xl ${neonPulseClass} ${kiAuraClass}`}>
+                <img
+                  src={profile.avatar_url || DEFAULT_AVATAR}
+                  alt={`${profile.name || profile.login || 'User'}'s avatar`}
+                  crossOrigin="anonymous"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = DEFAULT_AVATAR;
+                  }}
+                  className="w-28 h-28 rounded-2xl border-4 shadow-lg object-cover"
+                  style={{ borderColor: scoreColor }}
+                />
+                {profile.hireable && (
+                  <span className="absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg" style={{ background: '#10b981' }}>
+                    Hireable
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Score Ring with Draw Animation & Low Score Shake */}
+            <div className={`flex-shrink-0 relative ${score < 50 ? 'animate-rpg-shake' : ''}`}>
+              <svg width="140" height="140" className="-rotate-90">
+                <circle cx="70" cy="70" r={radius} fill="none" stroke="var(--border)" strokeWidth="10" />
+                <circle
+                  cx="70" cy="70" r={radius} fill="none"
+                  stroke={scoreColor}
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={dashOffset}
+                  style={{
+                    animation: 'scoreReveal 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    filter: `drop-shadow(0 0 10px ${scoreColor}70)`,
+                    transition: 'stroke-dashoffset 1.4s ease',
+                  }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-4xl font-extrabold font-gaming tracking-wide shonen-score-slam" style={{ color: scoreColor }}>
+                  {displayScore}
                 </span>
-              )}
+                <span className="text-xs font-medium font-gaming text-gray-400">/100</span>
+              </div>
             </div>
-          </div>
-
-          {/* Score Ring */}
-          <div className="flex-shrink-0 relative">
-            <svg width="140" height="140" className="-rotate-90">
-              <circle cx="70" cy="70" r={radius} fill="none" stroke="var(--border)" strokeWidth="10" />
-              <circle
-                cx="70" cy="70" r={radius} fill="none"
-                stroke={scoreColor}
-                strokeWidth="10"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={dashOffset}
-                style={{ animation: 'scoreReveal 1.5s ease forwards', filter: `drop-shadow(0 0 8px ${scoreColor}40)` }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-extrabold font-gaming tracking-wide" style={{ color: scoreColor }}>
-                {score}
-              </span>
-              <span className="text-xs font-medium font-gaming text-gray-400">/100</span>
-            </div>
-          </div>
 
           {/* User Info */}
           <div className="flex-1 min-w-0">
@@ -308,7 +387,7 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
               </span>
 
               {/* Phase 1, Feature 2: Top X% Percentile Badge */}
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 text-amber-300 shadow-sm">
+              <span className="animate-badge-pop flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 text-amber-300 shadow-sm">
                 <Trophy className="w-3.5 h-3.5 text-amber-400" />
                 {percentile} of Developers
               </span>
@@ -482,6 +561,7 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
         </div>
       )}
     </div>
+    </>
   );
 };
 

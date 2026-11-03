@@ -49,9 +49,9 @@ Resolves GitFolioScore audit recommendation: **${redFlag}**
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md modal-backdrop-fade">
       <div
-        className="w-full max-w-lg rounded-2xl border shadow-2xl overflow-y-auto max-h-[85vh] pb-20 flex flex-col"
+        className="w-full max-w-lg rounded-2xl border shadow-2xl overflow-y-auto max-h-[85vh] pb-20 flex flex-col manga-panel-modal"
         style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
       >
         {/* Header */}
@@ -127,7 +127,7 @@ Resolves GitFolioScore audit recommendation: **${redFlag}**
           )}
           <button
             onClick={handleCopy}
-            className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition active:scale-95"
+            className={`ml-auto flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition active:scale-95 ${copied ? 'animate-copy-pop' : ''}`}
             style={{ background: 'var(--gradient-primary)' }}
           >
             {copied ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}

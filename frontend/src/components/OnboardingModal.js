@@ -26,9 +26,9 @@ function OnboardingModal({ isOpen, onClose, onQuickTry }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md modal-backdrop-fade">
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl bg-slate-900 border border-indigo-500/30 p-6 shadow-2xl max-h-[85vh] overflow-y-auto pb-20 space-y-6 animate-fade-in-up">
+      <div className="relative z-10 w-full max-w-lg rounded-2xl bg-slate-900 border border-indigo-500/30 p-6 shadow-2xl max-h-[85vh] overflow-y-auto pb-20 space-y-6 manga-panel-modal">
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-3">

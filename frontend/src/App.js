@@ -44,7 +44,7 @@ import LanguageTrendsPredictor from './components/LanguageTrendsPredictor';
 import TimeMachineView from './components/TimeMachineView';
 import OpenToWorkBanner from './components/OpenToWorkBanner';
 import Trophies from './components/Trophies';
-import { playLevelUpSound } from './lib/audio';
+import { playLevelUpSound, playTypewriterClick } from './lib/audio';
 import OnboardingModal from './components/OnboardingModal';
 import QuotaModal from './components/QuotaModal';
 import { loadXP, addXPPoints } from './lib/xpStorage';
@@ -93,12 +93,138 @@ const REVIEWER_PERSONAS = [
   'Tough FAANG Hiring Manager',
 ];
 
+function TypewriterText({ text }) {
+  const [displayedText, setDisplayedText] = useState(process.env.NODE_ENV === 'test' ? text : '');
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'test') {
+      setDisplayedText(text);
+      return;
+    }
+    setDisplayedText('');
+    let idx = 0;
+    const timer = setInterval(() => {
+      idx += 3;
+      if (idx % 6 === 0) {
+        playTypewriterClick();
+      }
+      if (idx >= text.length) {
+        setDisplayedText(text);
+        clearInterval(timer);
+      } else {
+        setDisplayedText(text.slice(0, idx));
+      }
+    }, 14);
+    return () => clearInterval(timer);
+  }, [text]);
+
+  return (
+    <span>
+      {displayedText}
+      <span
+        className="inline-block w-2 h-3.5 ml-1 bg-indigo-400 align-middle animate-blink-cursor select-none"
+        aria-hidden="true"
+      />
+    </span>
+  );
+}
+
+function SakuraBackground() {
+  const petals = [
+    { id: 0, left: '4%', driftX: '55px', duration: '11s', delay: '0s', scale: '0.85' },
+    { id: 1, left: '10%', driftX: '-60px', duration: '13s', delay: '2s', scale: '0.75' },
+    { id: 2, left: '16%', driftX: '70px', duration: '10s', delay: '4.5s', scale: '0.9' },
+    { id: 3, left: '22%', driftX: '-50px', duration: '12s', delay: '1s', scale: '0.8' },
+    { id: 4, left: '28%', driftX: '65px', duration: '14s', delay: '3.2s', scale: '0.7' },
+    { id: 5, left: '34%', driftX: '-75px', duration: '11s', delay: '5.5s', scale: '0.95' },
+    { id: 6, left: '40%', driftX: '50px', duration: '12.5s', delay: '0.5s', scale: '0.85' },
+    { id: 7, left: '46%', driftX: '-65px', duration: '10.5s', delay: '6s', scale: '0.75' },
+    { id: 8, left: '52%', driftX: '80px', duration: '13.5s', delay: '2.5s', scale: '0.9' },
+    { id: 9, left: '58%', driftX: '-55px', duration: '11.5s', delay: '4s', scale: '0.8' },
+    { id: 10, left: '64%', driftX: '60px', duration: '12s', delay: '1.5s', scale: '0.7' },
+    { id: 11, left: '70%', driftX: '-70px', duration: '14s', delay: '5s', scale: '0.95' },
+    { id: 12, left: '76%', driftX: '55px', duration: '10.5s', delay: '3s', scale: '0.85' },
+    { id: 13, left: '82%', driftX: '-60px', duration: '12.5s', delay: '0.8s', scale: '0.75' },
+    { id: 14, left: '88%', driftX: '75px', duration: '11s', delay: '6.2s', scale: '0.9' },
+    { id: 15, left: '94%', driftX: '-50px', duration: '13s', delay: '2.2s', scale: '0.8' },
+  ];
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
+      {petals.map((p) => (
+        <div
+          key={p.id}
+          className="sakura-petal"
+          style={{
+            left: p.left,
+            '--drift-x': p.driftX,
+            '--fall-duration': p.duration,
+            '--fall-delay': p.delay,
+            transform: `scale(${p.scale})`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function LevelUpBurst({ level }) {
+  const particles = Array.from({ length: 18 }).map((_, i) => {
+    const angle = (i / 18) * 2 * Math.PI;
+    const dist = 90 + (i % 3) * 45;
+    const tx = `${Math.cos(angle) * dist}px`;
+    const ty = `${Math.sin(angle) * dist}px`;
+    const colors = ['#f59e0b', '#a855f7', '#6366f1', '#10b981', '#ec4899', '#38bdf8'];
+    return {
+      tx,
+      ty,
+      color: colors[i % colors.length],
+      size: 7 + (i % 4) * 2,
+      delay: (i * 0.02).toFixed(2),
+    };
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
+      {/* 12. Anime Level-Up 3-Frame Inverted Flash */}
+      <div className="fixed inset-0 anime-power-flash pointer-events-none z-10" aria-hidden="true" />
+      <div className="relative z-20">
+        {particles.map((p, idx) => (
+          <div
+            key={idx}
+            className="absolute rounded-full animate-particle-burst"
+            style={{
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              backgroundColor: p.color,
+              boxShadow: `0 0 12px ${p.color}`,
+              '--tx': p.tx,
+              '--ty': p.ty,
+              animationDelay: `${p.delay}s`,
+            }}
+          />
+        ))}
+        <div className="animate-level-up-pop px-8 py-5 rounded-2xl bg-slate-900/95 border-2 border-amber-400/80 shadow-[0_0_50px_rgba(245,158,11,0.6)] text-center">
+          <div className="text-3xl mb-1">⚔️ 🌟 ⚔️</div>
+          <h2 className="text-xl font-black font-gaming text-amber-300 tracking-wider">
+            LEVEL UP! LEVEL {level}
+          </h2>
+          <p className="text-xs font-pixel text-yellow-100 mt-1">
+            +STATS BOOST UNLOCKED
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [username, setUsername] = useState('');
   const [friendUsername, setFriendUsername] = useState('');
   const [compareData, setCompareData] = useState(null);
   const [isComparing, setIsComparing] = useState(false);
   const [showCompareInput, setShowCompareInput] = useState(false);
+  const [levelUpBurst, setLevelUpBurst] = useState(null);
 
   const [targetRole, setTargetRole] = useState('Fullstack Engineer');
   const [persona, setPersona] = useState('Friendly Mentor');
@@ -178,6 +304,9 @@ function App() {
       const res = await addXPPoints(amount);
       setXp(res.newXP);
       if (res.leveledUp) {
+        setLevelUpBurst(res.newLevel);
+        playLevelUpSound();
+        setTimeout(() => setLevelUpBurst(null), 3200);
         showToast(`🎉 Level Up! You reached Level ${res.newLevel}! (+${amount} XP: ${reason})`, 'success');
       } else {
         showToast(`+${amount} XP: ${reason}`, 'info');
@@ -623,9 +752,15 @@ function App() {
 
   return (
     <div
-      className="min-h-screen transition-colors duration-300"
+      className="min-h-screen transition-colors duration-300 relative overflow-hidden"
       style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
     >
+      {/* 1. Anime Sakura Petal Falling Drift Background */}
+      <SakuraBackground />
+
+      {/* 17. Level Up Burst Explosion */}
+      {levelUpBurst && <LevelUpBurst level={levelUpBurst} />}
+
       {/* Global Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
 
@@ -707,7 +842,7 @@ function App() {
                     setUsername(target);
                     handleAnalyze(target);
                   }}
-                  className="inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl font-extrabold text-xs md:text-sm text-white shadow-2xl transition-all transform hover:scale-105 active:scale-95 animate-pulse border border-indigo-400/40"
+                  className="btn-neon-glow inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl font-extrabold text-xs md:text-sm text-white shadow-2xl transition-all transform hover:scale-105 active:scale-95 animate-pulse border border-indigo-400/40"
                   style={{
                     background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
                     boxShadow: '0 0 25px rgba(168, 85, 247, 0.4)',
@@ -750,102 +885,104 @@ function App() {
 
             {/* Inputs Container */}
             <div className="max-w-4xl mx-auto space-y-4">
-              {!showCompareInput ? (
-                <div className="relative flex flex-col sm:flex-row gap-3 z-30">
-                  <UserSearchInput
-                    inputRef={mainInputRef}
-                    value={username}
-                    onChange={setUsername}
-                    onSelect={(uname) => {
-                      setUsername(uname);
-                      handleAnalyze(uname, targetRole, roastMode, persona);
-                    }}
-                    onSubmit={() => handleAnalyze()}
-                    onClear={handleClearSearch}
-                    recentProfiles={recentProfiles}
-                    disabled={isAnalyzing}
-                    onToast={showToast}
-                  />
-                  {/* Feature 2: Role Benchmarking Dropdown */}
-                  <select
-                    aria-label="Target Role Benchmark"
-                    className="sm:w-56 px-4 py-3 rounded-xl text-white bg-slate-900/80 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm cursor-pointer shadow-lg"
-                    value={targetRole}
-                    onChange={(e) => setTargetRole(e.target.value)}
-                    disabled={isAnalyzing}
-                  >
-                    {TARGET_ROLES.map((r) => (
-                      <option key={r} value={r} className="bg-slate-900 text-white">
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="relative flex flex-col md:flex-row items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xl animate-fade-in shadow-2xl z-30">
-                  <div className="relative flex-1 w-full">
+              <div key={showCompareInput ? 'compare-mode' : 'single-mode'} className="anime-slash-transition">
+                {!showCompareInput ? (
+                  <div className="relative flex flex-col sm:flex-row gap-3 z-30">
                     <UserSearchInput
                       inputRef={mainInputRef}
                       value={username}
                       onChange={setUsername}
-                      placeholder="Your GitHub username..."
-                      onSelect={(uname) => setUsername(uname)}
-                      onSubmit={handleCompare}
+                      onSelect={(uname) => {
+                        setUsername(uname);
+                        handleAnalyze(uname, targetRole, roastMode, persona);
+                      }}
+                      onSubmit={() => handleAnalyze()}
                       onClear={handleClearSearch}
                       recentProfiles={recentProfiles}
-                      disabled={isComparing}
+                      disabled={isAnalyzing}
                       onToast={showToast}
                     />
+                    {/* Feature 2: Role Benchmarking Dropdown */}
+                    <select
+                      aria-label="Target Role Benchmark"
+                      className="sm:w-56 px-4 py-3 rounded-xl text-white bg-slate-900/80 border border-white/20 backdrop-blur-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm cursor-pointer shadow-lg"
+                      value={targetRole}
+                      onChange={(e) => setTargetRole(e.target.value)}
+                      disabled={isAnalyzing}
+                    >
+                      {TARGET_ROLES.map((r) => (
+                        <option key={r} value={r} className="bg-slate-900 text-white">
+                          {r}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-
-                  <div className="flex items-center justify-center -my-1 md:my-0 flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-500 text-white font-black flex items-center justify-center shadow-lg shadow-purple-500/25 text-xs tracking-wider gap-0.5 border border-white/20 select-none">
-                      <Zap className="w-4 h-4 fill-white text-white" />
-                      <span>VS</span>
+                ) : (
+                  <div className="relative flex flex-col md:flex-row items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xl animate-fade-in shadow-2xl z-30">
+                    <div className="relative flex-1 w-full">
+                      <UserSearchInput
+                        inputRef={mainInputRef}
+                        value={username}
+                        onChange={setUsername}
+                        placeholder="Your GitHub username..."
+                        onSelect={(uname) => setUsername(uname)}
+                        onSubmit={handleCompare}
+                        onClear={handleClearSearch}
+                        recentProfiles={recentProfiles}
+                        disabled={isComparing}
+                        onToast={showToast}
+                      />
                     </div>
-                  </div>
 
-                  <div className="relative flex-1 w-full">
-                    <FriendCompareInput
-                      value={friendUsername}
-                      onChange={setFriendUsername}
-                      onSelect={(uname) => setFriendUsername(uname)}
-                      onSubmit={handleCompare}
-                      onClear={() => setFriendUsername('')}
-                      disabled={isComparing}
-                    />
-                  </div>
+                    <div className="flex items-center justify-center -my-1 md:my-0 flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-500 text-white font-black flex items-center justify-center shadow-lg shadow-purple-500/25 text-xs tracking-wider gap-0.5 border border-white/20 select-none">
+                        <Zap className="w-4 h-4 fill-white text-white" />
+                        <span>VS</span>
+                      </div>
+                    </div>
 
-                  <button
-                    type="button"
-                    onClick={handleCompare}
-                    disabled={isComparing || !username.trim() || !friendUsername.trim()}
-                    className="w-full md:w-auto px-6 py-3 rounded-xl font-bold text-xs text-white shadow-lg transition-all disabled:opacity-40 active:scale-95 flex items-center justify-center gap-1.5 flex-shrink-0"
-                    style={{ background: 'var(--gradient-primary)' }}
-                  >
-                    {isComparing ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Users2 className="w-4 h-4" />
-                    )}
-                    <span>{isComparing ? 'Battling...' : 'Run VS Battle'}</span>
-                  </button>
-                </div>
-              )}
+                    <div className="relative flex-1 w-full">
+                      <FriendCompareInput
+                        value={friendUsername}
+                        onChange={setFriendUsername}
+                        onSelect={(uname) => setFriendUsername(uname)}
+                        onSubmit={handleCompare}
+                        onClear={() => setFriendUsername('')}
+                        disabled={isComparing}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleCompare}
+                      disabled={isComparing || !username.trim() || !friendUsername.trim()}
+                      className="btn-neon-glow w-full md:w-auto px-6 py-3 rounded-xl font-bold text-xs text-white shadow-lg transition-all disabled:opacity-40 active:scale-95 flex items-center justify-center gap-1.5 flex-shrink-0"
+                      style={{ background: 'var(--gradient-primary)' }}
+                    >
+                      {isComparing ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Users2 className="w-4 h-4" />
+                      )}
+                      <span>{isComparing ? 'Battling...' : 'Run VS Battle'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {/* Feature 1: Roast My Profile Toggle */}
+                  {/* Feature 1: Roast My Profile Toggle with Anime Eye Gleam */}
                   <button
                     type="button"
                     onClick={handleToggleRoastMode}
-                    className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                    className={`btn-neon-glow relative flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
                       roastMode
                         ? 'bg-gradient-to-r from-orange-500/30 to-red-500/30 border-orange-500/60 text-orange-200 ring-2 ring-orange-400/40'
                         : 'bg-white/10 hover:bg-white/15 border-white/20 text-indigo-200 ring-1 ring-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
                     }`}
                   >
-                    {!roastMode && <span className="absolute -top-1 -right-1 text-[8px] font-black text-purple-300 bg-purple-500/30 px-1 rounded-full border border-purple-500/40">✦</span>}
+                    <span className="anime-eye-gleam absolute -top-1 -right-1 text-yellow-300 font-black pointer-events-none select-none text-[11px]">✦</span>
                     <Flame className={`w-4 h-4 ${roastMode ? 'text-orange-400 fill-orange-400' : 'text-gray-400'}`} />
                     <span>{roastMode ? '🔥 Roast ON' : 'Roast Me'}</span>
                   </button>
@@ -878,7 +1015,7 @@ function App() {
 
                 {!showCompareInput && (
                   <button
-                    className="w-full sm:w-auto px-8 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 text-sm"
+                    className="btn-neon-glow w-full sm:w-auto px-8 py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 text-sm"
                     style={{ background: 'var(--gradient-primary)' }}
                     onClick={() => handleAnalyze()}
                     disabled={isAnalyzing || !username.trim()}
@@ -1001,6 +1138,8 @@ function App() {
             {/* AI Advisor Panel */}
             <div
               className={`rounded-2xl p-6 border shadow-lg transition-all ${
+                state === 'advising' ? 'animate-ai-glow' : ''
+              } ${
                 roastMode ? 'border-orange-500/50 bg-gradient-to-b from-orange-500/5 to-transparent' : ''
               }`}
               style={{
@@ -1052,11 +1191,25 @@ function App() {
               </div>
 
               {state === 'advising' && (
-                <div className="py-8 text-center space-y-3">
-                  <RefreshCw className="animate-spin h-6 w-6 text-indigo-400 mx-auto" />
-                  <p className="text-sm font-medium text-indigo-200">
-                    Generating personalized AI coaching recommendations...
-                  </p>
+                <div className="py-10 text-center space-y-4 relative overflow-hidden rounded-2xl">
+                  {/* 2. Anime Radial Speed Lines */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-85" aria-hidden="true">
+                    <div className="w-80 h-80 anime-speed-lines" />
+                  </div>
+                  <div className="relative z-10 space-y-3">
+                    <div className="inline-flex items-center justify-center p-3.5 rounded-2xl bg-indigo-950/80 border-2 border-indigo-400/60 shadow-2xl shadow-indigo-500/40 backdrop-blur-md">
+                      <span className="inline-block animate-spin text-3xl select-none" role="img" aria-label="Processing">
+                        ⚔️
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-indigo-100 font-gaming tracking-wide">
+                      Generating personalized AI coaching recommendations...
+                    </p>
+                    <div className="flex items-center justify-center gap-2 font-pixel text-xs text-indigo-300">
+                      <span className="text-amber-400">⚡ FOCUS MODE</span>
+                      <span>· Synthesizing Multi-Agent Consensus</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1082,14 +1235,14 @@ function App() {
 
               {state === 'advised' && advice && (
                 <div className="space-y-6">
-                  {/* Summary */}
-                  <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                  {/* 7. Manga Speech Bubble Summary */}
+                  <div className="p-4 rounded-xl manga-speech-bubble bg-indigo-950/60 shadow-xl mt-1">
                     <div className="flex items-center gap-2 mb-1.5 text-xs font-bold text-indigo-300 font-gaming uppercase tracking-wider">
                       <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                       <span>3-Expert Consensus (FAANG HM, Staff Eng, Recruiter)</span>
                     </div>
                     <p className="text-sm leading-relaxed font-medium text-indigo-100">
-                      {advice.summary}
+                      {process.env.NODE_ENV === 'test' ? advice.summary : <TypewriterText text={advice.summary} />}
                     </p>
                   </div>
 
@@ -1186,7 +1339,9 @@ function App() {
                       </p>
                       <button
                         onClick={handleCopyShareText}
-                        className="px-3 py-1.5 rounded-lg border border-white/20 bg-white/10 hover:bg-white/20 text-xs font-medium flex items-center gap-1.5 transition"
+                        className={`px-3 py-1.5 rounded-lg border border-white/20 bg-white/10 hover:bg-white/20 text-xs font-medium flex items-center gap-1.5 transition ${
+                          copiedShareText ? 'animate-copy-pop text-emerald-400 border-emerald-400/40' : ''
+                        }`}
                       >
                         {copiedShareText ? (
                           <>
@@ -1358,6 +1513,19 @@ function App() {
         isOpen={showQuotaModal}
         onClose={() => setShowQuotaModal(false)}
       />
+
+      {/* 13. JoJo "To Be Continued" Meme Arrow */}
+      {state === 'advised' && data && (
+        <div
+          className="fixed bottom-6 right-6 z-40 jojo-arrow-container pointer-events-none select-none"
+          aria-hidden="true"
+        >
+          <div className="jojo-arrow-bounce flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-black tracking-widest text-xs border-2 border-slate-900 shadow-2xl font-gaming">
+            <span className="text-base leading-none">◀</span>
+            <span>TO BE CONTINUED</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

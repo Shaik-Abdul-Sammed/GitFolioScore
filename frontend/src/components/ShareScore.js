@@ -13,6 +13,7 @@ function getPercentile(score) {
 
 function ShareScore({ score, username, onToast }) {
   const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const percentile = getPercentile(score);
   const link = 'https://anna.partners/apps/gitfolioscore';
   const text = `I just scored ${score}/100 on GitFolioScore! I'm in the top ${percentile}% of developers. Analyze your GitHub at ${link}`;
@@ -43,6 +44,7 @@ function ShareScore({ score, username, onToast }) {
 
   const copyToClipboard = async () => {
     setSharing(true);
+    setCopied(true);
     try {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
@@ -54,6 +56,7 @@ function ShareScore({ score, username, onToast }) {
       // Best effort clipboard
     } finally {
       setTimeout(() => setSharing(false), 800);
+      setTimeout(() => setCopied(false), 1500);
     }
   };
 
@@ -80,10 +83,12 @@ function ShareScore({ score, username, onToast }) {
       <button
         onClick={copyToClipboard}
         disabled={sharing}
-        className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl disabled:opacity-50"
+        className={`btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl disabled:opacity-50 transition-all ${
+          copied ? 'animate-copy-pop text-emerald-400 border-emerald-400/40' : ''
+        }`}
       >
         {sharing ? <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" /> : <Share2 className="w-4 h-4" />}
-        <span>Copy</span>
+        <span>{copied ? 'Copied!' : 'Copy'}</span>
       </button>
     </div>
   );

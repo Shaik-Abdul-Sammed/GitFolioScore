@@ -417,3 +417,518 @@ body {
   background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), rgba(15, 23, 42, 0) 70%), var(--bg-primary);
 }
 
+/* ==========================================================================
+   20 RPG & CYBERPUNK GAMING ANIMATIONS
+   ========================================================================== */
+
+/* 1. Parallax Floating Neon Background Shapes */
+@keyframes float-drift-1 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(35px, -45px) rotate(180deg); }
+}
+
+@keyframes float-drift-2 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-40px, 30px) rotate(-180deg); }
+}
+
+@keyframes float-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(25px, 35px) scale(1.15); }
+}
+
+.animate-float-1 { animation: float-drift-1 18s ease-in-out infinite; }
+.animate-float-2 { animation: float-drift-2 24s ease-in-out infinite; }
+.animate-float-3 { animation: float-drift-3 15s ease-in-out infinite; }
+
+/* 2. Button Neon Hover Glow */
+.btn-neon-glow {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.btn-neon-glow:hover {
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.7), 0 0 45px rgba(168, 85, 247, 0.4);
+  transform: translateY(-1px) scale(1.02);
+}
+
+.btn-neon-glow:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* 4. Tab Slide-Fade Transition */
+@keyframes tabSlideFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-tab-slide {
+  animation: tabSlideFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 5. Staggered Chips Fade In */
+@keyframes staggerSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-stagger-chip {
+  animation: staggerSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+/* 7. Shimmering Health Bar Overlay */
+@keyframes health-bar-shimmer {
+  0% { transform: translateX(-150%); }
+  100% { transform: translateX(250%); }
+}
+
+.rpg-health-bar-fill::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: health-bar-shimmer 2.2s infinite linear;
+}
+
+/* 9. Low Score Shake */
+@keyframes rpg-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px) rotate(-1.5deg); }
+  40%, 80% { transform: translateX(6px) rotate(1.5deg); }
+}
+
+.animate-rpg-shake {
+  animation: rpg-shake 0.6s ease-in-out;
+}
+
+/* 10. Neon Avatar Pulse */
+@keyframes neon-pulse-green {
+  0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.85), 0 0 50px rgba(16, 185, 129, 0.3); }
+}
+
+@keyframes neon-pulse-amber {
+  0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.85), 0 0 45px rgba(245, 158, 11, 0.3); }
+}
+
+@keyframes neon-pulse-red {
+  0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 35px rgba(239, 68, 68, 0.9), 0 0 55px rgba(239, 68, 68, 0.4); }
+}
+
+.neon-pulse-green { animation: neon-pulse-green 2.4s infinite ease-in-out; }
+.neon-pulse-amber { animation: neon-pulse-amber 2.4s infinite ease-in-out; }
+.neon-pulse-red { animation: neon-pulse-red 1.6s infinite ease-in-out; }
+
+/* 11. Damage Numbers Floating */
+@keyframes damage-float {
+  0% { opacity: 0; transform: translateY(0) scale(0.8); }
+  25% { opacity: 1; transform: translateY(-8px) scale(1.15); }
+  100% { opacity: 0; transform: translateY(-22px) scale(0.9); }
+}
+
+.animate-damage-number {
+  animation: damage-float 1.8s ease-out infinite;
+}
+
+/* 12. Badge Unlock Pop */
+@keyframes badge-pop {
+  0% { transform: scale(0.35); opacity: 0; }
+  70% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.animate-badge-pop {
+  animation: badge-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+/* 14. Blinking Terminal Cursor */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-blink-cursor {
+  animation: blink-cursor 0.8s infinite;
+}
+
+/* 16. AI Sparkle Glow Border */
+@keyframes ai-border-glow {
+  0%, 100% { border-color: rgba(99, 102, 241, 0.35); box-shadow: 0 0 15px rgba(99, 102, 241, 0.15); }
+  50% { border-color: rgba(168, 85, 247, 0.75); box-shadow: 0 0 35px rgba(168, 85, 247, 0.4); }
+}
+
+.animate-ai-glow {
+  animation: ai-border-glow 2.2s infinite ease-in-out;
+}
+
+/* 18. Backdrop Blur Fade */
+@keyframes backdropFade {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(12px); }
+}
+
+.modal-backdrop-fade {
+  animation: backdropFade 0.3s ease-out forwards;
+}
+
+/* 19. Draw Checkmark */
+@keyframes draw-check {
+  from { stroke-dashoffset: 40; }
+  to { stroke-dashoffset: 0; }
+}
+
+.animate-draw-check {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: draw-check 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+/* 20. Copy Success Pop */
+@keyframes copy-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); color: #10b981; }
+  100% { transform: scale(1); }
+}
+
+.animate-copy-pop {
+  animation: copy-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 17. Level Up Explosion */
+@keyframes particle-burst {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+.animate-particle-burst {
+  animation: particle-burst 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes level-up-modal {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-level-up-pop {
+  animation: level-up-modal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ==========================================================================
+   ANIME & MANGA (SHONEN) UI ANIMATIONS
+   ========================================================================== */
+
+/* 1. Sakura Petal Background */
+@keyframes sakura-fall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0deg) scale(0.65);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(var(--drift-x, 80px), 110vh, 0) rotate(360deg) scale(1);
+    opacity: 0;
+  }
+}
+
+.sakura-petal {
+  position: absolute;
+  width: 14px;
+  height: 18px;
+  background: linear-gradient(135deg, #fbcfe8 0%, #f472b6 50%, #db2777 100%);
+  border-radius: 14px 1px 14px 1px;
+  box-shadow: 0 0 10px rgba(244, 114, 182, 0.45);
+  pointer-events: none;
+  animation: sakura-fall var(--fall-duration, 11s) linear infinite;
+  animation-delay: var(--fall-delay, 0s);
+}
+
+/* 2. Anime Radial Speed Lines */
+@keyframes speed-lines-spin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.06); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.anime-speed-lines {
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(99, 102, 241, 0.22) 0deg 3.5deg,
+    transparent 3.5deg 8deg,
+    rgba(236, 72, 153, 0.2) 8deg 11.5deg,
+    transparent 11.5deg 16deg
+  );
+  border-radius: 50%;
+  animation: speed-lines-spin 2.2s linear infinite;
+}
+
+/* 3. Manga Panel Modals */
+@keyframes manga-panel-enter {
+  0% {
+    transform: scale(0.88) translateY(30px) rotate(-1.5deg);
+    opacity: 0;
+  }
+  75% {
+    transform: scale(1.01) translateY(-3px) rotate(0.5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.manga-panel-modal {
+  animation: manga-panel-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow:
+    0 0 0 2px #0f172a,
+    0 0 0 4px rgba(255, 255, 255, 0.25),
+    6px 6px 0px rgba(0, 0, 0, 0.8),
+    0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+/* 4. Impact Frame on High Score */
+@keyframes impact-flash {
+  0% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+.anime-impact-flash {
+  animation: impact-flash 0.12s ease-out forwards;
+}
+
+@keyframes anime-impact-shake {
+  0% { transform: scale(1.12) translate(0, 0); }
+  15% { transform: scale(1.06) translate(-14px, -8px); }
+  30% { transform: scale(1.03) translate(12px, 7px); }
+  45% { transform: scale(1.02) translate(-7px, 4px); }
+  60% { transform: scale(1.01) translate(4px, -2px); }
+  100% { transform: scale(1) translate(0, 0); }
+}
+
+.animate-anime-impact {
+  animation: anime-impact-shake 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 5. Glowing Ki Aura (DBZ Style) */
+@keyframes ki-aura-shimmer-green {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.9)) drop-shadow(0 -10px 20px rgba(52, 211, 153, 0.7));
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(52, 211, 153, 1)) drop-shadow(0 -20px 35px rgba(16, 185, 129, 0.9));
+    transform: translateY(-2px) scale(1.03);
+  }
+}
+
+@keyframes ki-aura-shimmer-amber {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.9)) drop-shadow(0 -10px 20px rgba(251, 191, 36, 0.7));
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(251, 191, 36, 1)) drop-shadow(0 -20px 35px rgba(245, 158, 11, 0.9));
+    transform: translateY(-2px) scale(1.03);
+  }
+}
+
+@keyframes ki-aura-shimmer-red {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.95)) drop-shadow(0 -10px 20px rgba(248, 113, 113, 0.8));
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 25px rgba(239, 68, 68, 1)) drop-shadow(0 -22px 40px rgba(239, 68, 68, 0.95));
+    transform: translateY(-2.5px) scale(1.035);
+  }
+}
+
+.ki-aura-green { animation: ki-aura-shimmer-green 1.4s ease-in-out infinite; }
+.ki-aura-amber { animation: ki-aura-shimmer-amber 1.4s ease-in-out infinite; }
+.ki-aura-red { animation: ki-aura-shimmer-red 1.2s ease-in-out infinite; }
+
+/* 6. Shonen Title Slam */
+@keyframes shonen-slam {
+  0% {
+    transform: scale(3.2);
+    opacity: 0;
+    filter: blur(8px);
+  }
+  60% {
+    transform: scale(0.92);
+    opacity: 1;
+    filter: blur(0);
+  }
+  80% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.shonen-score-slam {
+  animation: shonen-slam 0.65s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  text-shadow:
+    -2px -2px 0 rgba(0, 0, 0, 0.8),
+    2px -2px 0 rgba(0, 0, 0, 0.8),
+    -2px 2px 0 rgba(0, 0, 0, 0.8),
+    2px 2px 0 rgba(0, 0, 0, 0.8),
+    3px 3px 0px rgba(0, 0, 0, 0.9),
+    0 0 22px rgba(99, 102, 241, 0.6);
+}
+
+/* 7. Speech Bubble AI */
+.manga-speech-bubble {
+  position: relative;
+  border-radius: 16px;
+  border: 1.5px solid rgba(129, 140, 248, 0.35);
+}
+
+.manga-speech-bubble::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 28px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 9px solid rgba(129, 140, 248, 0.35);
+}
+
+.manga-speech-bubble::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 29px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid rgba(30, 27, 75, 0.85);
+}
+
+/* 8. Sword Slash Diagonal Wipe Transition */
+@keyframes sword-slash-wipe {
+  0% {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+    transform: scale(0.96) translateX(-12px);
+  }
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    transform: scale(1) translateX(0);
+  }
+}
+
+.anime-slash-transition {
+  animation: sword-slash-wipe 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 9. Anime Anger Vein */
+@keyframes anger-throb {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.3) rotate(5deg); opacity: 1; filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.8)); }
+}
+
+.anime-anger-vein {
+  display: inline-block;
+  animation: anger-throb 0.9s ease-in-out infinite;
+}
+
+/* 10. Eye Gleam */
+@keyframes eye-gleam {
+  0% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1.4) rotate(90deg); opacity: 1; filter: drop-shadow(0 0 6px #fde047); }
+  100% { transform: scale(0) rotate(180deg); opacity: 0; }
+}
+
+.btn-neon-glow:hover .anime-eye-gleam,
+button:hover .anime-eye-gleam {
+  animation: eye-gleam 0.6s ease-out forwards;
+}
+
+/* 11. Manga Halftone Dot Overlay */
+.manga-halftone-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.manga-halftone-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1.2px, transparent 1.2px);
+  background-size: 8px 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  z-index: 1;
+}
+
+.manga-halftone-card:hover::after {
+  opacity: 1;
+}
+
+/* 12. Anime Level-Up 3-Frame Inverted Flash */
+@keyframes anime-screen-flash {
+  0% { opacity: 0; }
+  15% { opacity: 0.95; background: #ffffff; }
+  35% { opacity: 0.95; background: #000000; }
+  55% { opacity: 0.95; background: #ffffff; }
+  75% { opacity: 0.95; background: #000000; }
+  90% { opacity: 0.9; background: #ffffff; }
+  100% { opacity: 0; }
+}
+
+.anime-power-flash {
+  animation: anime-screen-flash 0.35s steps(2, jump-none) forwards;
+}
+
+/* 13. JoJo "To Be Continued" Meme Arrow */
+@keyframes jojo-slide-bounce {
+  0% { transform: translateX(120%); opacity: 0; }
+  60% { transform: translateX(-8px); opacity: 1; }
+  80% { transform: translateX(4px); }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes jojo-bounce {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-6px); }
+}
+
+.jojo-arrow-container {
+  animation: jojo-slide-bounce 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+.jojo-arrow-bounce {
+  animation: jojo-bounce 1.6s ease-in-out infinite;
+}
+
+
+

@@ -113,7 +113,7 @@ function TopRepos({ repos, username }) {
   if (!repos || repos.length === 0) return null;
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up">
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <FolderGit2 className="w-5 h-5" style={{ color: 'var(--primary)' }} />

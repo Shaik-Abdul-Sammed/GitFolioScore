@@ -69,7 +69,7 @@ export default function Trophies({ data = {} }) {
   const unlockedCount = trophies.filter((t) => t.unlocked).length;
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up" data-testid="trophies-cabinet">
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up" data-testid="trophies-cabinet">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
@@ -92,12 +92,13 @@ export default function Trophies({ data = {} }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-        {trophies.map((trophy) => (
+        {trophies.map((trophy, idx) => (
           <div
             key={trophy.id}
+            style={{ animationDelay: `${idx * 0.07}s` }}
             className={`relative p-4 rounded-xl border transition-all duration-300 ${
               trophy.unlocked
-                ? 'bg-gradient-to-b from-white/10 to-white/5 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.12)]'
+                ? 'animate-badge-pop bg-gradient-to-b from-white/10 to-white/5 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.12)]'
                 : 'bg-black/20 border-white/5 opacity-60'
             }`}
           >

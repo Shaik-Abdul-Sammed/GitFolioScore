@@ -1,8 +1,9 @@
-import { playLevelUpSound } from '../lib/audio';
+import { playLevelUpSound, playTypewriterClick } from '../lib/audio';
 
 describe('playLevelUpSound Web Audio Synthesizer', () => {
   it('does not throw when window.AudioContext is available or unavailable', () => {
     expect(() => playLevelUpSound()).not.toThrow();
+    expect(() => playTypewriterClick()).not.toThrow();
 
     const mockStart = jest.fn();
     const mockStop = jest.fn();

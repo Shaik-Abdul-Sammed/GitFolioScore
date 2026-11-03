@@ -33,3 +33,34 @@ export function playLevelUpSound() {
     // Graceful no-op if audio context is blocked
   }
 }
+
+/**
+ * Subtle typewriter mechanical key click for dramatic anime text reveal.
+ */
+export function playTypewriterClick() {
+  if (typeof window === 'undefined' || process.env.NODE_ENV === 'test') return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(650 + Math.random() * 250, ctx.currentTime);
+
+    gain.gain.setValueAtTime(0.015, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.025);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.03);
+  } catch {
+    // Graceful no-op
+  }
+}

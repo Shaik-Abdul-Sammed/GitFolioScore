@@ -2,12 +2,12 @@ import React from 'react';
 import { Sliders, RotateCcw, X, Check } from 'lucide-react';
 
 const weightMeta = {
-  profile: { label: 'Profile', icon: '👤', max: 30 },
-  repoQuality: { label: 'Repo Quality', icon: '📦', max: 50 },
-  activity: { label: 'Activity', icon: '⚡', max: 40 },
-  impact: { label: 'Impact', icon: '🌟', max: 40 },
-  diversity: { label: 'Diversity', icon: '🎨', max: 20 },
-  docs: { label: 'Documentation', icon: '📝', max: 20 },
+  profile: { label: 'Profile', stat: '[VIT] VITALITY', icon: '👤', max: 30 },
+  repoQuality: { label: 'Repo Quality', stat: '[STR] STRENGTH', icon: '⚔️', max: 50 },
+  activity: { label: 'Activity', stat: '[AGI] AGILITY', icon: '⚡', max: 40 },
+  impact: { label: 'Impact', stat: '[INT] INTELLECT', icon: '🌟', max: 40 },
+  diversity: { label: 'Diversity', stat: '[DEX] DEXTERITY', icon: '🎨', max: 20 },
+  docs: { label: 'Documentation', stat: '[WIS] WISDOM', icon: '📜', max: 20 },
 };
 
 export const DEFAULT_WEIGHTS = {
@@ -29,9 +29,9 @@ function WeightsForm({ weights, setWeights, dark = true, isModal = false, onClos
 
   const content = (
     <div
-      className={`rounded-2xl border p-6 ${
+      className={`rounded-2xl border p-6 manga-halftone-card ${
         isModal
-          ? 'w-full max-w-lg max-h-[85vh] overflow-y-auto pb-20 bg-slate-900/95 border-white/10 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] shadow-2xl backdrop-blur-xl animate-fade-in-up'
+          ? 'w-full max-w-lg max-h-[85vh] overflow-y-auto pb-20 bg-slate-900/95 border-white/20 manga-panel-modal shadow-2xl backdrop-blur-xl'
           : 'max-w-lg mx-auto'
       }`}
       style={
@@ -45,7 +45,7 @@ function WeightsForm({ weights, setWeights, dark = true, isModal = false, onClos
           : undefined
       }
     >
-      <div className="flex items-center justify-between gap-3 mb-5 pb-3 border-b border-white/10">
+      <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-white/10">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
             <Sliders className="w-4 h-4" />
@@ -55,7 +55,7 @@ function WeightsForm({ weights, setWeights, dark = true, isModal = false, onClos
               Custom Scoring Weights
             </h3>
             <p className="text-[11px] text-gray-400">
-              Fine-tune the algorithm parameters to your benchmark
+              RPG Character Stat Allocation Screen
             </p>
           </div>
         </div>
@@ -83,17 +83,32 @@ function WeightsForm({ weights, setWeights, dark = true, isModal = false, onClos
         </div>
       </div>
 
+      {/* 14. Character Stats HUD points bar */}
+      <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/70 border border-indigo-500/30 text-xs font-gaming mb-4">
+        <span className="text-indigo-300 flex items-center gap-1.5">
+          <span>⚔️</span>
+          <span className="tracking-wider">BUILD STAT BUDGET</span>
+        </span>
+        <span className={`font-mono font-bold ${isBalanced ? 'text-emerald-400' : 'text-amber-400'}`}>
+          {total} / 100 PTS {isBalanced ? '· READY' : `· ${100 - total > 0 ? `+${100 - total} REMAINING` : `${total - 100} OVER`}`}
+        </span>
+      </div>
+
       <div className="space-y-4">
         {Object.entries(weights || {}).map(([key, val]) => {
-          const meta = weightMeta[key] || { label: key, icon: '📊', max: 50 };
+          const meta = weightMeta[key] || { label: key, stat: '[STAT]', icon: '📊', max: 50 };
           return (
-            <div key={key} className="space-y-1.5">
+            <div key={key} className="space-y-1.5 p-2 rounded-xl bg-slate-950/40 border border-white/5">
               <div className="flex items-center justify-between">
                 <label
                   htmlFor={`weight-${key}`}
                   className="text-xs font-semibold flex items-center gap-2 text-gray-200"
                 >
-                  <span className="text-base">{meta.icon}</span> {meta.label}
+                  <span className="text-base">{meta.icon}</span>
+                  <span>{meta.label}</span>
+                  <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded font-pixel tracking-tighter">
+                    {meta.stat}
+                  </span>
                 </label>
                 <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
                   {val}%
@@ -146,7 +161,7 @@ function WeightsForm({ weights, setWeights, dark = true, isModal = false, onClos
 
   if (isModal || onClose) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md modal-backdrop-fade">
         <div
           className="fixed inset-0"
           onClick={onClose}

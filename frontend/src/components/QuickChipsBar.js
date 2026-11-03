@@ -15,13 +15,14 @@ function QuickChipsBar({ recentProfiles = [], famousUsers = [], onSelect, disabl
         </span>
 
         {/* Recent Profiles */}
-        {recentProfiles.map((p) => (
+        {recentProfiles.map((p, idx) => (
           <button
             key={`recent-${p.username}`}
             type="button"
             onClick={() => onSelect(p.username)}
             disabled={disabled}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 border border-white/15 text-indigo-100 hover:text-white transition-all active:scale-95 flex-shrink-0 disabled:opacity-50"
+            className="animate-stagger-chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 border border-white/15 text-indigo-100 hover:text-white transition-all active:scale-95 flex-shrink-0 disabled:opacity-50"
+            style={{ animationDelay: `${idx * 0.05}s` }}
             title={`Analyze @${p.username} (Previous score: ${p.score})`}
           >
             <Clock className="w-3 h-3 text-indigo-300" />
@@ -37,13 +38,14 @@ function QuickChipsBar({ recentProfiles = [], famousUsers = [], onSelect, disabl
         )}
 
         {/* Famous Profiles */}
-        {famousUsers.map((uname) => (
+        {famousUsers.map((uname, idx) => (
           <button
             key={`famous-${uname}`}
             type="button"
             onClick={() => onSelect(uname)}
             disabled={disabled}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-white/5 hover:bg-white/15 border border-white/10 text-indigo-200 hover:text-white transition-all active:scale-95 flex-shrink-0 disabled:opacity-50"
+            className="animate-stagger-chip inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-white/5 hover:bg-white/15 border border-white/10 text-indigo-200 hover:text-white transition-all active:scale-95 flex-shrink-0 disabled:opacity-50"
+            style={{ animationDelay: `${(recentProfiles.length + idx) * 0.05}s` }}
           >
             <span>@{uname}</span>
           </button>

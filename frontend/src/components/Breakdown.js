@@ -51,7 +51,7 @@ function Breakdown({ breakdown }) {
   if (!breakdown) return null;
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
       <div className="flex items-center gap-2 mb-6">
         <BarChart3 className="w-5 h-5" style={{ color: 'var(--primary)' }} />
         <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Score Breakdown</h3>

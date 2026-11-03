@@ -18,6 +18,7 @@ import JDMatcher from './components/JDMatcher';
 import Leaderboard from './components/Leaderboard';
 import ResumeGenerator from './components/ResumeGenerator';
 import NetworkMatcher from './components/NetworkMatcher';
+import FeatureHub from './components/FeatureHub/FeatureHub';
 import UserSearchInput from './components/UserSearchInput';
 import PortfolioWebGraph from './components/PortfolioWebGraph';
 import ThemeCustomizer from './components/ThemeCustomizer';
@@ -1462,6 +1463,16 @@ function App() {
 
             {/* AI Networking Matcher */}
             <NetworkMatcher languages={data.mostUsedLanguages} targetRole={targetRole} />
+
+            {/* Developer Command Center / Feature Hub (25 Tools) */}
+            <FeatureHub
+              data={data}
+              username={username}
+              topRepos={data.topRepos}
+              languages={data.mostUsedLanguages}
+              onToast={showToast}
+              onRewardXP={handleRewardXP}
+            />
           </div>
 
           {/* Leaderboard & Network (outside reportRef for performance) */}

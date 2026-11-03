@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UserCheck, RefreshCw, CheckCircle2, X } from 'lucide-react';
 
+const DEFAULT_AVATAR =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="%231e293b"/><path d="M50 30a15 15 0 100 30 15 15 0 000-30zm-24 45c0-10 10-15 24-15s24 5 24 15v5H26v-5z" fill="%2394a3b8"/></svg>';
+
 function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disabled }) {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -108,6 +111,11 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
           <img
             src={avatarUrl}
             alt="Friend Avatar"
+            crossOrigin="anonymous"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = DEFAULT_AVATAR;
+            }}
             className="w-5 h-5 rounded-full border border-purple-400 object-cover shadow"
           />
         ) : (
@@ -163,8 +171,13 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
               className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-purple-500/10 transition text-left border-b border-gray-800 last:border-0"
             >
               <img
-                src={user.avatar_url}
+                src={user.avatar_url || DEFAULT_AVATAR}
                 alt={user.login}
+                crossOrigin="anonymous"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = DEFAULT_AVATAR;
+                }}
                 className="w-7 h-7 rounded-full border border-gray-700 object-cover"
               />
               <span className="text-sm font-medium text-white">

@@ -13,22 +13,22 @@ const sectionConfig = {
     emoji: '💪',
   },
   redFlags: {
-    title: 'Red Flags',
+    title: 'Active Quests (Red Flags)',
     icon: AlertTriangle,
     gradient: 'linear-gradient(135deg, #ef4444, #f87171)',
     bgColor: 'rgba(239, 68, 68, 0.06)',
     borderColor: 'rgba(239, 68, 68, 0.2)',
     textColor: '#ef4444',
-    emoji: '🚩',
+    emoji: '⚔️',
   },
   suggestions: {
-    title: 'Suggestions',
+    title: 'Bonus Quests (Suggestions)',
     icon: Lightbulb,
     gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
     bgColor: 'rgba(245, 158, 11, 0.06)',
     borderColor: 'rgba(245, 158, 11, 0.2)',
     textColor: '#f59e0b',
-    emoji: '💡',
+    emoji: '📜',
   },
 };
 
@@ -75,16 +75,35 @@ function InsightCard({ type, items, username, topRepos = [], onSelectRedFlag }) 
         </p>
       ) : (
         <ul className="space-y-2">
-          {items.map((item, i) => (
-            <li
-              key={i}
-              className="flex items-center justify-between gap-2 text-sm animate-fade-in-up"
-              style={{ animationDelay: `${i * 0.05}s`, color: 'var(--text-secondary)' }}
-            >
-              <div className="flex items-start gap-2 flex-1 min-w-0">
-                <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: config.textColor }} />
-                <span className="break-words">{item}</span>
-              </div>
+          {items.map((item, i) => {
+            const isQuest = type === 'redFlags' || type === 'suggestions';
+            let questLabel = item;
+            if (isQuest) {
+              const lower = item.toLowerCase();
+              if (lower.includes('readme')) {
+                questLabel = `[QUEST] Slay the README Dragon: Add comprehensive README (+15 XP)`;
+              } else if (lower.includes('test')) {
+                questLabel = `[QUEST] Fortify the Castle: Add automated unit tests (+20 XP)`;
+              } else if (lower.includes('license')) {
+                questLabel = `[QUEST] Guild Legal Decree: Add an open-source LICENSE (+10 XP)`;
+              } else if (lower.includes('avatar') || lower.includes('picture')) {
+                questLabel = `[QUEST] Hero's Portrait: Add a GitHub profile picture (+10 XP)`;
+              } else if (type === 'redFlags') {
+                questLabel = `[QUEST] Purge Technical Debt: ${item} (+10 XP)`;
+              } else {
+                questLabel = `[QUEST] Level-Up Mastery: ${item} (+15 XP)`;
+              }
+            }
+            return (
+              <li
+                key={i}
+                className="flex items-center justify-between gap-2 text-sm animate-fade-in-up"
+                style={{ animationDelay: `${i * 0.05}s`, color: 'var(--text-secondary)' }}
+              >
+                <div className="flex items-start gap-2 flex-1 min-w-0">
+                  <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: config.textColor }} />
+                  <span className="break-words font-medium">{questLabel}</span>
+                </div>
               {/* Feature 10 & 16: Quick Fix Modal and Repo Settings Deep Links */}
               {type === 'redFlags' && (
                 <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
@@ -110,7 +129,8 @@ function InsightCard({ type, items, username, topRepos = [], onSelectRedFlag }) 
                 </div>
               )}
             </li>
-          ))}
+          );
+        })}
         </ul>
       )}
     </div>

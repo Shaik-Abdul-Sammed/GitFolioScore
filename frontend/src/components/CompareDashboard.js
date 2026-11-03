@@ -10,6 +10,9 @@ import {
 import { addToNetwork } from '../lib/leaderboard';
 import { compareProjects, peerCodeReview, stealReadmeStructure } from '../lib/llm';
 
+const DEFAULT_AVATAR =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="%231e293b"/><path d="M50 30a15 15 0 100 30 15 15 0 000-30zm-24 45c0-10 10-15 24-15s24 5 24 15v5H26v-5z" fill="%2394a3b8"/></svg>';
+
 function CompareDashboard({ user1, user2, onClose }) {
   const cardRef = useRef(null);
 
@@ -213,8 +216,13 @@ function CompareDashboard({ user1, user2, onClose }) {
           )}
           <div className="flex items-center gap-4 mb-4">
             <img
-              src={r1.profile?.avatar_url || 'https://github.com/ghost.png'}
+              src={r1.profile?.avatar_url || DEFAULT_AVATAR}
               alt={u1Name}
+              crossOrigin="anonymous"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_AVATAR;
+              }}
               className="w-16 h-16 rounded-xl border-2 border-indigo-500/40 object-cover"
             />
             <div>
@@ -264,8 +272,13 @@ function CompareDashboard({ user1, user2, onClose }) {
           )}
           <div className="flex items-center gap-4 mb-4">
             <img
-              src={r2.profile?.avatar_url || 'https://github.com/ghost.png'}
+              src={r2.profile?.avatar_url || DEFAULT_AVATAR}
               alt={u2Name}
+              crossOrigin="anonymous"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_AVATAR;
+              }}
               className="w-16 h-16 rounded-xl border-2 border-purple-500/40 object-cover"
             />
             <div>

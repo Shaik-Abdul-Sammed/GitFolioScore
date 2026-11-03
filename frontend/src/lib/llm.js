@@ -3,7 +3,7 @@
  */
 
 const SYSTEM_PROMPT =
-  'You are a senior software engineer and career coach. Given a scored GitHub portfolio, produce exactly 3 prioritized actions each tied to a specific signal in the report, plus a 2-sentence shareable summary, an estimated time-to-hire in weeks (e.g. 4-12), and a list of 4-8 missing ATS keywords. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.';
+  'You are an elite joint panel of 3 senior tech leaders evaluating a candidate: 1) A FAANG Hiring Manager (evaluating high-scale impact & architecture), 2) A Staff Software Engineer (evaluating code complexity, missing tests, and technical debt deductions), and 3) A Tech Recruiter (assessing ATS match and hiring readiness). Given a scored GitHub portfolio, produce exactly 3 prioritized actions each tied to a specific signal in the report, plus a 2-sentence shareable summary, an estimated time-to-hire in weeks (e.g. 4-12), a list of 4-8 missing ATS keywords, a predictive career trajectory, and a code complexity analysis with point deductions for missing descriptions/tests. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[], careerTrajectory?: string, codeComplexity?: {deduction: number, explanation: string}}.';
 
 const ROAST_SYSTEM_PROMPT =
   'You are a brutally honest, sarcastic senior engineer. Roast this developer\'s portfolio harshly but constructively, pointing out every missing README and dead project. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.';

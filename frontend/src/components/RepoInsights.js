@@ -73,9 +73,14 @@ function RepoInsights({ repo, insights }) {
           {insights.contributors.slice(0, 5).map((c, i) => (
             <img
               key={i}
-              src={c.avatar_url}
+              src={c.avatar_url || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%23475569"/><circle cx="50" cy="40" r="18" fill="%23cbd5e1"/><path d="M25 85c0-12 12-18 25-18s25 6 25 18" fill="%23cbd5e1"/></svg>'}
               alt={c.login}
               title={c.login}
+              crossOrigin="anonymous"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%23475569"/><circle cx="50" cy="40" r="18" fill="%23cbd5e1"/><path d="M25 85c0-12 12-18 25-18s25 6 25 18" fill="%23cbd5e1"/></svg>';
+              }}
               className="w-7 h-7 rounded-full border-2 -ml-1 first:ml-0 hover:scale-110 transition-transform"
               style={{ borderColor: 'var(--bg-secondary)' }}
             />

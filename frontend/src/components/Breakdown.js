@@ -78,12 +78,18 @@ function Breakdown({ breakdown }) {
                   {value}<span className="font-normal" style={{ color: 'var(--text-muted)' }}>/{meta.max}</span>
                 </span>
               </div>
-              <div className="score-bar">
+              <div className="score-bar rpg-health-bar">
                 <div
-                  className="score-bar-fill"
+                  className="score-bar-fill rpg-health-bar-fill"
                   style={{
                     width: `${Math.min(percentage, 100)}%`,
-                    background: `linear-gradient(90deg, ${meta.color}, ${meta.color}aa)`,
+                    background: percentage < 40 
+                      ? 'linear-gradient(180deg, #f87171 0%, #ef4444 50%, #991b1b 100%)'
+                      : percentage < 65
+                      ? 'linear-gradient(180deg, #fde047 0%, #eab308 50%, #854d0e 100%)'
+                      : percentage < 85
+                      ? 'linear-gradient(180deg, #60a5fa 0%, #3b82f6 50%, #1d4ed8 100%)'
+                      : 'linear-gradient(180deg, #6ee7b7 0%, #10b981 50%, #065f46 100%)',
                     transition: 'width 1.2s ease',
                   }}
                 />

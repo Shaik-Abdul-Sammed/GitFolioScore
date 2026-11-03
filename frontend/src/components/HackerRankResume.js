@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FileCode, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
-function HackerRankResume({ report, advice }) {
+function HackerRankResume({ report, advice, onToast }) {
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
@@ -164,9 +164,11 @@ function HackerRankResume({ report, advice }) {
       doc.save(fileName);
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 3000);
+      onToast?.('HackerRank Resume PDF downloaded successfully!');
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('PDF generation error:', err);
+      onToast?.('Could not generate HackerRank resume. Please retry.');
     } finally {
       setDownloading(false);
     }

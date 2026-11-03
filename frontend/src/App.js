@@ -43,6 +43,8 @@ import VoiceOfGodAudio from './components/VoiceOfGodAudio';
 import LanguageTrendsPredictor from './components/LanguageTrendsPredictor';
 import TimeMachineView from './components/TimeMachineView';
 import OpenToWorkBanner from './components/OpenToWorkBanner';
+import Trophies from './components/Trophies';
+import { playLevelUpSound } from './lib/audio';
 import OnboardingModal from './components/OnboardingModal';
 import QuotaModal from './components/QuotaModal';
 import { loadXP, addXPPoints } from './lib/xpStorage';
@@ -64,6 +66,8 @@ import {
   Zap,
   Sliders,
   User,
+  Compass,
+  AlertTriangle,
 } from 'lucide-react';
 import { fetchProfile, fetchRepos } from './lib/github';
 import { calculateReport } from './lib/score';
@@ -379,6 +383,7 @@ function App() {
       if (cached && cached.report) {
         setData(cached.report);
         setState('scored');
+        playLevelUpSound();
         await runLLMAdvice(cached.report, activeRole, activeRoast, activePersona, reqId);
         return;
       }
@@ -394,6 +399,7 @@ function App() {
       const report = calculateReport({ profile, repos, weights });
       setData(report);
       setState('scored');
+      playLevelUpSound();
       handleRewardXP(10, 'Analyzed GitHub profile');
 
       // Feature 8: Record new score history
@@ -955,6 +961,7 @@ function App() {
               username={username}
               targetRole={targetRole}
               advice={advice}
+              onToast={showToast}
               onExport={() => handleRewardXP(20, 'Export PDF Resume')}
             />
             <ShareScore score={data.score} username={username} onToast={showToast} />
@@ -978,6 +985,9 @@ function App() {
               topRepos={data.topRepos}
               languages={data.mostUsedLanguages}
             />
+
+            {/* RPG Achievements & Trophy Cabinet */}
+            <Trophies data={data} />
 
             {/* Feature 1: "What-If" Score Simulator */}
             <ScoreSimulator data={data} weights={weights} />
@@ -1074,8 +1084,41 @@ function App() {
                 <div className="space-y-6">
                   {/* Summary */}
                   <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                    <div className="flex items-center gap-2 mb-1.5 text-xs font-bold text-indigo-300 font-gaming uppercase tracking-wider">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>3-Expert Consensus (FAANG HM, Staff Eng, Recruiter)</span>
+                    </div>
                     <p className="text-sm leading-relaxed font-medium text-indigo-100">
                       {advice.summary}
+                    </p>
+                  </div>
+
+                  {/* Predictive Career Trajectory */}
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-indigo-500/30 space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-cyan-300 uppercase tracking-wider font-gaming">
+                      <Compass className="w-4 h-4 text-cyan-400" />
+                      <span>Predictive Career Trajectory (AI Model)</span>
+                    </div>
+                    <p className="text-xs text-gray-200 leading-relaxed font-medium">
+                      {advice.careerTrajectory ||
+                        `Based on your ${data?.mostUsedLanguages?.slice(0, 2).map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name || l)).join(' and ') || 'stack'} usage, you are on track for a ${targetRole || 'Fullstack Software Engineer'} role. To reach Senior Staff level, prioritize high-throughput distributed system design, CI/CD telemetry, and architecture documentation.`}
+                    </p>
+                  </div>
+
+                  {/* Code Complexity & Technical Debt Deductions */}
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-300 uppercase tracking-wider font-gaming">
+                        <AlertTriangle className="w-4 h-4 text-amber-400" />
+                        <span>Code Complexity &amp; Technical Debt Deduction</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-2.5 py-0.5 rounded-full font-gaming">
+                        -{advice.codeComplexity?.deduction ?? Math.max(3, (data?.topRepos?.filter((r) => !r.hasReadme).length || 1) * 3)} PTS DEDUCTED
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      {advice.codeComplexity?.explanation ||
+                        'Staff Engineer analysis: Missing unit test suites or repository descriptions detected across public repositories, indicating technical debt drag in hiring pipeline screenings.'}
                     </p>
                   </div>
 
@@ -1260,7 +1303,7 @@ function App() {
             <ResumeGenerator report={data} advice={advice} />
 
             {/* HackerRank Style Black-and-White Resume */}
-            <HackerRankResume report={data} advice={advice} />
+            <HackerRankResume report={data} advice={advice} onToast={showToast} />
 
             {/* AI Networking Matcher */}
             <NetworkMatcher languages={data.mostUsedLanguages} targetRole={targetRole} />

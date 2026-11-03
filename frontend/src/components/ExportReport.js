@@ -3,7 +3,7 @@ import { Image, FileText, Check, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-function ExportReport({ targetRef, data, username, targetRole, advice }) {
+function ExportReport({ targetRef, data, username, targetRole, advice, onToast, onExport }) {
   const [exporting, setExporting] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
@@ -15,14 +15,19 @@ function ExportReport({ targetRef, data, username, targetRole, advice }) {
         backgroundColor: '#0f172a',
         scale: 2,
         useCORS: true,
+        allowTaint: false,
+        logging: false,
       });
       const link = document.createElement('a');
       link.download = `gitfolioscore-${username || 'report'}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
+      onToast?.('Portfolio report PNG image downloaded!');
+      onExport?.();
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Export failed:', err);
+      onToast?.('Could not export PNG image. Please try again.');
     } finally {
       setExporting(false);
     }
@@ -238,22 +243,36 @@ function ExportReport({ targetRef, data, username, targetRole, advice }) {
       doc.save(`GitFolioScore-${username || 'Developer'}-Resume-Audit.pdf`);
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 2500);
+      onToast?.('PDF Report downloaded successfully!');
+      onExport?.();
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('PDF export failed, falling back to canvas:', err);
       // Fallback to html2canvas if needed
-      if (targetRef?.current) {
-        const canvas = await html2canvas(targetRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          useCORS: true,
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`GitFolioScore-${username || 'Report'}.pdf`);
+      try {
+        if (targetRef?.current) {
+          const canvas = await html2canvas(targetRef.current, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            logging: false,
+          });
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(`GitFolioScore-${username || 'Report'}.pdf`);
+          onToast?.('PDF Report downloaded successfully!');
+          onExport?.();
+        } else {
+          onToast?.('Could not generate PDF. Please try again.');
+        }
+      } catch (canvasErr) {
+        // eslint-disable-next-line no-console
+        console.error('Fallback canvas PDF failed:', canvasErr);
+        onToast?.('Could not generate PDF report.');
       }
     } finally {
       setExporting(false);

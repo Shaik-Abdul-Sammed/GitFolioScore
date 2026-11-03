@@ -8,6 +8,9 @@ import html2canvas from 'html2canvas';
 import { generateBio } from '../lib/llm';
 import { addToNetwork } from '../lib/leaderboard';
 
+const DEFAULT_AVATAR =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="%231e293b"/><path d="M50 30a15 15 0 100 30 15 15 0 000-30zm-24 45c0-10 10-15 24-15s24 5 24 15v5H26v-5z" fill="%2394a3b8"/><circle cx="50" cy="45" r="7" fill="%23cbd5e1"/></svg>';
+
 const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare, topRepos = [], languages = [] }) => {
   const cardRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
@@ -191,9 +194,9 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
             <span style={{ color: 'var(--text-muted)' }}>towards Perfect 100</span>
           </div>
         </div>
-        <div className="w-full h-2 rounded-full overflow-hidden bg-white/10">
+        <div className="rpg-health-bar w-full">
           <div
-            className="h-full rounded-full transition-all duration-1000 ease-out"
+            className="rpg-health-bar-fill transition-all duration-1000 ease-out"
             style={{
               width: `${profileCompletion}%`,
               background: 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #10b981 100%)',
@@ -208,8 +211,13 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
           <div className="relative flex-shrink-0">
             <div className="relative">
               <img
-                src={profile.avatar_url}
+                src={profile.avatar_url || DEFAULT_AVATAR}
                 alt={`${profile.name || profile.login || 'User'}'s avatar`}
+                crossOrigin="anonymous"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = DEFAULT_AVATAR;
+                }}
                 className="w-28 h-28 rounded-2xl border-4 shadow-lg object-cover"
                 style={{ borderColor: scoreColor }}
               />
@@ -236,10 +244,10 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-extrabold" style={{ color: scoreColor }}>
+              <span className="text-4xl font-extrabold font-gaming tracking-wide" style={{ color: scoreColor }}>
                 {score}
               </span>
-              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>/100</span>
+              <span className="text-xs font-medium font-gaming text-gray-400">/100</span>
             </div>
           </div>
 

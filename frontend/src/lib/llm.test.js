@@ -1,4 +1,4 @@
-import { generateAdvice } from './llm';
+import { generateAdvice, waitForAnna } from './llm';
 
 describe('llm.js - AI Career Coach & Error Handling', () => {
   const dummyReport = {
@@ -143,6 +143,36 @@ describe('llm.js - AI Career Coach & Error Handling', () => {
         code: 'API_UNAVAILABLE',
         userMessage: 'Anna AI environment not detected. Please run within Anna AI OS.',
       });
+    });
+  });
+
+  describe('waitForAnna Bridge Polling & Parent Check', () => {
+    it('detects window.parent.anna as fallback when window.anna is undefined', async () => {
+      const mockAnna = { llm: { complete: jest.fn().mockResolvedValue({ content: { text: JSON.stringify(validAdvicePayload) } }) } };
+      Object.defineProperty(window, 'parent', {
+        value: { anna: mockAnna },
+        configurable: true,
+        writable: true,
+      });
+
+      const result = await waitForAnna();
+      expect(result).toBe(mockAnna);
+      expect(window.anna).toBe(mockAnna);
+
+      Object.defineProperty(window, 'parent', {
+        value: window,
+        configurable: true,
+        writable: true,
+      });
+    });
+
+    it('resolves when window.anna.llm.complete appears asynchronously', async () => {
+      setTimeout(() => {
+        window.anna = { llm: { complete: jest.fn() } };
+      }, 50);
+
+      const result = await waitForAnna();
+      expect(result).toBe(window.anna);
     });
   });
 });

@@ -23,11 +23,14 @@ export { PERSONA_PROMPTS };
 
 /**
  * Wait for the Anna Host API bridge (window.anna.llm.complete) to be injected.
- * Checks every 100ms until available or timeoutMs is exceeded.
- * @param {number} [timeoutMs=5000]
+ * Checks every 200ms until available or timeoutMs (default 15000) is exceeded.
+ * @param {number} [timeoutMs=15000]
  * @returns {Promise<object>} The window.anna object
  */
-export async function waitForAnna(timeoutMs = 5000) {
+export async function waitForAnna(timeoutMs = 15000) {
+  // eslint-disable-next-line no-console
+  console.log('[Anna Bridge] Waiting for window.anna...');
+
   if (typeof window === 'undefined') {
     const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
     error.code = 'API_UNAVAILABLE';
@@ -35,21 +38,63 @@ export async function waitForAnna(timeoutMs = 5000) {
     throw error;
   }
 
-  if (window.anna?.llm?.complete) {
+  const checkAnna = () => {
+    // 4. Iframe Parent Check: fallback to window.parent.anna if window.anna is missing
+    if (!window.anna && typeof window.parent !== 'undefined' && window.parent) {
+      try {
+        if (window.parent.anna) {
+          window.anna = window.parent.anna;
+        }
+      } catch {
+        // Cross-origin iframe parent access might throw security error, ignore safely
+      }
+    }
+
+    // 2. Deep Checking: window.anna, window.anna.llm, window.anna.llm.complete
+    if (window.anna?.llm?.complete) {
+      return window.anna;
+    }
+    if (window.anna?.llm) {
+      return window.anna;
+    }
+    if (window.anna) {
+      return window.anna;
+    }
+    return null;
+  };
+
+  // Immediate check
+  if (checkAnna()?.llm?.complete) {
+    // eslint-disable-next-line no-console
+    console.log('[Anna Bridge] window.anna detected!');
     return window.anna;
   }
 
   const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
-  const effectiveTimeout = isTest && timeoutMs === 5000 ? 150 : timeoutMs;
-  const pollInterval = isTest ? 25 : 100;
+  const effectiveTimeout = isTest && timeoutMs === 15000 ? 150 : timeoutMs;
+  const pollInterval = isTest ? 25 : 200;
 
   const startTime = Date.now();
   while (Date.now() - startTime < effectiveTimeout) {
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
-    if (window.anna?.llm?.complete) {
-      return window.anna;
+    const detected = checkAnna();
+    if (detected?.llm?.complete) {
+      // eslint-disable-next-line no-console
+      console.log('[Anna Bridge] window.anna detected!');
+      return detected;
     }
   }
+
+  // After polling loop, do a final deep check for window.anna, window.anna.llm, or window.anna.llm.complete
+  const finalCheck = checkAnna();
+  if (finalCheck) {
+    // eslint-disable-next-line no-console
+    console.log('[Anna Bridge] window.anna detected!');
+    return finalCheck;
+  }
+
+  // eslint-disable-next-line no-console
+  console.warn('[Anna Bridge] Failed to detect window.anna after 15s', typeof window !== 'undefined' ? window.anna : undefined);
 
   const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
   error.code = 'API_UNAVAILABLE';

@@ -838,15 +838,23 @@ body {
   0% {
     clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
     transform: scale(0.96) translateX(-12px);
+    opacity: 0.7;
   }
-  100% {
+  99% {
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
     transform: scale(1) translateX(0);
+    opacity: 1;
+  }
+  100% {
+    clip-path: none;
+    transform: none;
+    opacity: 1;
   }
 }
 
 .anime-slash-transition {
   animation: sword-slash-wipe 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  overflow: visible !important;
 }
 
 /* 9. Anime Anger Vein */

@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, RefreshCw, History, X, Mic, MicOff } from 'lucide-react';
+import { searchGitHubUsers, getLocalUserMatches } from '../lib/userSearch';
 
 /**
- * Live user search dropdown using GitHub Search API.
+ * Live user search dropdown using GitHub Search API with instant fallback & keyboard navigation.
  * Supports debounced autocomplete, recent history dropdown, voice-activated search, clear button, and focus ring.
  */
 const DEFAULT_AVATAR =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="%231e293b"/><path d="M50 30a15 15 0 100 30 15 15 0 000-30zm-24 45c0-10 10-15 24-15s24 5 24 15v5H26v-5z" fill="%2394a3b8"/></svg>';
+
+const EMPTY_PROFILES = [];
 
 function UserSearchInput({
   value,
@@ -16,19 +19,22 @@ function UserSearchInput({
   onClear,
   disabled,
   placeholder = 'GitHub username (e.g. torvalds)...',
-  recentProfiles = [],
+  recentProfiles = EMPTY_PROFILES,
   inputRef,
   onToast,
 }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showHistory, setShowHistory] = useState(false);
   const [listening, setListening] = useState(false);
   const debounceRef = useRef(null);
   const abortControllerRef = useRef(null);
   const containerRef = useRef(null);
   const recognitionRef = useRef(null);
+  const recentProfilesRef = useRef(recentProfiles);
+  recentProfilesRef.current = recentProfiles;
 
   const startVoiceSearch = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -120,7 +126,16 @@ function UserSearchInput({
     if (!clean || clean.length < 2) {
       setResults([]);
       setOpen(false);
+      setSelectedIndex(-1);
       return;
+    }
+
+    // Immediately display instant local matches
+    const profiles = recentProfilesRef.current || [];
+    const initialMatches = getLocalUserMatches(clean, profiles);
+    if (initialMatches.length > 0) {
+      setResults(initialMatches);
+      setOpen(true);
     }
 
     debounceRef.current = setTimeout(async () => {
@@ -128,26 +143,22 @@ function UserSearchInput({
       abortControllerRef.current = controller;
       setLoading(true);
       try {
-        const res = await fetch(
-          `https://api.github.com/search/users?q=${encodeURIComponent(clean)}&per_page=6`,
-          {
-            headers: { Accept: 'application/vnd.github.v3+json' },
-            signal: controller.signal,
-          }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setResults(data.items || []);
+        const fetched = await searchGitHubUsers(clean, {
+          signal: controller.signal,
+          recentProfiles: profiles,
+        });
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          setResults(fetched);
           setOpen(true);
         }
       } catch (err) {
         if (err.name !== 'AbortError') {
-          // Network error – silently ignore
+          // Fallback handled inside searchGitHubUsers
         }
       } finally {
         setLoading(false);
       }
-    }, 500);
+    }, 250);
 
     return () => {
       clearTimeout(debounceRef.current);
@@ -161,6 +172,7 @@ function UserSearchInput({
     setOpen(false);
     setShowHistory(false);
     setResults([]);
+    setSelectedIndex(-1);
     if (onSelect) {
       onSelect(userLogin);
     } else {
@@ -172,8 +184,44 @@ function UserSearchInput({
     onChange('');
     setResults([]);
     setOpen(false);
+    setSelectedIndex(-1);
     setShowHistory(false);
     if (onClear) onClear();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setOpen(false);
+      setShowHistory(false);
+      setSelectedIndex(-1);
+      return;
+    }
+
+    if (open && results.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (selectedIndex >= 0 && results[selectedIndex]) {
+          e.preventDefault();
+          handleSelect(results[selectedIndex].login);
+          return;
+        }
+      }
+    }
+
+    if (e.key === 'Enter' && onSubmit) {
+      setOpen(false);
+      setShowHistory(false);
+      onSubmit();
+    }
   };
 
   return (
@@ -190,23 +238,16 @@ function UserSearchInput({
           onChange(e.target.value);
         }}
         onFocus={() => {
-          if (!value && recentProfiles && recentProfiles.length > 0) {
+          if (value && value.trim().length >= 2 && results.length > 0) {
+            setOpen(true);
+          } else if (!value && recentProfiles && recentProfiles.length > 0) {
             setShowHistory(true);
           }
         }}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            setOpen(false);
-            setShowHistory(false);
-          }
-          if (e.key === 'Enter' && onSubmit) {
-            setOpen(false);
-            setShowHistory(false);
-            onSubmit();
-          }
-        }}
+        onKeyDown={handleKeyDown}
         disabled={disabled}
         autoComplete="off"
+        spellCheck="false"
       />
 
       <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5">
@@ -274,12 +315,17 @@ function UserSearchInput({
         <div
           className="absolute top-full left-0 w-full z-50 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in"
         >
-          {results.map((user) => (
+          {results.map((user, idx) => (
             <button
-              key={user.id}
+              key={user.id || user.login}
               type="button"
               onClick={() => handleSelect(user.login)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-indigo-500/10 transition text-left border-b border-gray-800 last:border-0"
+              onMouseEnter={() => setSelectedIndex(idx)}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 transition text-left border-b border-gray-800 last:border-0 ${
+                selectedIndex === idx
+                  ? 'bg-indigo-600/25 ring-1 ring-inset ring-indigo-500/40 text-white'
+                  : 'hover:bg-indigo-500/10 text-gray-200'
+              }`}
             >
               <img
                 src={user.avatar_url || DEFAULT_AVATAR}
@@ -289,11 +335,23 @@ function UserSearchInput({
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = DEFAULT_AVATAR;
                 }}
-                className="w-7 h-7 rounded-full border border-gray-700 object-cover"
+                className="w-7 h-7 rounded-full border border-gray-700 object-cover flex-shrink-0"
               />
-              <span className="text-sm font-medium text-white">
-                @{user.login}
-              </span>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-semibold text-white truncate">
+                  @{user.login}
+                </span>
+                {user.name && (
+                  <span className="text-[11px] text-gray-400 truncate">
+                    {user.name}
+                  </span>
+                )}
+              </div>
+              {user.isRecent && (
+                <span className="ml-auto text-[10px] text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30 font-medium">
+                  Recent
+                </span>
+              )}
               {user.type === 'Organization' && (
                 <span className="ml-auto text-[10px] text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full border border-gray-700">
                   org

@@ -886,8 +886,8 @@ function App() {
             </div>
 
             {/* Inputs Container */}
-            <div className="max-w-4xl mx-auto space-y-4">
-              <div key={showCompareInput ? 'compare-mode' : 'single-mode'} className="anime-slash-transition">
+            <div className="max-w-4xl mx-auto space-y-4 relative z-30">
+              <div key={showCompareInput ? 'compare-mode' : 'single-mode'} className="anime-slash-transition overflow-visible">
                 {!showCompareInput ? (
                   <div className="relative flex flex-col sm:flex-row gap-3 z-30">
                     <UserSearchInput

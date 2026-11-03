@@ -878,10 +878,10 @@ function App() {
             </div>
 
             {/* Inputs Container */}
-            <div className="max-w-4xl mx-auto space-y-4 relative z-30">
-              <div key={showCompareInput ? 'compare-mode' : 'single-mode'} className="anime-slash-transition overflow-visible">
+            <div className="max-w-4xl mx-auto space-y-4 relative z-40">
+              <div key={showCompareInput ? 'compare-mode' : 'single-mode'} className="anime-slash-transition overflow-visible relative z-40">
                 {!showCompareInput ? (
-                  <div className="relative flex flex-col sm:flex-row gap-3 z-30">
+                  <div className="relative flex flex-col sm:flex-row gap-3 z-40">
                     <UserSearchInput
                       inputRef={mainInputRef}
                       value={username}
@@ -912,7 +912,7 @@ function App() {
                     </select>
                   </div>
                 ) : (
-                  <div className="relative flex flex-col md:flex-row items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xl animate-fade-in shadow-2xl z-30">
+                  <div className="relative flex flex-col md:flex-row items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-xl animate-fade-in shadow-2xl z-40">
                     <div className="relative flex-1 w-full">
                       <UserSearchInput
                         inputRef={mainInputRef}
@@ -964,7 +964,7 @@ function App() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1 relative z-10">
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Feature 1: Roast My Profile Toggle with Anime Eye Gleam */}
                   <button
@@ -1027,12 +1027,14 @@ function App() {
               </div>
 
               {/* Part 1, Item 1: Sleek Horizontal Scrolling Chips Bar */}
-              <QuickChipsBar
-                recentProfiles={recentProfiles}
-                famousUsers={FAMOUS_USERS}
-                onSelect={handleQuickTry}
-                disabled={isAnalyzing}
-              />
+              <div className="relative z-0">
+                <QuickChipsBar
+                  recentProfiles={recentProfiles}
+                  famousUsers={FAMOUS_USERS}
+                  onSelect={handleQuickTry}
+                  disabled={isAnalyzing}
+                />
+              </div>
             </div>
 
             {/* Part 1, Item 1: Custom Weights Modal */}

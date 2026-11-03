@@ -207,7 +207,8 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
       {/* Autocomplete Suggestions Dropdown */}
       {open && results.length > 0 && (
         <div
-          className="absolute top-full left-0 w-full z-50 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in"
+          className="absolute top-full left-0 w-full z-50 mt-2 bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in ring-1 ring-white/10"
+          style={{ backgroundColor: '#090d16', zIndex: 100 }}
         >
           {results.map((user, idx) => (
             <button
@@ -217,9 +218,10 @@ function FriendCompareInput({ value, onChange, onSelect, onSubmit, onClear, disa
               onMouseEnter={() => setSelectedIndex(idx)}
               className={`w-full flex items-center gap-3 px-4 py-2.5 transition text-left border-b border-gray-800 last:border-0 ${
                 selectedIndex === idx
-                  ? 'bg-purple-600/25 ring-1 ring-inset ring-purple-500/40 text-white'
-                  : 'hover:bg-purple-500/10 text-gray-200'
+                  ? 'bg-purple-600/30 ring-1 ring-inset ring-purple-500/50 text-white'
+                  : 'hover:bg-purple-500/15 text-gray-200'
               }`}
+              style={{ backgroundColor: selectedIndex === idx ? 'rgba(147, 51, 234, 0.3)' : '#090d16' }}
             >
               <img
                 src={user.avatar_url || DEFAULT_AVATAR}

@@ -235,13 +235,12 @@ function UserSearchInput({
         placeholder={placeholder}
         value={value}
         onChange={(e) => {
+          setShowHistory(false);
           onChange(e.target.value);
         }}
         onFocus={() => {
           if (value && value.trim().length >= 2 && results.length > 0) {
             setOpen(true);
-          } else if (!value && recentProfiles && recentProfiles.length > 0) {
-            setShowHistory(true);
           }
         }}
         onKeyDown={handleKeyDown}
@@ -313,7 +312,8 @@ function UserSearchInput({
       {/* Autocomplete Suggestions Dropdown */}
       {open && results.length > 0 && (
         <div
-          className="absolute top-full left-0 w-full z-50 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in"
+          className="absolute top-full left-0 w-full z-50 mt-2 bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in ring-1 ring-white/10"
+          style={{ backgroundColor: '#090d16', zIndex: 100 }}
         >
           {results.map((user, idx) => (
             <button
@@ -323,9 +323,10 @@ function UserSearchInput({
               onMouseEnter={() => setSelectedIndex(idx)}
               className={`w-full flex items-center gap-3 px-4 py-2.5 transition text-left border-b border-gray-800 last:border-0 ${
                 selectedIndex === idx
-                  ? 'bg-indigo-600/25 ring-1 ring-inset ring-indigo-500/40 text-white'
-                  : 'hover:bg-indigo-500/10 text-gray-200'
+                  ? 'bg-indigo-600/30 ring-1 ring-inset ring-indigo-500/50 text-white'
+                  : 'hover:bg-indigo-500/15 text-gray-200'
               }`}
+              style={{ backgroundColor: selectedIndex === idx ? 'rgba(79, 70, 229, 0.3)' : '#090d16' }}
             >
               <img
                 src={user.avatar_url || DEFAULT_AVATAR}
@@ -365,10 +366,14 @@ function UserSearchInput({
       {/* Recently Viewed Dropdown */}
       {showHistory && recentProfiles.length > 0 && !open && (
         <div
-          className="absolute top-full left-0 w-full z-50 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in"
+          className="absolute top-full left-0 w-full z-50 mt-2 bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in ring-1 ring-white/10"
+          style={{ backgroundColor: '#090d16', zIndex: 100 }}
         >
-          <div className="px-3.5 py-2 border-b border-gray-800 flex items-center justify-between text-[11px] text-gray-400 font-semibold uppercase tracking-wider bg-gray-900/90 sticky top-0 backdrop-blur-sm z-10">
-            <span className="flex items-center gap-1.5">
+          <div
+            className="px-3.5 py-2 border-b border-gray-800 flex items-center justify-between text-[11px] text-gray-400 font-semibold uppercase tracking-wider sticky top-0 backdrop-blur-sm z-10"
+            style={{ backgroundColor: '#0d1322' }}
+          >
+            <span className="flex items-center gap-1.5 text-indigo-300">
               <History className="w-3.5 h-3.5 text-indigo-400" /> Recently Viewed
             </span>
             <span className="text-[10px] text-gray-500">Last 5</span>
@@ -378,7 +383,8 @@ function UserSearchInput({
               key={p.username}
               type="button"
               onClick={() => handleSelect(p.username)}
-              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-indigo-500/10 transition text-left border-b border-gray-800 last:border-0"
+              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-indigo-500/15 transition text-left border-b border-gray-800 last:border-0"
+              style={{ backgroundColor: '#090d16' }}
             >
               <span className="text-xs font-semibold text-white">
                 @{p.username}

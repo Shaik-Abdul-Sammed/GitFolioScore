@@ -7,6 +7,7 @@ import {
 import html2canvas from 'html2canvas';
 import { generateBio } from '../lib/llm';
 import { addToNetwork } from '../lib/leaderboard';
+import ExportPreviewModal from './ExportPreviewModal';
 
 const DEFAULT_AVATAR =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="%231e293b"/><path d="M50 30a15 15 0 100 30 15 15 0 000-30zm-24 45c0-10 10-15 24-15s24 5 24 15v5H26v-5z" fill="%2394a3b8"/><circle cx="50" cy="45" r="7" fill="%23cbd5e1"/></svg>';
@@ -23,6 +24,7 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [displayScore, setDisplayScore] = useState(() => (process.env.NODE_ENV === 'test' ? (score || 0) : 0));
   const [showImpactFlash, setShowImpactFlash] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
 
   // 4. Anime Impact Frame on High Score (>= 85)
   useEffect(() => {
@@ -203,7 +205,7 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
     return Math.min(100, Math.max(10, total));
   }, [profile, score]);
 
-  // Feature 3: Dynamic OG Image Generation using html2canvas
+  // Feature 3: Dynamic OG Image Generation with Preview Modal
   const handleDownloadScorecard = async () => {
     if (!cardRef.current) return;
     try {
@@ -213,10 +215,32 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
         useCORS: true,
         backgroundColor: '#0f172a',
       });
-      const link = document.createElement('a');
-      link.download = `gitfolioscore-${profile.login || 'portfolio'}-scorecard.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      const fileName = `gitfolioscore-${profile.login || 'portfolio'}-scorecard.png`;
+      let fileUrl = '';
+      if (typeof canvas.toBlob === 'function') {
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        if (blob) {
+          try {
+            fileUrl = URL.createObjectURL(blob);
+          } catch (e) {
+            fileUrl = typeof canvas.toDataURL === 'function' ? canvas.toDataURL('image/png') : '';
+          }
+        } else if (typeof canvas.toDataURL === 'function') {
+          fileUrl = canvas.toDataURL('image/png');
+        }
+      } else if (typeof canvas.toDataURL === 'function') {
+        fileUrl = canvas.toDataURL('image/png');
+      }
+
+      if (!fileUrl && typeof canvas.toDataURL === 'function') {
+        fileUrl = canvas.toDataURL('image/png');
+      }
+
+      setPreviewData({
+        fileUrl,
+        fileType: 'image',
+        fileName,
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Scorecard download failed:', err);
@@ -559,6 +583,16 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
             </div>
           </div>
         </div>
+      )}
+
+      {previewData && (
+        <ExportPreviewModal
+          isOpen={Boolean(previewData)}
+          fileUrl={previewData.fileUrl}
+          fileType={previewData.fileType}
+          fileName={previewData.fileName}
+          onClose={() => setPreviewData(null)}
+        />
       )}
     </div>
     </>

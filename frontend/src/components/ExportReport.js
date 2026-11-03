@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Image, FileText, Check, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import ExportPreviewModal from './ExportPreviewModal';
 
 function ExportReport({ targetRef, data, username, targetRole, advice, onToast, onExport }) {
   const [exporting, setExporting] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
 
   const exportAsImage = async () => {
     if (!targetRef?.current) return;
@@ -18,12 +20,31 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
         allowTaint: false,
         logging: false,
       });
-      const link = document.createElement('a');
-      link.download = `gitfolioscore-${username || 'report'}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      onToast?.('Portfolio report PNG image downloaded!');
-      onExport?.();
+      if (!canvas) {
+        onToast?.('Could not export PNG image. Please try again.');
+        return;
+      }
+      const fileName = `gitfolioscore-${username || 'report'}.png`;
+      let fileUrl = '';
+      if (typeof canvas.toBlob === 'function') {
+        try {
+          const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+          if (blob && typeof URL.createObjectURL === 'function') {
+            fileUrl = URL.createObjectURL(blob);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      if (!fileUrl && typeof canvas.toDataURL === 'function') {
+        fileUrl = canvas.toDataURL('image/png');
+      }
+
+      setPreviewData({
+        fileUrl,
+        fileType: 'image',
+        fileName,
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Export failed:', err);
@@ -240,11 +261,20 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
         { align: 'center' }
       );
 
-      doc.save(`GitFolioScore-${username || 'Developer'}-Resume-Audit.pdf`);
-      setDownloaded(true);
-      setTimeout(() => setDownloaded(false), 2500);
-      onToast?.('PDF Report downloaded successfully!');
-      onExport?.();
+      let blobUrl = '';
+      if (typeof doc.output === 'function') {
+        try {
+          blobUrl = doc.output('bloburl');
+        } catch (e) {
+          const blob = doc.output('blob');
+          blobUrl = URL.createObjectURL(blob);
+        }
+      }
+      setPreviewData({
+        fileUrl: blobUrl,
+        fileType: 'pdf',
+        fileName: `GitFolioScore-${username || 'Developer'}-Resume-Audit.pdf`,
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('PDF export failed, falling back to canvas:', err);
@@ -263,9 +293,20 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
           pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-          pdf.save(`GitFolioScore-${username || 'Report'}.pdf`);
-          onToast?.('PDF Report downloaded successfully!');
-          onExport?.();
+          let fallbackUrl = '';
+          if (typeof pdf.output === 'function') {
+            try {
+              fallbackUrl = pdf.output('bloburl');
+            } catch (e) {
+              const blob = pdf.output('blob');
+              fallbackUrl = URL.createObjectURL(blob);
+            }
+          }
+          setPreviewData({
+            fileUrl: fallbackUrl,
+            fileType: 'pdf',
+            fileName: `GitFolioScore-${username || 'Report'}.pdf`,
+          });
         } else {
           onToast?.('Could not generate PDF. Please try again.');
         }
@@ -280,38 +321,56 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={exportAsImage}
-        disabled={exporting}
-        className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl hover:shadow-md transition-all active:scale-95 disabled:opacity-50"
-      >
-        {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
-        Export PNG
-      </button>
-      <button
-        onClick={exportAsPDF}
-        disabled={exporting}
-        className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl hover:shadow-md transition-all active:scale-95 text-indigo-400 font-semibold disabled:opacity-50"
-      >
-        {exporting ? (
-          <>
-            <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
-            Generating PDF...
-          </>
-        ) : downloaded ? (
-          <>
-            <Check className="w-4 h-4 text-emerald-400" />
-            Downloaded!
-          </>
-        ) : (
-          <>
-            <FileText className="w-4 h-4" />
-            Export PDF
-          </>
-        )}
-      </button>
-    </div>
+    <>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={exportAsImage}
+          disabled={exporting}
+          className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl hover:shadow-md transition-all active:scale-95 disabled:opacity-50"
+        >
+          {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
+          Export PNG
+        </button>
+        <button
+          onClick={exportAsPDF}
+          disabled={exporting}
+          className="btn-secondary flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl hover:shadow-md transition-all active:scale-95 text-indigo-400 font-semibold disabled:opacity-50"
+        >
+          {exporting ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
+              Generating PDF...
+            </>
+          ) : downloaded ? (
+            <>
+              <Check className="w-4 h-4 text-emerald-400" />
+              Downloaded!
+            </>
+          ) : (
+            <>
+              <FileText className="w-4 h-4" />
+              Export PDF
+            </>
+          )}
+        </button>
+      </div>
+
+      {previewData && (
+        <ExportPreviewModal
+          isOpen={Boolean(previewData)}
+          fileUrl={previewData.fileUrl}
+          fileType={previewData.fileType}
+          fileName={previewData.fileName}
+          onClose={() => setPreviewData(null)}
+          onDownload={() => {
+            setDownloaded(true);
+            onToast?.(previewData.fileType === 'pdf' ? 'PDF Report downloaded successfully!' : 'Portfolio report PNG image downloaded!');
+            onExport?.();
+            setTimeout(() => setDownloaded(false), 2500);
+          }}
+        />
+      )}
+    </>
   );
 }
 

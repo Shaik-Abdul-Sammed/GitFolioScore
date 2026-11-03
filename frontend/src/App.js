@@ -34,6 +34,7 @@ import ScoreSimulator from './components/ScoreSimulator';
 import CommitRoaster from './components/CommitRoaster';
 import TerminalEasterEgg from './components/TerminalEasterEgg';
 import TechDebtGraveyard from './components/TechDebtGraveyard';
+import FeedbackRating from './components/FeedbackRating';
 import RecruiterSwipeMode from './components/RecruiterSwipeMode';
 import ReadmeWidgetGenerator from './components/ReadmeWidgetGenerator';
 import CompanyOSINT from './components/CompanyOSINT';
@@ -1485,6 +1486,15 @@ function App() {
           {/* Social Badging */}
           <div className="max-w-md mx-auto">
             <LinkedInBadge username={username} score={data.score} />
+          </div>
+
+          {/* User Rating & Feedback System */}
+          <div className="max-w-4xl mx-auto">
+            <FeedbackRating
+              username={username}
+              onToast={showToast}
+              onRewardXP={handleRewardXP}
+            />
           </div>
         </div>
       )}

@@ -261,14 +261,14 @@ function App() {
   const mainInputRef = useRef();
   const compareRef = useRef();
   const [toasts, setToasts] = useState([]);
-  const [xp, setXp] = useState(20);
+  const [xp, setXp] = useState(0);
   const { i18n } = useTranslation();
 
   useEffect(() => {
     let isMounted = true;
     if (process.env.NODE_ENV !== 'test') {
       loadXP().then((val) => {
-        if (isMounted) setXp(val);
+        if (isMounted) setXp(val || 0);
       });
 
       const checkOnboarded = async () => {

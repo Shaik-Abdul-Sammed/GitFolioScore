@@ -1,8 +1,10 @@
 /**
  * Gamified Developer XP management backed by window.anna.storage with localStorage fallback.
+ * Defaults to Level 1 (0 XP) for all fresh users or cleared caches.
  */
 
 const STORAGE_KEY = 'gitfolioscore_xp';
+const RESET_FLAG = 'gitfolioscore_xp_v1_cleared';
 
 export const LEVELS = [
   { level: 1, title: 'Code Initiate', minXP: 0, maxXP: 50, icon: '🌱' },
@@ -30,12 +32,47 @@ export function getLevelInfo(xp) {
   return { ...LEVELS[0], currentXP, nextXP: 50, progress: 0 };
 }
 
+export async function clearStoredXP() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  try {
+    if (window?.anna?.storage?.set) {
+      await window.anna.storage.set(STORAGE_KEY, 0);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return 0;
+}
+
 export async function loadXP() {
+  // Clear any stale legacy default 50/20 XP from pre-release testing
+  try {
+    if (typeof localStorage !== 'undefined' && !localStorage.getItem(RESET_FLAG)) {
+      localStorage.setItem(RESET_FLAG, 'true');
+      const val = localStorage.getItem(STORAGE_KEY);
+      if (val === '20' || val === '50') {
+        localStorage.removeItem(STORAGE_KEY);
+        if (window?.anna?.storage?.set) {
+          window.anna.storage.set(STORAGE_KEY, 0).catch(() => {});
+        }
+        return 0;
+      }
+    }
+  } catch {
+    // Ignore
+  }
+
   try {
     if (window?.anna?.storage?.get) {
       const stored = await window.anna.storage.get(STORAGE_KEY);
       if (stored !== null && stored !== undefined) {
-        return parseInt(stored, 10) || 0;
+        return Math.max(0, parseInt(stored, 10) || 0);
       }
     }
   } catch {
@@ -43,24 +80,30 @@ export async function loadXP() {
   }
 
   try {
-    const local = localStorage.getItem(STORAGE_KEY);
-    return parseInt(local, 10) || 20; // default start with 20 XP welcome
+    const local = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+    if (local !== null && local !== undefined) {
+      return Math.max(0, parseInt(local, 10) || 0);
+    }
+    return 0; // Fresh user starts at Level 1 (0 XP)
   } catch {
-    return 20;
+    return 0;
   }
 }
 
 export async function saveXP(newXP) {
+  const safeXP = Math.max(0, parseInt(newXP, 10) || 0);
   try {
     if (window?.anna?.storage?.set) {
-      await window.anna.storage.set(STORAGE_KEY, newXP);
+      await window.anna.storage.set(STORAGE_KEY, safeXP);
     }
   } catch {
     // Fall back to localStorage
   }
 
   try {
-    localStorage.setItem(STORAGE_KEY, String(newXP));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, String(safeXP));
+    }
   } catch {
     // Ignore storage errors
   }
@@ -68,7 +111,7 @@ export async function saveXP(newXP) {
 
 export async function addXPPoints(amount) {
   const current = await loadXP();
-  const updated = current + amount;
+  const updated = current + Math.max(0, parseInt(amount, 10) || 0);
   await saveXP(updated);
   return {
     oldXP: current,

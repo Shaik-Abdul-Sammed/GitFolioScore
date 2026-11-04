@@ -24,7 +24,7 @@ function CompanyOSINT({ username, data, repos = [] }) {
     const company = COMPANIES.find((c) => c.id === selectedCompany) || COMPANIES[0];
 
     const topLanguages = Array.from(new Set(repos.map((r) => r.language).filter(Boolean))).slice(0, 5);
-    const topRepos = repos.slice(0, 5).map((r) => `${r.name} (${r.language || 'Code'}, ${r.stargazers_count} stars)`).join(', ');
+    const topRepos = repos.slice(0, 5).map((r) => `${r.name} (${r.language || 'Code'}, ${r.stargazers_count ?? r.stars ?? 0} stars)`).join(', ');
 
     const prompt = `You are a Principal Engineering Recruiter evaluating candidate @${username} for ${company.name}.
 Target company culture & bar: ${company.tags}.

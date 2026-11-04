@@ -186,7 +186,7 @@ export function computeScore({
     diversity = Math.min(w.diversity, diversity * (0.8 + (roleFit.fitScore / 100) * 0.4));
   }
 
-  return {
+  const breakdown = {
     profile: Math.round(profileScore),
     repoQuality: Math.round(repoQuality),
     activity: Math.round(activity),
@@ -194,6 +194,15 @@ export function computeScore({
     diversity: Math.round(diversity),
     docs: Math.round(docs),
   };
+
+  const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
+  Object.defineProperty(breakdown, 'score', {
+    value: total,
+    enumerable: false,
+    configurable: true,
+  });
+
+  return breakdown;
 }
 
 /**
@@ -435,8 +444,16 @@ export function calculateReport({ profile, repos = [], weights, targetRole = '' 
     strengths,
     redFlags,
     suggestions,
+    repos: repoStats,
     repoStats,
     topRepos,
+    totalStars,
+    totalForks,
+    readmeCount,
+    detailedReadmeCount,
+    inactiveRepos,
+    consistentReposCount,
+    topReposCount: topRepos.length,
     mostUsedLanguages,
     commitActivity,
     repoInsights,

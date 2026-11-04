@@ -17,6 +17,14 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
   const oldStars = oldRepos.reduce((acc, r) => acc + Math.floor((r.stargazers_count || 0) * 0.4), 0);
   const currentStars = repos.reduce((acc, r) => acc + (r.stargazers_count || 0), 0);
 
+  const oldLangs = {};
+  oldRepos.forEach((r) => {
+    if (r.language) oldLangs[r.language] = (oldLangs[r.language] || 0) + 1;
+  });
+  if (Object.keys(oldLangs).length === 0) {
+    oldLangs['Code'] = 1;
+  }
+
   // Compute 1-year ago estimated score
   const pastScoreResult = computeScore({
     profile: {
@@ -26,7 +34,7 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
     repos: oldRepos.length > 0 ? oldRepos : repos.slice(0, 2),
     totalStars: oldStars,
     totalForks: 0,
-    languageCount: Math.max(1, (oldRepos.length > 0 ? new Set(oldRepos.map((r) => r.language).filter(Boolean)).size : 1)),
+    languageCount: oldLangs,
     readmeCount: Math.max(0, Math.floor(oldRepos.length * 0.5)),
     detailedReadmeCount: Math.max(0, Math.floor(oldRepos.length * 0.3)),
     inactiveRepos: 0,
@@ -35,8 +43,9 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
     weights,
   });
 
-  const pastScore = Math.min(100, Math.max(30, pastScoreResult.score));
-  const scoreDiff = currentScore - pastScore;
+  const rawPast = pastScoreResult?.score ?? Object.values(pastScoreResult).reduce((sum, v) => sum + (Number(v) || 0), 0);
+  const pastScore = Math.min(100, Math.max(25, Math.round(Number(rawPast) || 25)));
+  const scoreDiff = Math.max(0, currentScore - pastScore);
   const growthPercent = pastScore > 0 ? Math.round((scoreDiff / pastScore) * 100) : 100;
 
   return (

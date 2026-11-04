@@ -3,9 +3,12 @@ import { Target, HelpCircle } from 'lucide-react';
 import Tooltip from './Tooltip';
 
 function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
-  // If LinkedIn not synced yet, default baseline linkedInScore to githubScore * 0.9
-  const effectiveLinkedInScore = linkedInScore !== null ? linkedInScore : Math.round(githubScore * 0.88);
-  const readiness = Math.round(githubScore * 0.7 + effectiveLinkedInScore * 0.3);
+  const safeGithubScore = Math.min(100, Math.max(0, Math.round(Number(githubScore) || 0)));
+  // If LinkedIn not synced yet, default baseline linkedInScore to githubScore * 0.88
+  const effectiveLinkedInScore = linkedInScore !== null 
+    ? Math.min(100, Math.max(0, Math.round(Number(linkedInScore) || 0)))
+    : Math.min(100, Math.max(0, Math.round(safeGithubScore * 0.88)));
+  const readiness = Math.min(100, Math.max(0, Math.round(safeGithubScore * 0.7 + effectiveLinkedInScore * 0.3)));
 
   const status = useMemo(() => {
     if (readiness >= 85) return { label: '🔥 Ready to Apply', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.35)' };
@@ -70,10 +73,10 @@ function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
           <div>
             <div className="flex justify-between font-semibold mb-1">
               <span className="text-gray-300">GitHub Code & Repo Quality (70% weight)</span>
-              <span className="text-indigo-300 font-bold">{githubScore}/100</span>
+              <span className="text-indigo-300 font-bold">{safeGithubScore}/100</span>
             </div>
             <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${githubScore}%` }} />
+              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${safeGithubScore}%` }} />
             </div>
           </div>
 

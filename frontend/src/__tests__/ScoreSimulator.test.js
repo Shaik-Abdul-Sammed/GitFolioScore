@@ -30,6 +30,7 @@ describe('ScoreSimulator', () => {
 
     expect(screen.getByText(/Projected Score/i)).toBeInTheDocument();
     expect(screen.getByText(/\+50 ⭐/i)).toBeInTheDocument();
+    expect(screen.getByText(/\+([1-9][0-9]*) pts/i)).toBeInTheDocument();
   });
 
   it('resets simulator state when reset button is clicked', () => {

@@ -92,11 +92,22 @@ function LanguageChart({ languages, repos, showEmptyState = true }) {
 
   // Normalize language data
   const rawList = Array.isArray(languages)
-    ? languages.map((item) => ({
-        name: String(item.lang || item.name || 'Unknown'),
-        count: item.count || item.value || 1,
-      }))
-    : Object.entries(languages).map(([lang, count]) => ({
+    ? languages.map((item) => {
+        if (Array.isArray(item)) {
+          return {
+            name: String(item[0] || 'Unknown'),
+            count: typeof item[1] === 'number' ? item[1] : 1,
+          };
+        }
+        if (typeof item === 'string') {
+          return { name: item, count: 1 };
+        }
+        return {
+          name: String(item?.lang || item?.name || 'Unknown'),
+          count: item?.count || item?.value || 1,
+        };
+      })
+    : Object.entries(languages || {}).map(([lang, count]) => ({
         name: lang,
         count: typeof count === 'number' ? count : 1,
       }));

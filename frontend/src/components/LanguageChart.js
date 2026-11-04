@@ -63,28 +63,31 @@ const CustomTooltip = ({ active, payload }) => {
   );
 };
 
-function LanguageChart({ languages, showEmptyState = false }) {
+export function EmptyState({ message = 'No repositories found to analyze.' }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[220px]">
+      <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+        <Code2 className="w-6 h-6" />
+      </div>
+      <div className="space-y-1 max-w-sm">
+        <h4 className="text-sm font-bold text-white">Empty Portfolio</h4>
+        <p className="text-xs text-gray-400 leading-relaxed">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+function LanguageChart({ languages, repos, showEmptyState = true }) {
   const [chartMode, setChartMode] = useState('radar'); // 'radar' | 'donut'
 
   if (
+    (repos !== undefined && (!repos || repos.length === 0)) ||
     !languages ||
     (Array.isArray(languages) && languages.length === 0) ||
     (!Array.isArray(languages) && Object.keys(languages).length === 0)
   ) {
     if (!showEmptyState) return null;
-    return (
-      <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[300px]">
-        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-          <Code2 className="w-6 h-6" />
-        </div>
-        <div className="space-y-1 max-w-xs">
-          <h4 className="text-sm font-bold text-white">No Language Distribution</h4>
-          <p className="text-xs text-gray-400 leading-relaxed">
-            Create a repository with detected code languages to generate your full-stack domain radar and breakdown.
-          </p>
-        </div>
-      </div>
-    );
+    return <EmptyState message="No repositories found to analyze." />;
   }
 
   // Normalize language data

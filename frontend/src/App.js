@@ -257,6 +257,7 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showQuotaModal, setShowQuotaModal] = useState(false);
   const currentRequestId = useRef(0);
+  const abortControllerRef = useRef(null);
   const reportRef = useRef();
   const mainInputRef = useRef();
   const compareRef = useRef();
@@ -444,6 +445,20 @@ function App() {
     }
     return () => {
       isMounted = false;
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch {
+          // ignore
+        }
+      }
+      if (abortControllerRef.current) {
+        try {
+          abortControllerRef.current.abort();
+        } catch {
+          // ignore
+        }
+      }
     };
   }, []);
 
@@ -466,12 +481,18 @@ function App() {
     setState('advising');
     setLlmError('');
     try {
-      const result = await generateAdvice(report, role, { roastMode: isRoast, persona: activePersona });
+      const result = await generateAdvice(report, role, {
+        roastMode: isRoast,
+        persona: activePersona,
+        signal: abortControllerRef.current?.signal,
+      });
       if (currentRequestId.current !== reqId) return;
       setAdvice(result);
       setState('advised');
     } catch (err) {
-      if (currentRequestId.current !== reqId) return;
+      if (currentRequestId.current !== reqId || err?.name === 'AbortError' || err?.code === 'ABORTED') {
+        return;
+      }
       // eslint-disable-next-line no-console
       console.error('LLM generation error:', err);
       if (err.code === 'APP_QUOTA_EXCEEDED' || /quota/i.test(err.message || '')) {
@@ -491,6 +512,26 @@ function App() {
     const activeRole = overrideRole !== undefined ? overrideRole : targetRole;
     const activeRoast = overrideRoast !== undefined ? overrideRoast : roastMode;
     const activePersona = overridePersona !== undefined ? overridePersona : persona;
+
+    // Cancel any ongoing speech synthesis to prevent ghost audio
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+      } catch {
+        // ignore
+      }
+    }
+
+    // Abort previous in-flight LLM call if any
+    if (abortControllerRef.current) {
+      try {
+        abortControllerRef.current.abort();
+      } catch {
+        // ignore
+      }
+    }
+    abortControllerRef.current = new AbortController();
 
     setErrorMessage('');
     setLlmError('');
@@ -595,8 +636,8 @@ function App() {
       // eslint-disable-next-line no-console
       console.error('Analysis error:', err);
       setState('fetch_failed');
-      if (err.code === 'RATE_LIMIT') {
-        setErrorMessage('GitHub API rate limit exceeded. Please try again in a few minutes.');
+      if (err.code === 'RATE_LIMIT_EXCEEDED' || err.code === 'RATE_LIMIT' || err.isRateLimit) {
+        setErrorMessage('GitHub API limit reached for your network. Please wait 15 minutes.');
       } else if (err.code === 'NOT_FOUND') {
         setErrorMessage(`GitHub user "${activeUsername}" was not found.`);
       } else if (err.code === 'NETWORK') {
@@ -1068,18 +1109,38 @@ function App() {
       {/* Fetch Error Display */}
       {state === 'fetch_failed' && errorMessage && (
         <div className="max-w-4xl mx-auto px-4 mt-6 animate-fade-in-up">
-          <div className="flex items-center justify-between p-4 rounded-xl border bg-red-500/10 border-red-500/30 text-red-500">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p className="font-medium text-sm">{errorMessage}</p>
+          {errorMessage.includes('limit reached') || errorMessage.includes('rate limit') ? (
+            <div className="flex items-center justify-between p-4 rounded-2xl border bg-amber-500/10 border-amber-500/30 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.2)] backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 flex-shrink-0 border border-amber-500/40">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-amber-200">Rate Limit Exceeded</p>
+                  <p className="text-xs text-amber-300/80">{errorMessage}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleAnalyze()}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition shadow"
+              >
+                Retry
+              </button>
             </div>
-            <button
-              onClick={() => handleAnalyze()}
-              className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition"
-            >
-              Retry
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between p-4 rounded-xl border bg-red-500/10 border-red-500/30 text-red-500">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="font-medium text-sm">{errorMessage}</p>
+              </div>
+              <button
+                onClick={() => handleAnalyze()}
+                className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition"
+              >
+                Retry
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1384,7 +1445,11 @@ function App() {
             />
 
             {/* Commit Activity */}
-            <CommitActivityGraph commitActivity={data.commitActivity} showEmptyState={true} />
+            <CommitActivityGraph
+              commitActivity={data.commitActivity}
+              repos={data.repos || data.topRepos}
+              showEmptyState={true}
+            />
 
             {/* Insights Section with Phase 3 Deep Links */}
             <Insights
@@ -1420,7 +1485,11 @@ function App() {
             {/* Two column layout */}
             <div className="grid md:grid-cols-2 gap-6">
               <TopRepos repos={data.topRepos} username={username} />
-              <LanguageChart languages={data.mostUsedLanguages} showEmptyState={true} />
+              <LanguageChart
+                languages={data.mostUsedLanguages}
+                repos={data.repos || data.topRepos}
+                showEmptyState={true}
+              />
             </div>
 
             {/* Feature 13: Predictive Language Trends */}

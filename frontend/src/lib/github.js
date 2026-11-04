@@ -29,7 +29,12 @@ async function handleResponse(response) {
   }
 
   if (response.status === 403) {
-    throw createGitHubError('GitHub API rate limit exceeded. Please wait or try again later.', 'RATE_LIMIT');
+    const error = createGitHubError(
+      'GitHub API limit reached for your network. Please wait 15 minutes.',
+      'RATE_LIMIT_EXCEEDED'
+    );
+    error.isRateLimit = true;
+    throw error;
   }
 
   if (response.status === 404) {

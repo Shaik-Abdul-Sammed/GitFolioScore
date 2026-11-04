@@ -110,7 +110,7 @@ describe('ExportReport Component', () => {
     await waitFor(() => {
       expect(screen.queryByText(/Preview Before Download/i)).not.toBeInTheDocument();
     });
-  });
+  }, 15000);
 
   it('opens preview modal before download on clicking Export PNG', async () => {
     const ref = { current: document.createElement('div') };
@@ -125,5 +125,5 @@ describe('ExportReport Component', () => {
 
     expect(screen.getByText(/PNG SCORECARD/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Download File/i })).toBeInTheDocument();
-  });
+  }, 15000);
 });

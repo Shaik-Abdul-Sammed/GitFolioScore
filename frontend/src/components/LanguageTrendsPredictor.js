@@ -7,9 +7,11 @@ function LanguageTrendsPredictor({ repos = [], username }) {
   const [trends, setTrends] = useState(null);
   const [error, setError] = useState('');
 
+  const safeRepos = Array.isArray(repos) ? repos : [];
+
   // Extract distinct languages from repositories
   const counts = {};
-  repos.forEach((r) => {
+  safeRepos.forEach((r) => {
     if (r.language) {
       counts[r.language] = (counts[r.language] || 0) + 1;
     }

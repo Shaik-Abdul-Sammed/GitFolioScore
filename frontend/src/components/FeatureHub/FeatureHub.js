@@ -265,12 +265,12 @@ function FeatureHub({ data, username, topRepos = [], languages = [], onToast, on
             onClick={() => setActiveModalId(null)}
             aria-hidden="true"
           />
-          <div className="relative z-10 w-full max-w-xl rounded-3xl bg-slate-900 border border-white/15 p-6 shadow-2xl max-h-[88vh] overflow-y-auto pb-16 manga-panel-modal">
+          <div className="relative z-10 w-full max-w-xl rounded-3xl bg-slate-900 border border-white/15 p-6 shadow-2xl max-h-[85vh] overflow-y-auto pb-16 manga-panel-modal">
             {/* Modal Close Button */}
             <button
               type="button"
               onClick={() => setActiveModalId(null)}
-              className="absolute top-5 right-5 p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition z-20"
+              className="sticky top-0 float-right -mt-2 -mr-2 p-2 rounded-xl text-gray-400 hover:text-white bg-slate-900/95 hover:bg-slate-800 border border-white/10 transition z-30 shadow-md backdrop-blur-md"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />

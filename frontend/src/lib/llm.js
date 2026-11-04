@@ -138,9 +138,49 @@ function extractJSON(rawText) {
 }
 
 /**
+ * Race a promise with an AbortSignal to immediately abort stale requests.
+ */
+function raceWithSignal(promise, signal) {
+  if (!signal) return promise;
+  if (signal.aborted) {
+    const error = new Error('The operation was aborted.');
+    error.name = 'AbortError';
+    error.code = 'ABORTED';
+    return Promise.reject(error);
+  }
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      const error = new Error('The operation was aborted.');
+      error.name = 'AbortError';
+      error.code = 'ABORTED';
+      reject(error);
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (res) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(res);
+      },
+      (err) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(err);
+      }
+    );
+  });
+}
+
+/**
  * Map Anna Host API errors to user-friendly error objects with userMessage.
  */
 function handleLLMError(err) {
+  if (err?.name === 'AbortError' || err?.code === 'ABORTED') {
+    const error = new Error('The operation was aborted.');
+    error.name = 'AbortError';
+    error.code = 'ABORTED';
+    error.userMessage = '';
+    return error;
+  }
+
   if (err?.code === 'API_UNAVAILABLE') {
     const error = new Error(err.userMessage || err.message || 'Anna AI environment not detected. Please run within Anna AI OS.');
     error.code = 'API_UNAVAILABLE';
@@ -236,19 +276,29 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
     const startTime = Date.now();
     const maxTotalBudget = 45000;
 
-    const response = await window.anna.llm.complete(
-      {
-        messages: [{ role: 'user', content: userPrompt }],
-        systemPrompt: activeSystemPrompt,
-        maxTokens: 800,
-        temperature: options?.roastMode ? 0.7 : 0.4,
-        modelPreferences: {
-          speedPriority: 0.8,
-          costPriority: 0.5,
-          intelligencePriority: 0.85,
+    if (options?.signal?.aborted) {
+      const error = new Error('The operation was aborted.');
+      error.name = 'AbortError';
+      error.code = 'ABORTED';
+      throw error;
+    }
+
+    const response = await raceWithSignal(
+      window.anna.llm.complete(
+        {
+          messages: [{ role: 'user', content: userPrompt }],
+          systemPrompt: activeSystemPrompt,
+          maxTokens: 800,
+          temperature: options?.roastMode ? 0.7 : 0.4,
+          modelPreferences: {
+            speedPriority: 0.8,
+            costPriority: 0.5,
+            intelligencePriority: 0.85,
+          },
         },
-      },
-      { timeoutMs: maxTotalBudget }
+        { timeoutMs: maxTotalBudget, signal: options?.signal }
+      ),
+      options?.signal
     );
 
     const rawText = response?.content?.text || response?.text || (typeof response === 'string' ? response : '');
@@ -259,23 +309,33 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
       const elapsed = Date.now() - startTime;
       const remainingTime = Math.max(5000, maxTotalBudget - elapsed);
 
-      const retryResponse = await window.anna.llm.complete(
-        {
-          messages: [
-            { role: 'user', content: userPrompt },
-            { role: 'assistant', content: rawText },
-            {
-              role: 'user',
-              content:
-                'Your output could not be parsed as JSON. Return ONLY the raw JSON object: {"summary":"...", "actions":[{"action":"...","rationale":"..."}], "shareText":"..."} without markdown or commentary.',
-            },
-          ],
-          systemPrompt: activeSystemPrompt,
-          maxTokens: 800,
-          temperature: 0.2,
-          modelPreferences: { speedPriority: 0.9, costPriority: 0.7, intelligencePriority: 0.5 },
-        },
-        { timeoutMs: remainingTime }
+      if (options?.signal?.aborted) {
+        const error = new Error('The operation was aborted.');
+        error.name = 'AbortError';
+        error.code = 'ABORTED';
+        throw error;
+      }
+
+      const retryResponse = await raceWithSignal(
+        window.anna.llm.complete(
+          {
+            messages: [
+              { role: 'user', content: userPrompt },
+              { role: 'assistant', content: rawText },
+              {
+                role: 'user',
+                content:
+                  'Your output could not be parsed as JSON. Return ONLY the raw JSON object: {"summary":"...", "actions":[{"action":"...","rationale":"..."}], "shareText":"..."} without markdown or commentary.',
+              },
+            ],
+            systemPrompt: activeSystemPrompt,
+            maxTokens: 800,
+            temperature: 0.2,
+            modelPreferences: { speedPriority: 0.9, costPriority: 0.7, intelligencePriority: 0.5 },
+          },
+          { timeoutMs: remainingTime, signal: options?.signal }
+        ),
+        options?.signal
       );
 
       return extractJSON(retryResponse?.content?.text || retryResponse?.text || (typeof retryResponse === 'string' ? retryResponse : ''));

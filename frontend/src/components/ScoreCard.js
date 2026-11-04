@@ -26,6 +26,26 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
   const [showImpactFlash, setShowImpactFlash] = useState(false);
   const [previewData, setPreviewData] = useState(null);
 
+  // Revoke Blob URL on unmount or before setting new previewData
+  useEffect(() => {
+    return () => {
+      if (
+        previewData?.fileUrl &&
+        typeof URL.revokeObjectURL === 'function' &&
+        previewData.fileUrl.startsWith('blob:')
+      ) {
+        try {
+          URL.revokeObjectURL(previewData.fileUrl);
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [previewData]);
+
+  // Safe fallback for profile to avoid any null/undefined dereference
+  const safeProfile = profile || {};
+
   // 4. Anime Impact Frame on High Score (>= 85)
   useEffect(() => {
     if (score >= 85 && process.env.NODE_ENV !== 'test') {
@@ -215,7 +235,7 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
         useCORS: true,
         backgroundColor: '#0f172a',
       });
-      const fileName = `gitfolioscore-${profile.login || 'portfolio'}-scorecard.png`;
+      const fileName = `gitfolioscore-${safeProfile.login || 'portfolio'}-scorecard.png`;
       let fileUrl = '';
       if (typeof canvas.toBlob === 'function') {
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
@@ -250,8 +270,8 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
   };
 
   const getMemberSince = () => {
-    if (!profile.created_at) return '';
-    const date = new Date(profile.created_at);
+    if (!safeProfile.created_at) return '';
+    const date = new Date(safeProfile.created_at);
     const now = new Date();
     const years = now.getFullYear() - date.getFullYear();
     return `${years} ${years === 1 ? 'year' : 'years'}`;
@@ -310,8 +330,8 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
             <div className="relative flex-shrink-0">
               <div className={`relative rounded-2xl ${neonPulseClass} ${kiAuraClass}`}>
                 <img
-                  src={profile.avatar_url || DEFAULT_AVATAR}
-                  alt={`${profile.name || profile.login || 'User'}'s avatar`}
+                  src={safeProfile.avatar_url || DEFAULT_AVATAR}
+                  alt={`${safeProfile.name || safeProfile.login || 'User'}'s avatar`}
                   crossOrigin="anonymous"
                   onError={(e) => {
                     e.currentTarget.onerror = null;
@@ -320,7 +340,7 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
                   className="w-28 h-28 rounded-2xl border-4 shadow-lg object-cover"
                   style={{ borderColor: scoreColor }}
                 />
-                {profile.hireable && (
+                {safeProfile.hireable && (
                   <span className="absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg" style={{ background: '#10b981' }}>
                     Hireable
                   </span>
@@ -359,16 +379,16 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
             <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                  {profile.name || profile.login || 'Unknown'}
+                  {safeProfile.name || safeProfile.login || 'Unknown'}
                 </h2>
-                {profile.login && (
+                {safeProfile.login && (
                   <a
-                    href={profile.html_url || `https://github.com/${profile.login}`}
+                    href={safeProfile.html_url || `https://github.com/${safeProfile.login}`}
                     target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1 text-sm font-medium hover:underline"
                     style={{ color: 'var(--primary)' }}
                   >
-                    @{profile.login} <ExternalLink className="w-3 h-3" />
+                    @{safeProfile.login} <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
               </div>
@@ -442,19 +462,19 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
               )}
             </div>
 
-            {profile.bio && (
-              <p className="text-sm mb-3 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{profile.bio}</p>
+            {safeProfile.bio && (
+              <p className="text-sm mb-3 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{safeProfile.bio}</p>
             )}
 
             <div className="flex flex-wrap items-center gap-4 text-sm" style={{ color: 'var(--text-muted)' }}>
-              {profile.location && (
+              {safeProfile.location && (
                 <span className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4" /> {profile.location}
+                  <MapPin className="w-4 h-4" /> {safeProfile.location}
                 </span>
               )}
-              {profile.company && (
+              {safeProfile.company && (
                 <span className="flex items-center gap-1.5">
-                  <Building className="w-4 h-4" /> {profile.company}
+                  <Building className="w-4 h-4" /> {safeProfile.company}
                 </span>
               )}
               {getMemberSince() && (
@@ -471,22 +491,22 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
       {showDetails && (
         <div className="border-t px-8 py-5 stagger-children" style={{ borderColor: 'var(--border)', background: 'var(--bg-glass)' }}>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatBox icon={<Users className="w-5 h-5" />} label="Followers" value={profile.followers?.toLocaleString() || '0'} color="var(--primary)" />
-            <StatBox icon={<Users className="w-5 h-5" />} label="Following" value={profile.following?.toLocaleString() || '0'} color="var(--accent)" />
-            <StatBox icon={<GitBranch className="w-5 h-5" />} label="Repositories" value={profile.public_repos || '0'} color="var(--info)" />
+            <StatBox icon={<Users className="w-5 h-5" />} label="Followers" value={safeProfile.followers?.toLocaleString() || '0'} color="var(--primary)" />
+            <StatBox icon={<Users className="w-5 h-5" />} label="Following" value={safeProfile.following?.toLocaleString() || '0'} color="var(--accent)" />
+            <StatBox icon={<GitBranch className="w-5 h-5" />} label="Repositories" value={safeProfile.public_repos || '0'} color="var(--info)" />
             <StatBox icon={<Award className="w-5 h-5" />} label="Score" value={`${score}/100`} color={scoreColor} />
           </div>
 
           {/* Contact links */}
-          {(profile.email || profile.blog || profile.twitter_username) && (
+          {(safeProfile.email || safeProfile.blog || safeProfile.twitter_username) && (
             <div className="mt-4 flex flex-wrap gap-3">
-              {profile.email && (
-                <a href={`mailto:${profile.email}`} className="flex items-center gap-1.5 text-sm hover:underline" style={{ color: 'var(--text-muted)' }}>
-                  <Mail className="w-4 h-4" /> {profile.email}
+              {safeProfile.email && (
+                <a href={`mailto:${safeProfile.email}`} className="flex items-center gap-1.5 text-sm hover:underline" style={{ color: 'var(--text-muted)' }}>
+                  <Mail className="w-4 h-4" /> {safeProfile.email}
                 </a>
               )}
-              {profile.blog && (
-                <a href={profile.blog.startsWith('http') ? profile.blog : `https://${profile.blog}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm hover:underline" style={{ color: 'var(--text-muted)' }}>
+              {safeProfile.blog && (
+                <a href={safeProfile.blog.startsWith('http') ? safeProfile.blog : `https://${safeProfile.blog}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm hover:underline" style={{ color: 'var(--text-muted)' }}>
                   <LinkIcon className="w-4 h-4" /> Website
                 </a>
               )}

@@ -64,3 +64,16 @@ export function playTypewriterClick() {
     // Graceful no-op
   }
 }
+
+/**
+ * Cancel any pending or active speech synthesis to prevent ghost audio.
+ */
+export function cancelSpeech() {
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      // Graceful no-op
+    }
+  }
+}

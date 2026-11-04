@@ -25,6 +25,19 @@ function ExportPreviewModal({
     onClose?.();
   }, [fileUrl, onClose]);
 
+  // Ensure blob URL is safely revoked on unmount or when fileUrl changes
+  useEffect(() => {
+    return () => {
+      if (fileUrl && typeof URL.revokeObjectURL === 'function' && fileUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(fileUrl);
+        } catch (err) {
+          // ignore
+        }
+      }
+    };
+  }, [fileUrl]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Image, FileText, Check, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -9,9 +9,37 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
   const [downloaded, setDownloaded] = useState(false);
   const [previewData, setPreviewData] = useState(null);
 
+  // Revoke Blob URL on unmount or before generating a new export preview
+  useEffect(() => {
+    return () => {
+      if (
+        previewData?.fileUrl &&
+        typeof URL.revokeObjectURL === 'function' &&
+        previewData.fileUrl.startsWith('blob:')
+      ) {
+        try {
+          URL.revokeObjectURL(previewData.fileUrl);
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [previewData]);
+
   const exportAsImage = async () => {
     if (!targetRef?.current) return;
     try {
+      if (
+        previewData?.fileUrl &&
+        typeof URL.revokeObjectURL === 'function' &&
+        previewData.fileUrl.startsWith('blob:')
+      ) {
+        try {
+          URL.revokeObjectURL(previewData.fileUrl);
+        } catch {
+          // ignore
+        }
+      }
       setExporting(true);
       const canvas = await html2canvas(targetRef.current, {
         backgroundColor: '#0f172a',

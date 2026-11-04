@@ -74,8 +74,8 @@ describe('github.js - API Fetching', () => {
       });
 
       await expect(fetchProfile('octocat')).rejects.toMatchObject({
-        code: 'RATE_LIMIT',
-        message: expect.stringMatching(/rate limit/i),
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: expect.stringMatching(/rate limit|limit reached/i),
       });
     });
 
@@ -87,8 +87,8 @@ describe('github.js - API Fetching', () => {
       });
 
       await expect(fetchRepos('octocat')).rejects.toMatchObject({
-        code: 'RATE_LIMIT',
-        message: expect.stringMatching(/rate limit/i),
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: expect.stringMatching(/rate limit|limit reached/i),
       });
     });
   });

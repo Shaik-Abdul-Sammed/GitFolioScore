@@ -4,12 +4,15 @@ import { Download, Briefcase } from 'lucide-react';
 function OpenToWorkBanner({ username = 'developer', score = 88, profile = {}, repos = [], onToast }) {
   const [downloading, setDownloading] = useState(false);
 
+  const safeProfile = profile || {};
+  const safeRepos = Array.isArray(repos) ? repos : [];
+
   const topLanguages = Array.from(
-    new Set(repos.map((r) => r.language).filter(Boolean))
+    new Set(safeRepos.map((r) => r.language).filter(Boolean))
   ).slice(0, 4);
 
   const languagesText = topLanguages.length ? topLanguages.join('  •  ') : 'React  •  TypeScript  •  Node.js  •  Python';
-  const roleTitle = profile.bio ? profile.bio.slice(0, 45) : 'Senior Full-Stack Software Engineer';
+  const roleTitle = safeProfile.bio ? safeProfile.bio.slice(0, 45) : 'Senior Full-Stack Software Engineer';
 
   const generateAndDownloadPNG = () => {
     setDownloading(true);
@@ -72,7 +75,7 @@ function OpenToWorkBanner({ username = 'developer', score = 88, profile = {}, re
       // 5. Name / Handle
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 48px system-ui, -apple-system, sans-serif';
-      ctx.fillText(profile.name || `@${username}`, 80, 160);
+      ctx.fillText(safeProfile.name || `@${username}`, 80, 160);
 
       // 6. Subtitle / Bio
       ctx.fillStyle = '#94a3b8';
@@ -188,7 +191,7 @@ function OpenToWorkBanner({ username = 'developer', score = 88, profile = {}, re
 
             <div>
               <h4 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {profile.name || `@${username}`}
+                {safeProfile.name || `@${username}`}
               </h4>
               <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
                 {roleTitle}

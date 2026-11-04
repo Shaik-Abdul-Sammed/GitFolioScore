@@ -775,3 +775,404 @@ Return ONLY markdown content.`;
     throw handleLLMError(err);
   }
 }
+
+/**
+ * Algorithmic fallback for score explanation & career strategy when LLM is unavailable.
+ */
+export function buildLocalScoreExplanation(report, targetRole = 'Fullstack Engineer') {
+  const score = report?.score ?? 0;
+  const breakdown = report?.scoreBreakdown || {
+    profile: 10,
+    repoQuality: 20,
+    activity: 15,
+    impact: 10,
+    diversity: 8,
+    docs: 6,
+  };
+
+  const role = targetRole || report?.targetRole || 'Fullstack Engineer';
+  const roleFit = report?.roleFitScore ?? (score >= 75 ? 85 : score >= 50 ? 65 : 45);
+
+  const pillarAnalysis = [
+    {
+      pillar: 'Profile Polish',
+      score: breakdown.profile ?? 0,
+      max: 15,
+      status: (breakdown.profile ?? 0) >= 12 ? 'Strong' : (breakdown.profile ?? 0) >= 8 ? 'Good' : 'Needs Work',
+      explanation:
+        (breakdown.profile ?? 0) >= 12
+          ? 'Comprehensive GitHub profile with bio, avatar, and public details.'
+          : 'Profile lacks complete bio, company affiliation, or location metadata.',
+    },
+    {
+      pillar: 'Repo Quality',
+      score: breakdown.repoQuality ?? 0,
+      max: 25,
+      status: (breakdown.repoQuality ?? 0) >= 20 ? 'Strong' : (breakdown.repoQuality ?? 0) >= 14 ? 'Good' : 'Needs Work',
+      explanation:
+        (breakdown.repoQuality ?? 0) >= 20
+          ? 'High proportion of repositories with descriptive summaries and clear README files.'
+          : 'Repositories have missing descriptions or brief, unformatted READMEs.',
+    },
+    {
+      pillar: 'Activity Consistency',
+      score: breakdown.activity ?? 0,
+      max: 20,
+      status: (breakdown.activity ?? 0) >= 16 ? 'Strong' : (breakdown.activity ?? 0) >= 10 ? 'Good' : 'Needs Work',
+      explanation:
+        (breakdown.activity ?? 0) >= 16
+          ? 'Consistent push and commit velocity maintained across recent months.'
+          : 'Inactivity gaps detected; multiple repositories show no commits in the last 6 months.',
+    },
+    {
+      pillar: 'Community Impact',
+      score: breakdown.impact ?? 0,
+      max: 20,
+      status: (breakdown.impact ?? 0) >= 15 ? 'Strong' : (breakdown.impact ?? 0) >= 8 ? 'Good' : 'Needs Work',
+      explanation:
+        (breakdown.impact ?? 0) >= 15
+          ? 'Good community traction with multiple stars and external forks.'
+          : 'Limited open-source discovery; portfolio would benefit from star curation and public releases.',
+    },
+    {
+      pillar: 'Tech Diversity',
+      score: breakdown.diversity ?? 0,
+      max: 10,
+      status: (breakdown.diversity ?? 0) >= 8 ? 'Strong' : (breakdown.diversity ?? 0) >= 5 ? 'Good' : 'Needs Work',
+      explanation:
+        (breakdown.diversity ?? 0) >= 8
+          ? 'Broad fluency across multiple complementary languages and toolchains.'
+          : 'Narrow language footprint; adding modern frameworks increases marketability.',
+    },
+    {
+      pillar: 'Documentation & Licensing',
+      score: breakdown.docs ?? 0,
+      max: 10,
+      status: (breakdown.docs ?? 0) >= 8 ? 'Strong' : (breakdown.docs ?? 0) >= 5 ? 'Good' : 'Needs Work',
+      explanation:
+        (breakdown.docs ?? 0) >= 8
+          ? 'Clear licensing, architecture notes, and contribution guidelines present.'
+          : 'Missing open source licenses (MIT/Apache) and contributing guidelines.',
+    },
+  ];
+
+  const roleRoadmaps = {
+    'Frontend Engineer': {
+      summary: `Your portfolio scored ${score}/100 with ${roleFit}% domain alignment for Frontend Engineer roles.`,
+      matched: ['React', 'JavaScript', 'CSS', 'HTML', 'TypeScript'],
+      missing: ['Next.js App Router', 'Playwright / Vitest E2E', 'Lighthouse 95+ Performance', 'Tailwind / CSS Tokens'],
+      roadmap: [
+        {
+          step: 'Deploy a Production Next.js 15 Web Application',
+          projectedGain: '+10 pts',
+          targetPillar: 'Repo Quality & Impact',
+          actionItem: 'Build a server-side rendered application with dynamic OpenGraph image generation and a live Vercel demo link in the repo header.',
+        },
+        {
+          step: 'Add Comprehensive Component & E2E Testing',
+          projectedGain: '+8 pts',
+          targetPillar: 'Documentation & Repo Quality',
+          actionItem: 'Integrate Vitest and Playwright with automated GitHub Actions CI, displaying test coverage badges (>= 80%) in the README.',
+        },
+        {
+          step: 'Publish an Accessible UI Component Library or Design System',
+          projectedGain: '+6 pts',
+          targetPillar: 'Community Impact & Documentation',
+          actionItem: 'Extract 5+ reusable accessible components (WCAG AA compliant) with Storybook documentation and npm package distribution.',
+        },
+      ],
+      project: {
+        title: 'Collaborative Real-Time Canvas / Dashboard',
+        techStack: ['Next.js 15', 'TypeScript', 'Tailwind CSS', 'WebSockets', 'Zustand', 'Playwright'],
+        architecture: 'Micro-frontend architecture with optimistic UI updates, local storage sync, and sub-100ms interaction latency.',
+        recruiterAppeal: 'Demonstrates deep DOM knowledge, accessibility hygiene, and modern state management that FAANG frontend recruiters look for.',
+      },
+    },
+    'Backend Engineer': {
+      summary: `Your portfolio scored ${score}/100 with ${roleFit}% domain alignment for Backend Engineer roles.`,
+      matched: ['Python', 'Node.js', 'Go', 'SQL', 'REST API'],
+      missing: ['Distributed Caching (Redis)', 'gRPC / Protocol Buffers', 'Database Indexing & Migrations', 'Docker Compose & Telemetry'],
+      roadmap: [
+        {
+          step: 'Build a High-Throughput REST & gRPC Microservice',
+          projectedGain: '+10 pts',
+          targetPillar: 'Repo Quality & Tech Diversity',
+          actionItem: 'Architect a service handling >= 1,000 req/sec with connection pooling, Redis caching, and automated benchmark numbers in the README.',
+        },
+        {
+          step: 'Implement Database Migrations & Transactional Integrity',
+          projectedGain: '+8 pts',
+          targetPillar: 'Documentation & Repo Quality',
+          actionItem: 'Include PostgreSQL migration scripts, indexing plans, and ER diagrams detailing schema normalization and ACID guarantees.',
+        },
+        {
+          step: 'Add Structured Logging, OpenTelemetry & Health Checks',
+          projectedGain: '+6 pts',
+          targetPillar: 'Activity & Documentation',
+          actionItem: 'Provide a docker-compose.yml setup with Prometheus and Grafana dashboards for monitoring request latencies (p95, p99).',
+        },
+      ],
+      project: {
+        title: 'Event-Driven Distributed Task & Notification Queue',
+        techStack: ['Go / Rust / Python', 'PostgreSQL', 'Redis', 'Kafka / RabbitMQ', 'Docker', 'OpenTelemetry'],
+        architecture: 'Decoupled worker pool with idempotent consumers, exponential backoff retries, and distributed tracing.',
+        recruiterAppeal: 'Directly validates system design capabilities, race condition handling, and production-grade reliability.',
+      },
+    },
+    'Mobile Engineer': {
+      summary: `Your portfolio scored ${score}/100 with ${roleFit}% domain alignment for Mobile Engineer roles.`,
+      matched: ['Kotlin', 'Swift', 'Dart', 'Flutter', 'React Native'],
+      missing: ['Offline-First SQLite / Room', 'CI/CD Fastlane Build Automation', 'App Store / Play Store Release', 'Deep Linking & Biometric Auth'],
+      roadmap: [
+        {
+          step: 'Ship a Published or Demoable Mobile App with Video Previews',
+          projectedGain: '+12 pts',
+          targetPillar: 'Repo Quality & Impact',
+          actionItem: 'Add an animated GIF or video walkthrough of the app running on iOS/Android, linking to TestFlight, APK download, or store listing.',
+        },
+        {
+          step: 'Implement Offline-First Synchronization Architecture',
+          projectedGain: '+8 pts',
+          targetPillar: 'Repo Quality & Documentation',
+          actionItem: 'Use Room / CoreData with conflict resolution, background sync workers, and network connectivity state observers.',
+        },
+        {
+          step: 'Automate Mobile CI/CD with Fastlane & GitHub Actions',
+          projectedGain: '+6 pts',
+          targetPillar: 'Activity & Documentation',
+          actionItem: 'Configure automated linting, unit tests, and build artifacts generated on every pull request.',
+        },
+      ],
+      project: {
+        title: 'Offline-First Personal Finance & Expense Tracker',
+        techStack: ['Kotlin (Jetpack Compose) / Swift (SwiftUI) / Flutter', 'Room DB / SQLite', 'Coroutines', 'Fastlane'],
+        architecture: 'MVVM / Clean Architecture with unidirectional data flow (UDF), biometric auth, and interactive charts.',
+        recruiterAppeal: 'Mobile hiring managers look for rock-solid UI responsiveness, offline data resilience, and native platform conventions.',
+      },
+    },
+    'DevOps & Cloud Engineer': {
+      summary: `Your portfolio scored ${score}/100 with ${roleFit}% domain alignment for DevOps & Cloud Engineer roles.`,
+      matched: ['Docker', 'Shell', 'GitHub Actions', 'Python', 'YAML'],
+      missing: ['Kubernetes Helm Charts', 'Terraform Infrastructure as Code', 'Prometheus & Grafana', 'Zero-Trust IAM & Security Scans'],
+      roadmap: [
+        {
+          step: 'Create Modular Terraform Infrastructure as Code (IaC)',
+          projectedGain: '+10 pts',
+          targetPillar: 'Repo Quality & Docs',
+          actionItem: 'Author reusable Terraform modules for VPC, EKS/GKE cluster, and RDS with state locking and tfsec security scanning.',
+        },
+        {
+          step: 'Deploy a Production Kubernetes Cluster with Helm & ArgoCD',
+          projectedGain: '+8 pts',
+          targetPillar: 'Tech Diversity & Impact',
+          actionItem: 'Set up GitOps deployment pipeline with automated canary rollouts and health check probes.',
+        },
+        {
+          step: 'Build a Multi-Stage CI/CD Pipeline with Trivy & Snyk Scans',
+          projectedGain: '+6 pts',
+          targetPillar: 'Documentation & Activity',
+          actionItem: 'Containerize apps with non-root Dockerfiles, minimal distroless base images, and automated vulnerability scanning in PRs.',
+        },
+      ],
+      project: {
+        title: 'GitOps Cloud Native Telemetry & Deployment Suite',
+        techStack: ['Terraform', 'Kubernetes (K8s)', 'Helm', 'ArgoCD', 'Prometheus', 'GitHub Actions'],
+        architecture: 'Declarative infrastructure repository managing multi-environment deployments (Dev/Staging/Prod) with automated rollback.',
+        recruiterAppeal: 'Proves immediate ability to manage cloud infrastructure, reduce deployment failure rates, and enforce security policies.',
+      },
+    },
+    'Machine Learning / AI Engineer': {
+      summary: `Your portfolio scored ${score}/100 with ${roleFit}% domain alignment for Machine Learning / AI Engineer roles.`,
+      matched: ['Python', 'PyTorch', 'Data Analysis', 'Jupyter'],
+      missing: ['MLOps Model Registry (MLflow)', 'ONNX Model Quantization', 'FastAPI Inference API with Docker', 'Evaluation Benchmarks & Data Drift'],
+      roadmap: [
+        {
+          step: 'Deploy a Model Serving API with Docker & FastAPI',
+          projectedGain: '+10 pts',
+          targetPillar: 'Repo Quality & Tech Diversity',
+          actionItem: 'Package your model with ONNX or TensorRT, serve with FastAPI, and include curl examples and response latency benchmarks in the README.',
+        },
+        {
+          step: 'Implement Reproducible MLOps Pipeline with DVC & Weights & Biases',
+          projectedGain: '+8 pts',
+          targetPillar: 'Documentation & Activity',
+          actionItem: 'Version control datasets and model checkpoints with DVC, logging hyperparameters and validation curves to W&B.',
+        },
+        {
+          step: 'Provide Clear Evaluation Metrics & Ablation Studies',
+          projectedGain: '+6 pts',
+          targetPillar: 'Documentation & Impact',
+          actionItem: 'Document F1-score, precision-recall curves, baseline comparisons, and trade-offs against industry benchmarks.',
+        },
+      ],
+      project: {
+        title: 'End-to-End Multimodal Semantic Search & Inference Engine',
+        techStack: ['Python', 'PyTorch', 'Hugging Face', 'FastAPI', 'Qdrant / Milvus (Vector DB)', 'Docker'],
+        architecture: 'Real-time embedding generation with vector indexing, cached query responses, and batch inference worker queues.',
+        recruiterAppeal: 'Distinguishes applied AI engineers from notebook-only experimenters by demonstrating deployment and latency awareness.',
+      },
+    },
+    'Fullstack Engineer': {
+      summary: `Your portfolio scored ${score}/100 with ${roleFit}% domain alignment for Fullstack Engineer roles.`,
+      matched: ['TypeScript', 'React', 'Node.js', 'SQL', 'REST'],
+      missing: ['End-to-End TypeScript Validation (Zod)', 'PostgreSQL Prisma/Drizzle ORM', 'Redis Session Store', 'Automated E2E Testing'],
+      roadmap: [
+        {
+          step: 'Build and Deploy a Full-Stack Production SaaS with Auth & Payments',
+          projectedGain: '+10 pts',
+          targetPillar: 'Repo Quality & Impact',
+          actionItem: 'Develop a full-stack app with Next.js/React, Node/PostgreSQL, Stripe/Auth integration, and a live working URL.',
+        },
+        {
+          step: 'Implement End-to-End Type Safety & Data Validation',
+          projectedGain: '+8 pts',
+          targetPillar: 'Documentation & Repo Quality',
+          actionItem: 'Use tRPC or Zod across client and server boundaries to eliminate runtime type mismatches and document API contracts.',
+        },
+        {
+          step: 'Add Comprehensive Test Pyramid (Unit + Integration + E2E)',
+          projectedGain: '+6 pts',
+          targetPillar: 'Activity & Documentation',
+          actionItem: 'Automate testing with Jest and Playwright running on GitHub Actions with PR preview environments.',
+        },
+      ],
+      project: {
+        title: 'Full-Stack Developer Analytics & Team Collaboration Hub',
+        techStack: ['TypeScript', 'Next.js 15', 'Node.js', 'PostgreSQL', 'Prisma', 'Tailwind CSS', 'Docker'],
+        architecture: 'Layered architecture with role-based access control (RBAC), WebSocket live updates, and rate-limited API endpoints.',
+        recruiterAppeal: 'Demonstrates end-to-end autonomy: capable of taking a product from conception to deployment without hand-holding.',
+      },
+    },
+  };
+
+  const selectedRoleData = roleRoadmaps[role] || roleRoadmaps['Fullstack Engineer'];
+
+  return {
+    overallScore: score,
+    targetRole: role,
+    scoreSummary: `Your portfolio earned ${score}/100. ${
+      score >= 80
+        ? 'You have a competitive, senior-ready profile with strong public signals.'
+        : score >= 60
+        ? 'You have a solid technical foundation, but key documentation and architecture gaps hold back your score.'
+        : 'Your portfolio has high technical debt or minimal repository documentation that significantly lowers recruiter visibility.'
+    } Evaluating specifically for the "${role}" track, your alignment index is ${roleFit}%.`,
+    pillarAnalysis,
+    roleAlignmentDiagnosis: {
+      fitScore: roleFit,
+      status: roleFit >= 75 ? 'Strong Match' : roleFit >= 50 ? 'Moderate Match' : 'Pivot Recommended',
+      summary: selectedRoleData.summary,
+      matchedSkills: selectedRoleData.matched,
+      missingSkills: selectedRoleData.missing,
+    },
+    improvementRoadmap: selectedRoleData.roadmap,
+    flagshipProjectIdea: selectedRoleData.project,
+  };
+}
+
+/**
+ * Explains how the portfolio score was calculated and generates an actionable career improvement blueprint.
+ * @param {object} report - The full computed portfolio report.
+ * @param {string} [targetRole] - The target career role (e.g. "Mobile Engineer", "Frontend Engineer").
+ * @param {object} [options] - Options including signal, persona.
+ */
+export async function explainScoreAndCareerStrategy(report, targetRole = 'Fullstack Engineer', options = {}) {
+  const fallback = buildLocalScoreExplanation(report, targetRole);
+
+  try {
+    await waitForAnna();
+    if (!window.anna?.llm?.complete) {
+      return fallback;
+    }
+
+    const condensed = {
+      username: report.profile?.login,
+      score: report.score,
+      targetRole: targetRole || 'Fullstack Engineer',
+      scoreBreakdown: report.scoreBreakdown,
+      languages: report.mostUsedLanguages?.slice(0, 5),
+      topRepos: report.topRepos?.slice(0, 4).map((r) => ({
+        name: r.name,
+        stars: r.stars,
+        language: r.language,
+        hasReadme: r.hasReadme,
+        description: r.description,
+      })),
+    };
+
+    const prompt = `You are a Principal Software Architect and VP of Engineering conducting an adversarial technical scoring audit.
+Explain why this developer received a score of ${report.score}/100, analyze their fit for the "${targetRole}" career track, and provide an actionable step-by-step roadmap to raise their score to 90+.
+
+Candidate Portfolio Data:
+${JSON.stringify(condensed, null, 2)}
+
+Return ONLY valid JSON matching this schema:
+{
+  "overallScore": ${report.score},
+  "targetRole": "${targetRole}",
+  "scoreSummary": "2-sentence clear diagnosis of why this score was received",
+  "pillarAnalysis": [
+    {"pillar": "Profile Polish", "score": number, "max": 15, "status": "Strong|Good|Needs Work", "explanation": "..."},
+    {"pillar": "Repo Quality", "score": number, "max": 25, "status": "Strong|Good|Needs Work", "explanation": "..."},
+    {"pillar": "Activity Consistency", "score": number, "max": 20, "status": "Strong|Good|Needs Work", "explanation": "..."},
+    {"pillar": "Community Impact", "score": number, "max": 20, "status": "Strong|Good|Needs Work", "explanation": "..."},
+    {"pillar": "Tech Diversity", "score": number, "max": 10, "status": "Strong|Good|Needs Work", "explanation": "..."},
+    {"pillar": "Documentation & Licensing", "score": number, "max": 10, "status": "Strong|Good|Needs Work", "explanation": "..."}
+  ],
+  "roleAlignmentDiagnosis": {
+    "fitScore": number,
+    "status": "Strong Match|Moderate Match|Pivot Recommended",
+    "summary": "...",
+    "matchedSkills": ["..."],
+    "missingSkills": ["..."]
+  },
+  "improvementRoadmap": [
+    {"step": "...", "projectedGain": "+X pts", "targetPillar": "...", "actionItem": "..."}
+  ],
+  "flagshipProjectIdea": {
+    "title": "...",
+    "techStack": ["..."],
+    "architecture": "...",
+    "recruiterAppeal": "..."
+  }
+}`;
+
+    const response = await raceWithSignal(
+      window.anna.llm.complete(
+        {
+          messages: [{ role: 'user', content: prompt }],
+          systemPrompt:
+            'You are a Principal Software Architect analyzing GitHub portfolios. Provide realistic, highly actionable score diagnosis and role-specific improvement blueprints in strict JSON.',
+          maxTokens: 1000,
+          temperature: 0.3,
+          modelPreferences: {
+            speedPriority: 0.8,
+            costPriority: 0.5,
+            intelligencePriority: 0.85,
+          },
+        },
+        { timeoutMs: 40000, signal: options?.signal }
+      ),
+      options?.signal
+    );
+
+    const raw = response?.content?.text || response?.text || (typeof response === 'string' ? response : '');
+    try {
+      const parsed = JSON.parse(raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, ''));
+      if (parsed.scoreSummary && Array.isArray(parsed.improvementRoadmap)) {
+        return {
+          ...fallback,
+          ...parsed,
+          overallScore: report.score,
+          targetRole,
+        };
+      }
+    } catch {
+      // JSON parse failed, use fallback
+    }
+
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}

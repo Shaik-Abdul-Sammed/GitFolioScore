@@ -1,4 +1,9 @@
-import { generateAdvice, waitForAnna } from './llm';
+import {
+  generateAdvice,
+  waitForAnna,
+  explainScoreAndCareerStrategy,
+  buildLocalScoreExplanation,
+} from './llm';
 
 describe('llm.js - AI Career Coach & Error Handling', () => {
   const dummyReport = {
@@ -173,6 +178,67 @@ describe('llm.js - AI Career Coach & Error Handling', () => {
 
       const result = await waitForAnna();
       expect(result).toBe(window.anna);
+    });
+  });
+
+  describe('explainScoreAndCareerStrategy', () => {
+    it('computes local algorithmic score explanation with all 6 pillars and role roadmap', () => {
+      const explanation = buildLocalScoreExplanation(dummyReport, 'Mobile Engineer');
+      expect(explanation.overallScore).toBe(85);
+      expect(explanation.targetRole).toBe('Mobile Engineer');
+      expect(explanation.pillarAnalysis).toHaveLength(6);
+      expect(explanation.roleAlignmentDiagnosis.matchedSkills).toContain('Kotlin');
+      expect(explanation.improvementRoadmap.length).toBeGreaterThanOrEqual(3);
+      expect(explanation.flagshipProjectIdea.title).toBeDefined();
+    });
+
+    it('falls back to local explanation gracefully when window.anna is missing', async () => {
+      delete window.anna;
+      const res = await explainScoreAndCareerStrategy(dummyReport, 'DevOps & Cloud Engineer');
+      expect(res.targetRole).toBe('DevOps & Cloud Engineer');
+      expect(res.improvementRoadmap.length).toBeGreaterThanOrEqual(3);
+      expect(res.pillarAnalysis).toHaveLength(6);
+    });
+
+    it('invokes window.anna.llm.complete when available and parses JSON', async () => {
+      const mockResult = {
+        overallScore: 85,
+        targetRole: 'Frontend Engineer',
+        scoreSummary: 'Strong TypeScript signals with modern component discipline.',
+        pillarAnalysis: [
+          { pillar: 'Repo Quality', score: 22, max: 25, status: 'Strong', explanation: 'Solid READMEs' },
+        ],
+        roleAlignmentDiagnosis: {
+          fitScore: 90,
+          status: 'Strong Match',
+          summary: 'Great React experience',
+          matchedSkills: ['React', 'TypeScript'],
+          missingSkills: ['Next.js App Router'],
+        },
+        improvementRoadmap: [
+          { step: 'Add E2E tests', projectedGain: '+8 pts', targetPillar: 'Repo Quality', actionItem: 'Run Playwright in CI' },
+        ],
+        flagshipProjectIdea: {
+          title: 'Interactive Realtime Whiteboard',
+          techStack: ['Next.js 15', 'TypeScript'],
+          architecture: 'Canvas with WebSockets',
+          recruiterAppeal: 'Shows high DOM performance and state handling',
+        },
+      };
+
+      window.anna = {
+        llm: {
+          complete: jest.fn().mockResolvedValue({
+            content: {
+              text: JSON.stringify(mockResult),
+            },
+          }),
+        },
+      };
+
+      const res = await explainScoreAndCareerStrategy(dummyReport, 'Frontend Engineer');
+      expect(res.scoreSummary).toBe('Strong TypeScript signals with modern component discipline.');
+      expect(res.roleAlignmentDiagnosis.fitScore).toBe(90);
     });
   });
 });

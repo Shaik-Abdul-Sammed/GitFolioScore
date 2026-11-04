@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, HelpCircle } from 'lucide-react';
+import { BarChart3, HelpCircle, Sparkles } from 'lucide-react';
 import Tooltip from './Tooltip';
 
 const categoryMeta = {
@@ -47,14 +47,27 @@ const categoryMeta = {
   },
 };
 
-function Breakdown({ breakdown }) {
+function Breakdown({ breakdown, onExplainScore }) {
   if (!breakdown) return null;
 
   return (
     <div className="premium-card manga-halftone-card p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-      <div className="flex items-center gap-2 mb-6">
-        <BarChart3 className="w-5 h-5" style={{ color: 'var(--primary)' }} />
-        <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Score Breakdown</h3>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+          <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Score Breakdown</h3>
+        </div>
+
+        {onExplainScore && (
+          <button
+            type="button"
+            onClick={onExplainScore}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-400/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-semibold shadow transition-all active:scale-95"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>AI Score Diagnosis</span>
+          </button>
+        )}
       </div>
 
       <div className="space-y-4 stagger-children">

@@ -12,7 +12,7 @@ import ExportPreviewModal from './ExportPreviewModal';
 const DEFAULT_AVATAR =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="%231e293b"/><path d="M50 30a15 15 0 100 30 15 15 0 000-30zm-24 45c0-10 10-15 24-15s24 5 24 15v5H26v-5z" fill="%2394a3b8"/><circle cx="50" cy="45" r="7" fill="%23cbd5e1"/></svg>';
 
-const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare, topRepos = [], languages = [], isMyPortfolio = false }) => {
+const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare, topRepos = [], languages = [], isMyPortfolio = false, onExplainScore }) => {
   const cardRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [generatingBio, setGeneratingBio] = useState(false);
@@ -428,6 +428,18 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
                   <Download className="w-3.5 h-3.5" />
                   <span>{downloading ? 'Capturing...' : 'Download Scorecard'}</span>
                 </button>
+
+                {/* AI Score Explainer & Career Strategy Button */}
+                {onExplainScore && (
+                  <button
+                    type="button"
+                    onClick={onExplainScore}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-amber-400/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-bold shadow-md transition-all active:scale-95 font-gaming"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Explain Score</span>
+                  </button>
+                )}
               </div>
             </div>
 

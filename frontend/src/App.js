@@ -49,6 +49,7 @@ import Trophies from './components/Trophies';
 import { playLevelUpSound, playTypewriterClick } from './lib/audio';
 import OnboardingModal from './components/OnboardingModal';
 import QuotaModal from './components/QuotaModal';
+import ScoreExplainerModal from './components/ScoreExplainerModal';
 import { loadXP, addXPPoints } from './lib/xpStorage';
 import {
   Moon,
@@ -272,6 +273,7 @@ function App() {
   const [toasts, setToasts] = useState([]);
   const [xp, setXp] = useState(0);
   const [showAuditHistory, setShowAuditHistory] = useState(false);
+  const [showScoreExplainerModal, setShowScoreExplainerModal] = useState(false);
   const [myPortfolioUsername, setMyPortfolioUsername] = useState(null);
   const [dismissedPortfolioPrompt, setDismissedPortfolioPrompt] = useState(false);
   const [auditCount, setAuditCount] = useState(0);
@@ -1334,6 +1336,7 @@ function App() {
               topRepos={data.topRepos}
               languages={data.mostUsedLanguages}
               isMyPortfolio={Boolean(myPortfolioUsername && myPortfolioUsername.toLowerCase() === (data.profile?.login || username || '').toLowerCase())}
+              onExplainScore={() => setShowScoreExplainerModal(true)}
             />
 
             {/* RPG Achievements & Trophy Cabinet */}
@@ -1570,6 +1573,31 @@ function App() {
                       </button>
                     </div>
                   )}
+
+                  {/* AI Score Diagnosis & Career Blueprint Callout */}
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300">
+                        <Sparkles className="w-5 h-5 text-indigo-400" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-white font-gaming">
+                          Deep-Dive AI Score Diagnosis &amp; {targetRole} Roadmap
+                        </h5>
+                        <p className="text-[11px] text-gray-300">
+                          Inspect algorithm deductions and get an actionable project blueprint to hit 90+.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowScoreExplainerModal(true)}
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-500/20 transition active:scale-95 flex items-center gap-1.5 whitespace-nowrap font-gaming"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Explain Score &amp; Career Roadmap</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1581,7 +1609,10 @@ function App() {
             <CompanyOSINT username={username} data={data} repos={data.repos || data.topRepos} />
 
             {/* Score Breakdown */}
-            <Breakdown breakdown={data.scoreBreakdown} />
+            <Breakdown
+              breakdown={data.scoreBreakdown}
+              onExplainScore={() => setShowScoreExplainerModal(true)}
+            />
 
             {/* Phase 2, Feature 4: Job Description Matcher */}
             <JDMatcher report={data} />
@@ -1762,6 +1793,18 @@ function App() {
         currentUsername={username}
         onToast={showToast}
       />
+
+      {/* AI Score Explainer & Career Strategy Modal */}
+      {showScoreExplainerModal && data && (
+        <ScoreExplainerModal
+          isOpen={showScoreExplainerModal}
+          onClose={() => setShowScoreExplainerModal(false)}
+          report={data}
+          targetRole={targetRole}
+          onRoleChange={(newRole) => setTargetRole(newRole)}
+          onToast={showToast}
+        />
+      )}
 
       {/* 13. JoJo "To Be Continued" Meme Arrow */}
       {state === 'advised' && data && (

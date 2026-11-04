@@ -70,12 +70,20 @@ import {
   User,
   Compass,
   AlertTriangle,
+  Crown,
 } from 'lucide-react';
 import { fetchProfile, fetchRepos } from './lib/github';
 import { calculateReport } from './lib/score';
 import { generateAdvice } from './lib/llm';
 import { cacheGet, cacheSet } from './lib/cache';
 import { addLeaderboardEntry } from './lib/leaderboard';
+import AuditHistoryModal from './components/AuditHistoryModal';
+import {
+  loadAuditHistory,
+  recordAuditEntry,
+  getClaimedPortfolio,
+  setClaimedPortfolio,
+} from './lib/auditHistory';
 
 const FAMOUS_USERS = ['torvalds', 'gaearon', 'sindresorhus', 'yyx990803'];
 
@@ -263,6 +271,10 @@ function App() {
   const compareRef = useRef();
   const [toasts, setToasts] = useState([]);
   const [xp, setXp] = useState(0);
+  const [showAuditHistory, setShowAuditHistory] = useState(false);
+  const [myPortfolioUsername, setMyPortfolioUsername] = useState(null);
+  const [dismissedPortfolioPrompt, setDismissedPortfolioPrompt] = useState(false);
+  const [auditCount, setAuditCount] = useState(0);
   const { i18n } = useTranslation();
 
   useEffect(() => {
@@ -285,6 +297,14 @@ function App() {
 
       loadXP().then((val) => {
         if (isMounted) setXp(val || 0);
+      });
+
+      getClaimedPortfolio().then((u) => {
+        if (isMounted && u) setMyPortfolioUsername(u);
+      });
+
+      loadAuditHistory().then((h) => {
+        if (isMounted && Array.isArray(h)) setAuditCount(h.length);
       });
 
       const checkOnboarded = async () => {
@@ -567,27 +587,74 @@ function App() {
       // 1. Check persistent cache
       const cached = await cacheGet(activeUsername);
       if (currentRequestId.current !== reqId) return;
-      if (cached && cached.report) {
-        setData(cached.report);
-        setState('scored');
-        playLevelUpSound();
-        await runLLMAdvice(cached.report, activeRole, activeRoast, activePersona, reqId);
-        return;
+
+      let profile = null;
+      let repos = null;
+
+      if (cached && (cached.profile || cached.repos)) {
+        profile = cached.profile;
+        repos = cached.repos || [];
+      } else {
+        // 2. Parallel GitHub fetch
+        const fetched = await Promise.all([
+          fetchProfile(activeUsername),
+          fetchRepos(activeUsername),
+        ]);
+        if (currentRequestId.current !== reqId) return;
+        profile = fetched[0];
+        repos = fetched[1];
       }
 
-      // 2. Parallel GitHub fetch
-      const [profile, repos] = await Promise.all([
-        fetchProfile(activeUsername),
-        fetchRepos(activeUsername),
-      ]);
-      if (currentRequestId.current !== reqId) return;
-
-      // 3. Pure scoring computation
-      const report = calculateReport({ profile, repos, weights });
+      // 3. Pure scoring computation with Target Role benchmark
+      const report = calculateReport({ profile, repos, weights, targetRole: activeRole });
       setData(report);
       setState('scored');
       playLevelUpSound();
-      handleRewardXP(10, 'Analyzed GitHub profile');
+
+      // Dynamic Gaming XP Rewards based on discovery & growth
+      try {
+        const historyList = await loadAuditHistory();
+        const isNewUser = !historyList.some((h) => (h.username || '').toLowerCase() === activeUsername.toLowerCase());
+        const sameUserLast = historyList.find((h) => (h.username || '').toLowerCase() === activeUsername.toLowerCase());
+        const changedRole = sameUserLast && sameUserLast.targetRole !== activeRole;
+        const scoreDelta = sameUserLast ? report.score - sameUserLast.score : 0;
+
+        let earnedXP = 10;
+        let xpReason = 'Analyzed GitHub profile';
+
+        if (isNewUser) {
+          earnedXP = 25;
+          xpReason = `Discovered New Developer (@${activeUsername})`;
+        } else if (changedRole) {
+          earnedXP = 15;
+          xpReason = `Tested Role Benchmark (${activeRole})`;
+        } else if (scoreDelta > 0) {
+          earnedXP = 20;
+          xpReason = `Tracked Score Improvement (+${scoreDelta} pts)`;
+        }
+
+        if (report.score >= 80) {
+          earnedXP += 15;
+          xpReason += ' + Elite Talent Scout Bonus';
+        }
+
+        handleRewardXP(earnedXP, xpReason);
+
+        // Record in Audit History with timeline delta
+        const isMine = activeUsername.toLowerCase() === (myPortfolioUsername || '').toLowerCase();
+        const histRes = await recordAuditEntry({
+          username: activeUsername,
+          profile,
+          report,
+          targetRole: activeRole,
+          roastMode: activeRoast,
+          persona: activePersona,
+          isMyPortfolio: isMine,
+        });
+        if (histRes?.history) setAuditCount(histRes.history.length);
+      } catch {
+        handleRewardXP(10, 'Analyzed GitHub profile');
+      }
 
       // Feature 8: Record new score history
       try {
@@ -702,8 +769,8 @@ function App() {
       const u1Data = res1.value;
       const u2Data = res2.value;
 
-      const rep1 = calculateReport({ profile: u1Data[0], repos: u1Data[1], weights });
-      const rep2 = calculateReport({ profile: u2Data[0], repos: u2Data[1], weights });
+      const rep1 = calculateReport({ profile: u1Data[0], repos: u1Data[1], weights, targetRole });
+      const rep2 = calculateReport({ profile: u2Data[0], repos: u2Data[1], weights, targetRole });
 
       setCompareData({
         user1: { username: u1, report: rep1 },
@@ -742,6 +809,24 @@ function App() {
     utterance.onerror = () => setIsSpeaking(false);
     setIsSpeaking(true);
     window.speechSynthesis.speak(utterance);
+  };
+
+  // Claim primary portfolio
+  const handleClaimPortfolio = async (uname) => {
+    const clean = (uname || '').trim().replace(/^@+/, '');
+    if (!clean) return;
+    await setClaimedPortfolio(clean);
+    setMyPortfolioUsername(clean);
+    handleRewardXP(30, 'Claimed Developer Portfolio');
+    showToast(`👑 @${clean} is now claimed as your portfolio! (+30 XP)`, 'success');
+  };
+
+  // Re-audit or load selected audit from history
+  const handleSelectAudit = (uname, role, isRoast) => {
+    setUsername(uname);
+    if (role) setTargetRole(role);
+    if (isRoast !== undefined) setRoastMode(isRoast);
+    handleAnalyze(uname, role || targetRole, isRoast !== undefined ? isRoast : roastMode, persona);
   };
 
   // Part 2: Quick Try Click Handler
@@ -845,6 +930,37 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2">
+            {myPortfolioUsername && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername(myPortfolioUsername);
+                  handleAnalyze(myPortfolioUsername, targetRole, roastMode, persona);
+                }}
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition shadow-sm active:scale-95"
+                title={`Open My Claimed Portfolio (@${myPortfolioUsername})`}
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-400" />
+                <span>@{myPortfolioUsername}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowAuditHistory(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-indigo-500/30 hover:border-indigo-400 text-white text-xs font-semibold backdrop-blur-md transition shadow-md active:scale-95"
+              title="View Chronological Audit History & Timeline"
+              aria-label="Open Audit History"
+            >
+              <Clock className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">Timeline</span>
+              {auditCount > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 font-bold">
+                  {auditCount}
+                </span>
+              )}
+            </button>
+
             <GamifiedXP xp={xp} onRewardXP={handleRewardXP} />
 
             <select
@@ -1171,6 +1287,45 @@ function App() {
           </div>
 
           <div ref={reportRef} className="space-y-12 md:space-y-16">
+            {/* Portfolio Claim & Verification Prompt */}
+            {(!myPortfolioUsername || myPortfolioUsername.toLowerCase() !== (username || '').toLowerCase()) && !dismissedPortfolioPrompt && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-indigo-500/10 to-purple-500/15 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-fade-in">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex-shrink-0">
+                    <Crown className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Is this your GitHub portfolio?</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                        +30 XP
+                      </span>
+                    </h4>
+                    <p className="text-xs text-gray-300 pt-0.5">
+                      Claim @{data.profile?.login || username} as your primary portfolio to track your growth timeline and unlock verified badges.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleClaimPortfolio(data.profile?.login || username)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 active:scale-95 transition shadow-md flex items-center gap-1.5"
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    <span>Yes, Claim My Portfolio</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDismissedPortfolioPrompt(true)}
+                    className="px-3.5 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition"
+                  >
+                    Not Mine
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Score Card */}
             <ScoreCard
               score={data.score}
@@ -1178,6 +1333,7 @@ function App() {
               previousScore={previousScore}
               topRepos={data.topRepos}
               languages={data.mostUsedLanguages}
+              isMyPortfolio={Boolean(myPortfolioUsername && myPortfolioUsername.toLowerCase() === (data.profile?.login || username || '').toLowerCase())}
             />
 
             {/* RPG Achievements & Trophy Cabinet */}
@@ -1596,6 +1752,15 @@ function App() {
       <QuotaModal
         isOpen={showQuotaModal}
         onClose={() => setShowQuotaModal(false)}
+      />
+
+      {/* Audit History & Timeline Modal */}
+      <AuditHistoryModal
+        isOpen={showAuditHistory}
+        onClose={() => setShowAuditHistory(false)}
+        onSelectAudit={handleSelectAudit}
+        currentUsername={username}
+        onToast={showToast}
       />
 
       {/* 13. JoJo "To Be Continued" Meme Arrow */}

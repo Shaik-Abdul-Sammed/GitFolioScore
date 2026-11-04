@@ -22,10 +22,13 @@ export const POPULAR_USERS = [
   { id: 25254, login: 'tj', name: 'TJ Holowaychuk', avatar_url: 'https://avatars.githubusercontent.com/u/25254?v=4', type: 'User' },
   { id: 110953, login: 'addyosmani', name: 'Addy Osmani', avatar_url: 'https://avatars.githubusercontent.com/u/110953?v=4', type: 'User' },
   { id: 150330, login: 'getify', name: 'Kyle Simpson', avatar_url: 'https://avatars.githubusercontent.com/u/150330?v=4', type: 'User' },
+  { id: 360120, login: 'wesbos', name: 'Wes Bos', avatar_url: 'https://avatars.githubusercontent.com/u/360120?v=4', type: 'User' },
+  { id: 1265995, login: 'bradtraversy', name: 'Brad Traversy', avatar_url: 'https://avatars.githubusercontent.com/u/1265995?v=4', type: 'User' },
   { id: 583231, login: 'octocat', name: 'The Octocat', avatar_url: 'https://avatars.githubusercontent.com/u/583231?v=4', type: 'User' },
   { id: 69631, login: 'facebook', name: 'Meta', avatar_url: 'https://avatars.githubusercontent.com/u/69631?v=4', type: 'Organization' },
   { id: 1342004, login: 'google', name: 'Google', avatar_url: 'https://avatars.githubusercontent.com/u/1342004?v=4', type: 'Organization' },
-  { id: 14985020, login: 'vercel', name: 'Vercel', avatar_url: 'https://avatars.githubusercontent.com/u/14985020?v=4', type: 'Organization' }
+  { id: 14985020, login: 'vercel', name: 'Vercel', avatar_url: 'https://avatars.githubusercontent.com/u/14985020?v=4', type: 'Organization' },
+  { id: 6154722, login: 'microsoft', name: 'Microsoft', avatar_url: 'https://avatars.githubusercontent.com/u/6154722?v=4', type: 'Organization' }
 ];
 
 const memoryCache = new Map();
@@ -128,6 +131,14 @@ export async function searchGitHubUsers(query, { signal, recentProfiles = [] } =
       });
 
       const finalResults = merged.slice(0, 8);
+      // Prioritize exact match if present
+      finalResults.sort((a, b) => {
+        const aExact = a.login.toLowerCase() === clean.toLowerCase();
+        const bExact = b.login.toLowerCase() === clean.toLowerCase();
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        return 0;
+      });
       memoryCache.set(cacheKey, finalResults);
       return finalResults;
     }

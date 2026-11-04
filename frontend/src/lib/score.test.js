@@ -148,4 +148,67 @@ describe('score.js - Pure Scoring Logic', () => {
       expect(goodReport.redFlags).not.toContain('Many repositories missing README');
     });
   });
+
+  describe('Role-Targeted Scoring Differentiation', () => {
+    it('produces different scores when evaluating the same candidate for different roles', () => {
+      const devProfile = {
+        login: 'dan-frontend',
+        name: 'Dan Frontend',
+        bio: 'Building React and UI tools',
+        avatar_url: 'https://avatars.githubusercontent.com/u/810438',
+        public_repos: 6,
+      };
+
+      const frontendRepos = [
+        {
+          name: 'react-ui-components',
+          description: 'A component library for React with Tailwind and CSS',
+          stargazers_count: 50,
+          forks_count: 10,
+          language: 'TypeScript',
+          topics: ['react', 'ui', 'frontend', 'tailwind'],
+          hasReadme: true,
+          readmeSize: 2000,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          name: 'nextjs-dashboard',
+          description: 'Dashboard template built with Next.js and TypeScript',
+          stargazers_count: 40,
+          forks_count: 8,
+          language: 'TypeScript',
+          topics: ['nextjs', 'react', 'web'],
+          hasReadme: true,
+          readmeSize: 1800,
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      const frontendReport = calculateReport({
+        profile: devProfile,
+        repos: frontendRepos,
+        targetRole: 'Frontend Engineer',
+      });
+
+      const devOpsReport = calculateReport({
+        profile: devProfile,
+        repos: frontendRepos,
+        targetRole: 'DevOps & Cloud Engineer',
+      });
+
+      const mobileReport = calculateReport({
+        profile: devProfile,
+        repos: frontendRepos,
+        targetRole: 'Mobile Engineer',
+      });
+
+      expect(frontendReport.score).not.toEqual(devOpsReport.score);
+      expect(frontendReport.roleFitScore).toBeGreaterThan(devOpsReport.roleFitScore);
+      expect(frontendReport.score).toBeGreaterThan(devOpsReport.score);
+      expect(frontendReport.roleFitLabel).toBe('Target Role Specialist');
+      expect(devOpsReport.roleFitLabel).not.toBe('Target Role Specialist');
+      expect(frontendReport.targetRole).toBe('Frontend Engineer');
+      expect(devOpsReport.targetRole).toBe('DevOps & Cloud Engineer');
+    });
+  });
 });

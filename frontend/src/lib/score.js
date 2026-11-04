@@ -1,9 +1,101 @@
 /**
  * Pure calculation logic for scoring a GitHub profile based on profile and repository data.
- * Faithful direct port of backend/utils/analyze.js.
+ * Faithful direct port of backend/utils/analyze.js with modern role-targeted benchmark adjustments.
  */
 
 const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6;
+
+export const ROLE_CRITERIA = {
+  'Frontend Engineer': {
+    preferredLanguages: ['JavaScript', 'TypeScript', 'HTML', 'CSS', 'Vue', 'Svelte', 'SCSS'],
+    preferredTopics: ['react', 'vue', 'angular', 'frontend', 'ui', 'nextjs', 'tailwind', 'web', 'css', 'design-system', 'vite', 'webpack'],
+    weights: { profile: 15, repoQuality: 25, activity: 20, impact: 15, diversity: 10, docs: 15 },
+  },
+  'Backend Engineer': {
+    preferredLanguages: ['Go', 'Rust', 'Java', 'Python', 'C#', 'C++', 'Node.js', 'Ruby', 'PHP', 'SQL', 'Elixir'],
+    preferredTopics: ['api', 'rest', 'graphql', 'backend', 'microservices', 'database', 'sql', 'postgresql', 'redis', 'server', 'grpc'],
+    weights: { profile: 15, repoQuality: 25, activity: 20, impact: 20, diversity: 10, docs: 10 },
+  },
+  'Mobile Engineer': {
+    preferredLanguages: ['Kotlin', 'Swift', 'Dart', 'Java', 'Objective-C'],
+    preferredTopics: ['android', 'ios', 'mobile', 'flutter', 'react-native', 'swiftui', 'jetpack-compose', 'app', 'expo', 'xcode'],
+    weights: { profile: 15, repoQuality: 30, activity: 15, impact: 20, diversity: 10, docs: 10 },
+  },
+  'Machine Learning / AI Engineer': {
+    preferredLanguages: ['Python', 'Jupyter Notebook', 'R', 'C++', 'Julia'],
+    preferredTopics: ['machine-learning', 'deep-learning', 'ai', 'data-science', 'nlp', 'computer-vision', 'pytorch', 'tensorflow', 'llm', 'huggingface', 'model'],
+    weights: { profile: 10, repoQuality: 25, activity: 20, impact: 25, diversity: 10, docs: 10 },
+  },
+  'DevOps & Cloud Engineer': {
+    preferredLanguages: ['Shell', 'HCL', 'Dockerfile', 'Go', 'Python', 'Makefile', 'YAML'],
+    preferredTopics: ['docker', 'kubernetes', 'terraform', 'ci-cd', 'devops', 'cloud', 'aws', 'k8s', 'ansible', 'helm', 'github-actions', 'infrastructure', 'monitoring', 'prometheus'],
+    weights: { profile: 10, repoQuality: 25, activity: 25, impact: 15, diversity: 10, docs: 15 },
+  },
+  'Fullstack Engineer': {
+    preferredLanguages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Java', 'HTML', 'CSS', 'SQL'],
+    preferredTopics: ['fullstack', 'web', 'api', 'react', 'node', 'database', 'rest', 'saas', 'app'],
+    weights: { profile: 15, repoQuality: 25, activity: 20, impact: 20, diversity: 10, docs: 10 },
+  },
+};
+
+/**
+ * Calculates domain role alignment score (0 - 100)
+ */
+export function calculateRoleFit(repos = [], languageCount = {}, targetRole = '') {
+  if (!targetRole || !ROLE_CRITERIA[targetRole]) {
+    return { fitScore: 100, label: 'General Alignment', matchedSkills: [] };
+  }
+
+  const criteria = ROLE_CRITERIA[targetRole];
+  const matchedSkills = new Set();
+
+  let matchedLangWeight = 0;
+  let totalLangWeight = 0;
+  Object.entries(languageCount).forEach(([lang, count]) => {
+    totalLangWeight += count;
+    if (criteria.preferredLanguages.some((pl) => pl.toLowerCase() === lang.toLowerCase())) {
+      matchedLangWeight += count;
+      matchedSkills.add(lang);
+    }
+  });
+
+  const langMatchRatio = totalLangWeight > 0 ? (matchedLangWeight / totalLangWeight) : 0.5;
+
+  let topicMatches = 0;
+  repos.forEach((repo) => {
+    const topics = repo.topics || [];
+    topics.forEach((t) => {
+      const tLower = t.toLowerCase();
+      if (criteria.preferredTopics.some((pt) => tLower.includes(pt))) {
+        topicMatches++;
+        matchedSkills.add(t);
+      }
+    });
+    // Check description for keywords
+    if (repo.description) {
+      const descLower = repo.description.toLowerCase();
+      criteria.preferredTopics.slice(0, 5).forEach((pt) => {
+        if (descLower.includes(pt)) {
+          topicMatches += 0.5;
+        }
+      });
+    }
+  });
+
+  const topicMatchRatio = Math.min(1, topicMatches / Math.max(1, repos.length * 0.8));
+
+  // Combined fit score: 60% language relevance + 40% project domain relevance
+  const rawFit = Math.round((langMatchRatio * 60) + (topicMatchRatio * 40));
+  const fitScore = Math.max(20, Math.min(100, rawFit));
+
+  let label = 'Domain Specialist';
+  if (fitScore >= 80) label = 'Target Role Specialist';
+  else if (fitScore >= 55) label = 'Solid Domain Alignment';
+  else if (fitScore >= 35) label = 'Moderate Role Alignment';
+  else label = 'Cross-Domain Explorer';
+
+  return { fitScore, label, matchedSkills: Array.from(matchedSkills).slice(0, 6) };
+}
 
 /**
  * Compute the overall portfolio score breakdown.
@@ -20,8 +112,10 @@ export function computeScore({
   consistentReposCount,
   topReposCount,
   weights,
+  targetRole = '',
   isRepo = false,
 }) {
+  const roleConfig = targetRole && ROLE_CRITERIA[targetRole] ? ROLE_CRITERIA[targetRole].weights : {};
   const w = {
     profile: 15,
     repoQuality: 25,
@@ -29,6 +123,7 @@ export function computeScore({
     impact: 20,
     diversity: 10,
     docs: 10,
+    ...roleConfig,
     ...(weights || {}),
   };
 
@@ -80,6 +175,16 @@ export function computeScore({
   // README + docs
   let docs = 0;
   docs += Math.min(w.docs, (readmeCount / reposCount) * w.docs);
+
+  // Role fit modulation: apply domain alignment factor when a target role is selected
+  if (targetRole && ROLE_CRITERIA[targetRole] && !isRepo && repos.length > 0) {
+    const roleFit = calculateRoleFit(repos, languageCount, targetRole);
+    // Role multiplier scales from 0.75 (low domain match) to 1.15 (spot-on domain specialist)
+    const roleMultiplier = 0.75 + (roleFit.fitScore / 100) * 0.4;
+    repoQuality = Math.min(w.repoQuality, repoQuality * roleMultiplier);
+    impact = Math.min(w.impact, impact * (0.85 + (roleFit.fitScore / 100) * 0.3));
+    diversity = Math.min(w.diversity, diversity * (0.8 + (roleFit.fitScore / 100) * 0.4));
+  }
 
   return {
     profile: Math.round(profileScore),
@@ -175,7 +280,7 @@ export function generateInsights({
  * @param {object} [params.weights] - Optional scoring weights.
  * @returns {object} Full report object matching backend output format.
  */
-export function calculateReport({ profile, repos = [], weights }) {
+export function calculateReport({ profile, repos = [], weights, targetRole = '' }) {
   const now = Date.now();
   let totalStars = 0;
   let totalForks = 0;
@@ -255,6 +360,9 @@ export function calculateReport({ profile, repos = [], weights }) {
     .sort((a, b) => b[1] - a[1])
     .map(([lang, count]) => ({ lang, count }));
 
+  // Role fit evaluation
+  const roleFit = calculateRoleFit(repoStats, languageCount, targetRole);
+
   // Score breakdown
   const scoreBreakdown = computeScore({
     profile,
@@ -268,6 +376,7 @@ export function calculateReport({ profile, repos = [], weights }) {
     consistentReposCount,
     topReposCount: topRepos.length,
     weights,
+    targetRole,
     isRepo: false,
   });
 
@@ -289,6 +398,16 @@ export function calculateReport({ profile, repos = [], weights }) {
     score,
   });
 
+  // Add role-specific feedback
+  if (targetRole) {
+    if (roleFit.fitScore >= 75) {
+      strengths.unshift(`High domain alignment for ${targetRole} (${roleFit.fitScore}%)`);
+    } else if (roleFit.fitScore < 45) {
+      redFlags.unshift(`Low repository alignment with typical ${targetRole} tech stack`);
+      suggestions.unshift(`Add projects demonstrating key ${targetRole} technologies and architecture`);
+    }
+  }
+
   // Safe minimal insights / commit mock structures to preserve component contract
   const repoInsights = {};
   const commitActivity = {};
@@ -309,6 +428,10 @@ export function calculateReport({ profile, repos = [], weights }) {
     score,
     openSourceScore,
     scoreBreakdown,
+    targetRole: targetRole || 'Fullstack Engineer',
+    roleFitScore: roleFit.fitScore,
+    roleFitLabel: roleFit.label,
+    roleMatchedSkills: roleFit.matchedSkills,
     strengths,
     redFlags,
     suggestions,

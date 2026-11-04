@@ -315,6 +315,16 @@ function UserSearchInput({
           className="absolute top-full left-0 w-full z-50 mt-2 bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-fade-in ring-1 ring-white/10"
           style={{ backgroundColor: '#090d16', zIndex: 9999 }}
         >
+          <div
+            className="px-3.5 py-1.5 border-b border-gray-800 flex items-center justify-between text-[11px] text-gray-400 font-semibold uppercase tracking-wider sticky top-0 backdrop-blur-sm z-10"
+            style={{ backgroundColor: '#0d1322' }}
+          >
+            <span className="flex items-center gap-1.5 text-indigo-300">
+              <Search className="w-3.5 h-3.5 text-indigo-400" /> GitHub Developers
+            </span>
+            <span className="text-[10px] text-gray-500">{results.length} results</span>
+          </div>
+
           {results.map((user, idx) => (
             <button
               key={user.id || user.login}
@@ -328,38 +338,47 @@ function UserSearchInput({
               }`}
               style={{ backgroundColor: selectedIndex === idx ? 'rgba(79, 70, 229, 0.3)' : '#090d16' }}
             >
-              <img
-                src={user.avatar_url || DEFAULT_AVATAR}
-                alt={user.login}
-                crossOrigin="anonymous"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = DEFAULT_AVATAR;
-                }}
-                className="w-7 h-7 rounded-full border border-gray-700 object-cover flex-shrink-0"
-              />
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-sm font-semibold text-white truncate">
-                  @{user.login}
-                </span>
-                {user.name && (
-                  <span className="text-[11px] text-gray-400 truncate">
-                    {user.name}
+                <img
+                  src={user.avatar_url || DEFAULT_AVATAR}
+                  alt={user.login}
+                  crossOrigin="anonymous"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = DEFAULT_AVATAR;
+                  }}
+                  className="w-7 h-7 rounded-full border border-gray-700 object-cover flex-shrink-0"
+                />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-sm font-semibold text-white truncate">
+                    @{user.login}
+                  </span>
+                  {user.name && (
+                    <span className="text-[11px] text-gray-400 truncate">
+                      {user.name}
+                    </span>
+                  )}
+                </div>
+                {user.isRecent && (
+                  <span className="ml-auto text-[10px] text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30 font-medium">
+                    Recent
                   </span>
                 )}
-              </div>
-              {user.isRecent && (
-                <span className="ml-auto text-[10px] text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30 font-medium">
-                  Recent
-                </span>
-              )}
-              {user.type === 'Organization' && (
-                <span className="ml-auto text-[10px] text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full border border-gray-700">
-                  org
-                </span>
-              )}
-            </button>
-          ))}
+                {user.type === 'Organization' && (
+                  <span className="ml-auto text-[10px] text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full border border-gray-700">
+                    org
+                  </span>
+                )}
+              </button>
+            ))}
+
+          <div
+            className="px-3.5 py-1.5 border-t border-gray-800/80 flex items-center justify-between text-[10px] text-gray-500 sticky bottom-0"
+            style={{ backgroundColor: '#090d16' }}
+          >
+            <span>↑↓ Navigate</span>
+            <span>↵ Select</span>
+            <span>esc Close</span>
+          </div>
         </div>
       )}
 

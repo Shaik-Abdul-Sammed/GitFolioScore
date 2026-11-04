@@ -7,11 +7,13 @@ const STORAGE_KEY = 'gitfolioscore_xp';
 const RESET_FLAG = 'gitfolioscore_xp_reset_to_zero_v2';
 
 export const LEVELS = [
-  { level: 1, title: 'Code Initiate', minXP: 0, maxXP: 50, icon: '🌱' },
-  { level: 2, title: 'Terminal Apprentice', minXP: 50, maxXP: 150, icon: '⚡' },
-  { level: 3, title: 'Code Craftsperson', minXP: 150, maxXP: 300, icon: '🛠️' },
-  { level: 4, title: 'Senior Repo Architect', minXP: 300, maxXP: 500, icon: '🏛️' },
-  { level: 5, title: 'Legendary Open Sourcerer', minXP: 500, maxXP: 1000, icon: '👑' },
+  { level: 1, title: 'Code Initiate', minXP: 0, maxXP: 50, icon: '🌱', perk: 'Basic Profile Audits' },
+  { level: 2, title: 'Terminal Apprentice', minXP: 50, maxXP: 150, icon: '⚡', perk: 'Role Benchmarking' },
+  { level: 3, title: 'Code Craftsperson', minXP: 150, maxXP: 300, icon: '🛠️', perk: 'ATS Resume Generator' },
+  { level: 4, title: 'Senior Repo Architect', minXP: 300, maxXP: 500, icon: '🏛️', perk: '1v1 VS Battle Mode' },
+  { level: 5, title: 'Lead Tech Evaluator', minXP: 500, maxXP: 750, icon: '🔮', perk: 'Audit Timeline & CRUD' },
+  { level: 6, title: 'Legendary Open Sourcerer', minXP: 750, maxXP: 1200, icon: '👑', perk: 'Recruiter Badge Sync' },
+  { level: 7, title: 'Mythic Code Sage', minXP: 1200, maxXP: 2500, icon: '🌌', perk: 'Grandmaster Auditor' },
 ];
 
 export function getLevelInfo(xp) {

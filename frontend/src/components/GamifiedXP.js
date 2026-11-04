@@ -111,20 +111,20 @@ function GamifiedXP({ xp, onRewardXP }) {
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
-              <div className="font-bold text-emerald-400">+10 XP</div>
-              <div className="text-gray-300 text-[11px]">Audit GitHub Profile</div>
+              <div className="font-bold text-emerald-400">+25 XP</div>
+              <div className="text-gray-300 text-[11px]">Discover New Developer</div>
             </div>
             <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
-              <div className="font-bold text-indigo-400">+20 XP</div>
-              <div className="text-gray-300 text-[11px]">Generate PDF Resume</div>
+              <div className="font-bold text-amber-400">+15 XP</div>
+              <div className="text-gray-300 text-[11px]">Scout Elite (80+) Score</div>
             </div>
             <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
-              <div className="font-bold text-purple-400">+15 XP</div>
-              <div className="text-gray-300 text-[11px]">Run VS Battle Mode</div>
+              <div className="font-bold text-indigo-400">+15 XP</div>
+              <div className="text-gray-300 text-[11px]">Cross-Role Benchmark Test</div>
             </div>
             <div className="p-2.5 rounded-lg bg-white/5 border border-white/5">
-              <div className="font-bold text-cyan-400">+10 XP</div>
-              <div className="text-gray-300 text-[11px]">Run Security Scan</div>
+              <div className="font-bold text-purple-400">+20 XP</div>
+              <div className="text-gray-300 text-[11px]">Track Score Growth Timeline</div>
             </div>
           </div>
         </div>
@@ -132,7 +132,7 @@ function GamifiedXP({ xp, onRewardXP }) {
         {/* Progression Ladder */}
         <div className="space-y-1.5">
           <div className="text-xs font-bold text-gray-300">Progression Ladder</div>
-          <div className="space-y-1 max-h-36 overflow-y-auto">
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
             {LEVELS.map((lvl) => (
               <div
                 key={lvl.level}
@@ -142,10 +142,15 @@ function GamifiedXP({ xp, onRewardXP }) {
                     : 'bg-white/5 text-gray-400'
                 }`}
               >
-                <span className="flex items-center gap-1.5">
-                  <span>{lvl.icon}</span> Lvl {lvl.level}: {lvl.title}
-                </span>
-                <span className="font-mono text-[11px]">{lvl.minXP} XP</span>
+                <div className="flex flex-col">
+                  <span className="flex items-center gap-1.5">
+                    <span>{lvl.icon}</span> Lvl {lvl.level}: {lvl.title}
+                  </span>
+                  {lvl.perk && (
+                    <span className="text-[10px] text-gray-500 pl-5">{lvl.perk}</span>
+                  )}
+                </div>
+                <span className="font-mono text-[11px] flex-shrink-0">{lvl.minXP} XP</span>
               </div>
             ))}
           </div>

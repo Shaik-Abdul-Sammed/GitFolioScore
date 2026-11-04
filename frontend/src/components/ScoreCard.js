@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   MapPin, Users, GitBranch, Calendar, Award,
   Mail, Link as LinkIcon, Building, ExternalLink, Download, Sparkles, CheckCircle2,
-  Trophy, Copy, Check, X, User, UserPlus
+  Trophy, Copy, Check, X, User, UserPlus, Crown
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { generateBio } from '../lib/llm';
@@ -12,7 +12,7 @@ import ExportPreviewModal from './ExportPreviewModal';
 const DEFAULT_AVATAR =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="%231e293b"/><path d="M50 30a15 15 0 100 30 15 15 0 000-30zm-24 45c0-10 10-15 24-15s24 5 24 15v5H26v-5z" fill="%2394a3b8"/><circle cx="50" cy="45" r="7" fill="%23cbd5e1"/></svg>';
 
-const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare, topRepos = [], languages = [] }) => {
+const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare, topRepos = [], languages = [], isMyPortfolio = false }) => {
   const cardRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [generatingBio, setGeneratingBio] = useState(false);
@@ -390,6 +390,12 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
                   >
                     @{safeProfile.login} <ExternalLink className="w-3 h-3" />
                   </a>
+                )}
+                {isMyPortfolio && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm">
+                    <Crown className="w-3.5 h-3.5 text-amber-400" />
+                    <span>My Portfolio</span>
+                  </span>
                 )}
               </div>
 

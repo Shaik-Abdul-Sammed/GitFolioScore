@@ -1,10 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileCode, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import ExportPreviewModal from './ExportPreviewModal';
 
 function HackerRankResume({ report, advice, onToast }) {
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+
+  // Revoke Blob URL on unmount or before setting new previewData
+  useEffect(() => {
+    return () => {
+      if (
+        previewData?.fileUrl &&
+        typeof URL.revokeObjectURL === 'function' &&
+        previewData.fileUrl.startsWith('blob:')
+      ) {
+        try {
+          URL.revokeObjectURL(previewData.fileUrl);
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [previewData]);
 
   const profile = report?.profile || {};
   const topRepos = report?.topRepos || [];
@@ -159,12 +178,38 @@ function HackerRankResume({ report, advice, onToast }) {
         y += split.length * 11 + 3;
       });
 
-      // Save PDF file
+      // Intercept and open preview before download
       const fileName = `${profile.login || 'developer'}_hackerrank_resume.pdf`;
-      doc.save(fileName);
-      setDownloaded(true);
-      setTimeout(() => setDownloaded(false), 3000);
-      onToast?.('HackerRank Resume PDF downloaded successfully!');
+      let fileUrl;
+      try {
+        if (typeof doc.output === 'function') {
+          try {
+            fileUrl = doc.output('bloburl');
+          } catch {
+            const blob = doc.output('blob');
+            fileUrl = URL.createObjectURL(blob);
+          }
+        }
+      } catch {
+        // ignore
+      }
+      if (!fileUrl && typeof URL.createObjectURL === 'function') {
+        try {
+          const blob = doc.output ? doc.output('blob') : new Blob([''], { type: 'application/pdf' });
+          fileUrl = URL.createObjectURL(blob);
+        } catch {
+          // ignore
+        }
+      }
+      if (!fileUrl) {
+        fileUrl = `blob:pdf-export-${Date.now()}`;
+      }
+
+      setPreviewData({
+        fileUrl,
+        fileName,
+        fileType: 'pdf',
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('PDF generation error:', err);
@@ -216,6 +261,21 @@ function HackerRankResume({ report, advice, onToast }) {
           </>
         )}
       </button>
+
+      {previewData && (
+        <ExportPreviewModal
+          isOpen={Boolean(previewData)}
+          fileUrl={previewData.fileUrl}
+          fileType={previewData.fileType}
+          fileName={previewData.fileName}
+          onClose={() => setPreviewData(null)}
+          onDownload={() => {
+            setDownloaded(true);
+            setTimeout(() => setDownloaded(false), 3000);
+            onToast?.('HackerRank Resume PDF downloaded successfully!');
+          }}
+        />
+      )}
     </div>
   );
 }

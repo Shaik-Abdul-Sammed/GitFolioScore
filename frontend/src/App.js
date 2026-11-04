@@ -1676,7 +1676,7 @@ function App() {
             />
 
             {/* Resume Generator */}
-            <ResumeGenerator report={data} advice={advice} />
+            <ResumeGenerator report={data} advice={advice} onToast={showToast} />
 
             {/* HackerRank Style Black-and-White Resume */}
             <HackerRankResume report={data} advice={advice} onToast={showToast} />

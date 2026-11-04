@@ -1,15 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Download, RefreshCw, AlertCircle } from 'lucide-react';
 import { waitForAnna } from '../lib/llm';
+import ExportPreviewModal from './ExportPreviewModal';
 
 /**
  * PDF Resume Generator – uses jsPDF (already in package.json) to export a
  * 1-page professional resume from the analysed portfolio.
  */
-function ResumeGenerator({ report, advice }) {
+function ResumeGenerator({ report, advice, onToast }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState('');
+  const [previewData, setPreviewData] = useState(null);
+
+  // Revoke Blob URL on unmount or before setting new previewData
+  useEffect(() => {
+    return () => {
+      if (
+        previewData?.fileUrl &&
+        typeof URL.revokeObjectURL === 'function' &&
+        previewData.fileUrl.startsWith('blob:')
+      ) {
+        try {
+          URL.revokeObjectURL(previewData.fileUrl);
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [previewData]);
 
   const profile = report?.profile || {};
   const topRepos = report?.topRepos || [];
@@ -105,7 +124,38 @@ function ResumeGenerator({ report, advice }) {
       const lines = doc.splitTextToSize(resumeText, usableWidth);
       doc.text(lines, margin, 38);
 
-      doc.save(`${profile.login || 'resume'}_gitfolioscore.pdf`);
+      // Intercept download and show interactive preview first
+      const fileName = `${profile.login || 'resume'}_gitfolioscore.pdf`;
+      let fileUrl;
+      try {
+        if (typeof doc.output === 'function') {
+          try {
+            fileUrl = doc.output('bloburl');
+          } catch {
+            const blob = doc.output('blob');
+            fileUrl = URL.createObjectURL(blob);
+          }
+        }
+      } catch {
+        // ignore
+      }
+      if (!fileUrl && typeof URL.createObjectURL === 'function') {
+        try {
+          const blob = doc.output ? doc.output('blob') : new Blob([''], { type: 'application/pdf' });
+          fileUrl = URL.createObjectURL(blob);
+        } catch {
+          // ignore
+        }
+      }
+      if (!fileUrl) {
+        fileUrl = `blob:pdf-export-${Date.now()}`;
+      }
+
+      setPreviewData({
+        fileUrl,
+        fileName,
+        fileType: 'pdf',
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Resume generation error:', err);
@@ -158,6 +208,19 @@ function ResumeGenerator({ report, advice }) {
           <><Download className="w-4 h-4" /> Generate & Download PDF Resume</>
         )}
       </button>
+
+      {previewData && (
+        <ExportPreviewModal
+          isOpen={Boolean(previewData)}
+          fileUrl={previewData.fileUrl}
+          fileType={previewData.fileType}
+          fileName={previewData.fileName}
+          onClose={() => setPreviewData(null)}
+          onDownload={() => {
+            onToast?.('PDF Resume downloaded successfully!');
+          }}
+        />
+      )}
     </div>
   );
 }

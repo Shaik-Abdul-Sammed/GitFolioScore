@@ -1,4 +1,4 @@
-import { calculateReport, computeScore, generateInsights } from './score';
+import { calculateReport } from './score';
 
 describe('score.js - Pure Scoring Logic', () => {
   describe('Newbie User', () => {
@@ -204,6 +204,7 @@ describe('score.js - Pure Scoring Logic', () => {
 
       expect(frontendReport.score).not.toEqual(devOpsReport.score);
       expect(frontendReport.roleFitScore).toBeGreaterThan(devOpsReport.roleFitScore);
+      expect(frontendReport.roleFitScore).toBeGreaterThan(mobileReport.roleFitScore);
       expect(frontendReport.score).toBeGreaterThan(devOpsReport.score);
       expect(frontendReport.roleFitLabel).toBe('Target Role Specialist');
       expect(devOpsReport.roleFitLabel).not.toBe('Target Role Specialist');

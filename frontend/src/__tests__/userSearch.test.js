@@ -1,4 +1,4 @@
-import { searchGitHubUsers, getLocalUserMatches, POPULAR_USERS } from '../lib/userSearch';
+import { searchGitHubUsers, getLocalUserMatches } from '../lib/userSearch';
 
 describe('userSearch utility', () => {
   beforeEach(() => {

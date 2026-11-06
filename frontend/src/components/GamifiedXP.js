@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Award, Zap, X } from 'lucide-react';
-import { loadXP, getLevelInfo, LEVELS } from '../lib/xpStorage';
+import { loadXP, getLevelInfo, clearStoredXP, LEVELS } from '../lib/xpStorage';
 
 function GamifiedXP({ xp, onRewardXP }) {
-  const [currentXP, setCurrentXP] = useState(xp !== undefined && xp !== null ? xp : 0);
+  const [currentXP, setCurrentXP] = useState(() => {
+    if (typeof xp === 'object' && xp !== null) return xp.xp ?? 0;
+    return xp !== undefined && xp !== null ? xp : 0;
+  });
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (xp !== undefined && xp !== null) {
-      setCurrentXP(xp);
+      setCurrentXP(typeof xp === 'object' ? (xp.xp ?? 0) : xp);
     } else {
-      loadXP().then((val) => setCurrentXP(val || 0));
+      loadXP().then((val) => {
+        const num = typeof val === 'object' && val !== null ? (val.xp ?? Number(val)) : (val || 0);
+        setCurrentXP(num);
+      });
     }
   }, [xp]);
 
@@ -156,13 +162,32 @@ function GamifiedXP({ xp, onRewardXP }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowModal(false)}
-          className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition cursor-pointer"
-        >
-          Close
-        </button>
+        <div className="pt-2 flex items-center justify-between gap-3 border-t border-white/5">
+          <button
+            type="button"
+            onClick={async () => {
+              if (typeof window !== 'undefined' && typeof window.resetXP === 'function') {
+                window.resetXP();
+              } else {
+                await clearStoredXP();
+                setCurrentXP(0);
+                onRewardXP?.(0, 'Reset XP');
+              }
+              setShowModal(false);
+            }}
+            className="text-[11px] text-gray-500 hover:text-amber-400 transition cursor-pointer underline underline-offset-2"
+            title="Reset developer XP back to 0 for testing"
+          >
+            Reset XP (Dev Test)
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowModal(false)}
+            className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-white/10 hover:bg-white/20 transition cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   ) : null;
@@ -184,7 +209,7 @@ function GamifiedXP({ xp, onRewardXP }) {
           </div>
           <div className="w-16 sm:w-20 bg-slate-800 rounded-full h-1 mt-1 overflow-hidden border border-white/5">
             <div
-              className="bg-gradient-to-r from-amber-400 to-yellow-500 h-full rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-amber-400 to-yellow-500 h-full rounded-full transition-all duration-500 ease-out"
               style={{ width: `${levelInfo.progress}%` }}
             />
           </div>

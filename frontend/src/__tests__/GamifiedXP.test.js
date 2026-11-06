@@ -1,10 +1,12 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GamifiedXP from '../components/GamifiedXP';
+import { loadXP, clearStoredXP, DEFAULT_INITIAL_STATE } from '../lib/xpStorage';
 
 describe('GamifiedXP', () => {
   beforeEach(() => {
     localStorage.clear();
+    delete window.anna;
   });
 
   it('defaults to Level 1 (0 XP) for fresh user', () => {
@@ -13,6 +15,54 @@ describe('GamifiedXP', () => {
     expect(screen.getByText(/LVL 1/i)).toBeInTheDocument();
     expect(screen.getByText(/Code Initiate/i)).toBeInTheDocument();
     expect(screen.getByText(/0 XP/i)).toBeInTheDocument();
+  });
+
+  it('renders level badge at 10 XP after an audit without jumping to Level 2', () => {
+    render(<GamifiedXP xp={10} />);
+
+    expect(screen.getByText(/LVL 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Code Initiate/i)).toBeInTheDocument();
+    expect(screen.getByText(/10 XP/i)).toBeInTheDocument();
+    expect(screen.queryByText(/LVL 2/i)).not.toBeInTheDocument();
+  });
+
+  it('transitions to Level 2 only when exact 50 XP threshold is reached', () => {
+    const { rerender } = render(<GamifiedXP xp={49} />);
+    expect(screen.getByText(/LVL 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Code Initiate/i)).toBeInTheDocument();
+
+    rerender(<GamifiedXP xp={50} />);
+    expect(screen.getByText(/LVL 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/Terminal Apprentice/i)).toBeInTheDocument();
+    expect(screen.getByText(/50 XP/i)).toBeInTheDocument();
+  });
+
+  it('loadXP fallback returns Level 1 default state on fresh install', async () => {
+    const state = await loadXP();
+    expect(state.xp).toBe(0);
+    expect(state.level).toBe(1);
+    expect(state.title).toBe('Code Initiate');
+    expect(Number(state)).toBe(0);
+    expect(DEFAULT_INITIAL_STATE).toEqual({ xp: 0, level: 1, title: 'Code Initiate' });
+  });
+
+  it('resets XP back to 0 using clearStoredXP or modal reset button', async () => {
+    const onRewardXP = jest.fn();
+    render(<GamifiedXP xp={75} onRewardXP={onRewardXP} />);
+
+    const badge = screen.getByTitle(/View Gamified Developer Rank & XP/i);
+    fireEvent.click(badge);
+
+    const resetBtn = screen.getByText(/Reset XP \(Dev Test\)/i);
+    expect(resetBtn).toBeInTheDocument();
+    fireEvent.click(resetBtn);
+
+    await waitFor(() => {
+      expect(onRewardXP).toHaveBeenCalledWith(0, 'Reset XP');
+    });
+
+    const cleared = await clearStoredXP();
+    expect(cleared).toBe(0);
   });
 
   it('renders level badge with current XP', () => {

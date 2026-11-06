@@ -54,6 +54,7 @@ function TerminalEasterEgg({ username, score, data, advice }) {
   roast                   - Instant terminal roast
   matrix                  - Toggle Matrix digital rain theme
   advice                  - View primary AI career recommendation
+  reset-xp                - Reset developer XP to Level 1 (0 XP)
   clear                   - Clear terminal screen
   exit                    - Close terminal`,
           type: 'output',
@@ -77,6 +78,17 @@ function TerminalEasterEgg({ username, score, data, advice }) {
       setHistory((prev) => [
         ...prev,
         { text: matrixMode ? 'Matrix mode disabled.' : 'Matrix digital mode ACTIVATED. Follow the white rabbit 🐇', type: 'success' },
+      ]);
+      return;
+    }
+
+    if (lower === 'reset-xp' || lower === 'resetxp') {
+      if (typeof window !== 'undefined' && typeof window.resetXP === 'function') {
+        window.resetXP();
+      }
+      setHistory((prev) => [
+        ...prev,
+        { text: 'Developer XP successfully reset to Level 1 (0 XP).', type: 'success' },
       ]);
       return;
     }

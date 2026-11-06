@@ -283,6 +283,29 @@ function App() {
 
   useEffect(() => {
     let isMounted = true;
+    // Expose window.resetXP for reviewer/developer quick testing
+    if (typeof window !== 'undefined') {
+      window.resetXP = async () => {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('gitfolioscore_xp');
+            localStorage.setItem('gitfolioscore_xp', '0');
+          }
+          if (window.anna?.storage?.set) {
+            await window.anna.storage.set({ key: 'gitfolioscore_xp', value: 0 }).catch(() => {});
+          }
+        } catch {
+          // ignore
+        }
+        if (isMounted) setXp(0);
+        // eslint-disable-next-line no-console
+        console.log('[GitFolioScore] Developer XP reset to Level 1 (0 XP)');
+        if (typeof window.location?.reload === 'function') {
+          window.location.reload();
+        }
+      };
+    }
+
     if (process.env.NODE_ENV !== 'test') {
       // Force one-time reset of any cached/stale legacy XP key so everyone starts fresh at Level 1 (0 XP)
       const XP_RESET_KEY = 'gitfolioscore_xp_reset_to_zero_v2';
@@ -300,7 +323,7 @@ function App() {
       }
 
       loadXP().then((val) => {
-        if (isMounted) setXp(val || 0);
+        if (isMounted) setXp(typeof val === 'object' && val !== null ? val.xp : (val || 0));
       });
 
       getClaimedPortfolio().then((u) => {
@@ -672,30 +695,8 @@ function App() {
 
       // Dynamic Gaming XP Rewards based on discovery & growth
       try {
-        const historyList = await loadAuditHistory();
-        const isNewUser = !historyList.some((h) => (h.username || '').toLowerCase() === activeUsername.toLowerCase());
-        const sameUserLast = historyList.find((h) => (h.username || '').toLowerCase() === activeUsername.toLowerCase());
-        const changedRole = sameUserLast && sameUserLast.targetRole !== activeRole;
-        const scoreDelta = sameUserLast ? report.score - sameUserLast.score : 0;
-
-        let earnedXP = 10;
-        let xpReason = 'Analyzed GitHub profile';
-
-        if (isNewUser) {
-          earnedXP = 25;
-          xpReason = `Discovered New Developer (@${activeUsername})`;
-        } else if (changedRole) {
-          earnedXP = 15;
-          xpReason = `Tested Role Benchmark (${activeRole})`;
-        } else if (scoreDelta > 0) {
-          earnedXP = 20;
-          xpReason = `Tracked Score Improvement (+${scoreDelta} pts)`;
-        }
-
-        if (report.score >= 80) {
-          earnedXP += 15;
-          xpReason += ' + Elite Talent Scout Bonus';
-        }
+        const earnedXP = 10;
+        const xpReason = 'Analyzed GitHub profile';
 
         handleRewardXP(earnedXP, xpReason);
 

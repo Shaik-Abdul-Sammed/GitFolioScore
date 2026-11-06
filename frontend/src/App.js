@@ -1895,10 +1895,10 @@ function App() {
       {/* 13. JoJo "To Be Continued" Meme Arrow */}
       {state === 'advised' && data && (
         <div
-          className="fixed bottom-6 right-6 z-40 jojo-arrow-container pointer-events-none select-none"
+          className="relative mt-12 mb-6 flex justify-end pr-4 jojo-arrow-container pointer-events-none select-none"
           aria-hidden="true"
         >
-          <div className="jojo-arrow-bounce flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-black tracking-widest text-xs border-2 border-slate-900 shadow-2xl font-gaming">
+          <div className="jojo-arrow-bounce flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-black tracking-widest text-xs border-2 border-slate-900 shadow-2xl font-mono">
             <span className="text-base leading-none">◀</span>
             <span>TO BE CONTINUED</span>
           </div>

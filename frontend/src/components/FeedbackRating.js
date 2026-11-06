@@ -177,7 +177,7 @@ function FeedbackRating({ username, onToast, onRewardXP }) {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="pt-5 space-y-4">
+        <div className="pt-5 space-y-4">
           {/* 5 Glowing Star Icons */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-950/70 border border-white/10">
             <span className="text-xs font-semibold text-gray-300">
@@ -232,7 +232,8 @@ function FeedbackRating({ username, onToast, onRewardXP }) {
             </span>
 
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={rating === 0 || saving}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-slate-950 shadow-lg transition-all active:scale-95 disabled:opacity-40 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 font-gaming shadow-amber-500/25"
             >
@@ -240,7 +241,7 @@ function FeedbackRating({ username, onToast, onRewardXP }) {
               <span>{saving ? 'Submitting...' : 'Submit Rating (+50 XP)'}</span>
             </button>
           </div>
-        </form>
+        </div>
       )}
     </div>
   );

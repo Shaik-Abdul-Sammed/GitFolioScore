@@ -29,6 +29,17 @@ function HackerRankResume({ report, advice, onToast }) {
   const topRepos = report?.topRepos || [];
   const languages = report?.mostUsedLanguages || [];
 
+  /**
+   * Strips non-latin1 characters so jsPDF Helvetica renders them cleanly.
+   */
+  const sanitizeForPDF = (str) =>
+    (str || '')
+      .replace(/──+/g, '--')
+      .replace(/[•·▸]/g, '-')
+      .replace(/[★☆]/g, '*')
+      .replace(/—/g, '-')
+      .replace(/[^\x20-\x7E\t\n\r\xA0-\xFF]/g, '?');
+
   const handleDownloadPDF = () => {
     setDownloading(true);
     try {
@@ -92,10 +103,11 @@ function HackerRankResume({ report, advice, onToast }) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
       doc.setTextColor(40, 40, 40);
-      const summaryText =
+      const summaryText = sanitizeForPDF(
         advice?.summary ||
         profile.bio ||
-        `Full-stack software developer with proven engineering discipline, verified GitHub portfolio score of ${report?.score ?? 85}/100, and hands-on expertise building production applications with high code quality and documentation hygiene.`;
+        `Full-stack software developer with proven engineering discipline, verified GitHub portfolio score of ${report?.score ?? 85}/100, and hands-on expertise building production applications with high code quality and documentation hygiene.`
+      );
       const splitSummary = doc.splitTextToSize(summaryText, usableWidth);
       doc.text(splitSummary, margin, y);
       y += splitSummary.length * 12;
@@ -104,7 +116,7 @@ function HackerRankResume({ report, advice, onToast }) {
       drawSection('Technical Skills');
       const langNames = languages
         .slice(0, 8)
-        .map((l) => (Array.isArray(l) ? l[0] : l.lang || l.name))
+        .map((l) => (Array.isArray(l) ? l[0] : l?.lang || l?.name))
         .filter(Boolean)
         .join(', ');
       doc.setFont('helvetica', 'bold');
@@ -134,19 +146,19 @@ function HackerRankResume({ report, advice, onToast }) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
-        doc.text(repo.name, margin, y);
+        doc.text(sanitizeForPDF(repo.name), margin, y);
 
-        const titleW = doc.getTextWidth(repo.name);
+        const titleW = doc.getTextWidth(sanitizeForPDF(repo.name));
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(9);
         doc.setTextColor(90, 90, 90);
-        doc.text(` — [${repo.language || 'Software Stack'}]`, margin + titleW, y);
+        doc.text(` - [${sanitizeForPDF(repo.language || 'Software Stack')}]`, margin + titleW, y);
 
         // Right-aligned stars & forks
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(100, 100, 100);
-        const statsStr = `★ ${repo.stars ?? 0}  |  Forks: ${repo.forks ?? 0}`;
+        const statsStr = `* ${repo.stars ?? 0}  |  Forks: ${repo.forks ?? 0}`;
         doc.text(statsStr, pageWidth - margin - doc.getTextWidth(statsStr), y);
 
         y += 12;
@@ -155,7 +167,7 @@ function HackerRankResume({ report, advice, onToast }) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(40, 40, 40);
-        const bulletDesc = `• ${repo.description || 'Engineered modular application architecture with comprehensive documentation and verified test workflows.'}`;
+        const bulletDesc = sanitizeForPDF(`- ${repo.description || 'Engineered modular application architecture with comprehensive documentation and verified test workflows.'}`);
         const splitBullet = doc.splitTextToSize(bulletDesc, usableWidth - 10);
         doc.text(splitBullet, margin + 5, y);
         y += splitBullet.length * 11 + 6;
@@ -164,9 +176,9 @@ function HackerRankResume({ report, advice, onToast }) {
       // 4. VERIFIED ACHIEVEMENTS & CODE QUALITY
       drawSection('Verified Technical Credentials');
       const bullets = [
-        `• Audited by GitFolioScore with overall technical index of ${report?.score ?? 85}/100.`,
-        `• Evaluated across 6 hiring pillars: Code Quality, Documentation Depth, Activity Consistency, and Community Impact.`,
-        ...(advice?.actions || []).slice(0, 2).map((a) => `• Engineering Focus: ${a.action}`),
+        sanitizeForPDF(`- Audited by GitFolioScore with overall technical index of ${report?.score ?? 85}/100.`),
+        sanitizeForPDF(`- Evaluated across 6 hiring pillars: Code Quality, Documentation Depth, Activity Consistency, and Community Impact.`),
+        ...(advice?.actions || []).slice(0, 2).map((a) => sanitizeForPDF(`- Engineering Focus: ${a.action}`)),
       ];
 
       bullets.forEach((b) => {

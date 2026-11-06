@@ -83,6 +83,18 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
   };
 
   const exportAsPDF = async () => {
+    /**
+     * Strips non-latin1 characters so jsPDF Helvetica renders them cleanly.
+     */
+    const sanitizeForPDF = (str) =>
+      (str || '')
+        .replace(/──+/g, '--')
+        .replace(/[•·▸]/g, '-')
+        .replace(/[★☆]/g, '*')
+        .replace(/—/g, '-')
+        .replace(/·/g, '.')
+        .replace(/[^\x20-\x7E\t\n\r\xA0-\xFF]/g, '?');
+
     try {
       setExporting(true);
       const doc = new jsPDF('p', 'pt', 'a4');
@@ -105,7 +117,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
       doc.setFontSize(11);
       doc.setTextColor(199, 210, 254);
       doc.text(
-        `Technical Portfolio Summary · Target: ${targetRole || 'Fullstack Software Engineer'}`,
+        sanitizeForPDF(`Technical Portfolio Summary - Target: ${targetRole || 'Fullstack Software Engineer'}`),
         margin,
         y
       );
@@ -114,7 +126,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
       doc.setFontSize(9);
       doc.setTextColor(148, 163, 184);
       doc.text(
-        `Audited User: @${username || data?.profile?.login || 'developer'} · Date: ${new Date().toLocaleDateString()}`,
+        sanitizeForPDF(`Audited User: @${username || data?.profile?.login || 'developer'} - Date: ${new Date().toLocaleDateString()}`),
         margin,
         y
       );
@@ -144,7 +156,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
       doc.setTextColor(51, 65, 85);
 
       const bioText = data?.profile?.bio
-        ? `Bio: ${data.profile.bio}`
+        ? sanitizeForPDF(`Bio: ${data.profile.bio}`)
         : 'Active open-source developer with verified public repositories.';
       const bioLines = doc.splitTextToSize(bioText, pageWidth - margin * 2);
       doc.text(bioLines, margin, y);
@@ -211,7 +223,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
         doc.setFontSize(9);
         doc.setTextColor(51, 65, 85);
         data.strengths.slice(0, 3).forEach((str) => {
-          doc.text(`•  ${str}`, margin + 8, y);
+          doc.text(sanitizeForPDF(`-  ${str}`), margin + 8, y);
           y += 14;
         });
         y += 8;
@@ -229,13 +241,13 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(10);
           doc.setTextColor(30, 41, 59);
-          doc.text(`${idx + 1}. ${r.name}`, margin + 8, y);
+          doc.text(sanitizeForPDF(`${idx + 1}. ${r.name}`), margin + 8, y);
 
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8.5);
           doc.setTextColor(100, 116, 139);
           doc.text(
-            `Language: ${r.language || 'Multi'}  ·  Stars: ${r.stars ?? 0}  ·  Forks: ${r.forks ?? 0}`,
+            sanitizeForPDF(`Language: ${r.language || 'Multi'}  .  Stars: ${r.stars ?? 0}  .  Forks: ${r.forks ?? 0}`),
             margin + 180,
             y
           );
@@ -244,7 +256,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
           if (r.description) {
             doc.setFontSize(8.5);
             doc.setTextColor(71, 85, 105);
-            const rDesc = doc.splitTextToSize(r.description, pageWidth - margin * 2 - 16);
+            const rDesc = doc.splitTextToSize(sanitizeForPDF(r.description), pageWidth - margin * 2 - 16);
             doc.text(rDesc, margin + 16, y);
             y += rDesc.length * 11 + 6;
           } else {
@@ -266,13 +278,13 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
           doc.setTextColor(79, 70, 229);
-          doc.text(`Action ${idx + 1}: ${item.action}`, margin + 8, y);
+          doc.text(sanitizeForPDF(`Action ${idx + 1}: ${item.action}`), margin + 8, y);
           y += 12;
 
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8.5);
           doc.setTextColor(71, 85, 105);
-          const rLines = doc.splitTextToSize(`Rationale: ${item.rationale}`, pageWidth - margin * 2 - 16);
+          const rLines = doc.splitTextToSize(sanitizeForPDF(`Rationale: ${item.rationale}`), pageWidth - margin * 2 - 16);
           doc.text(rLines, margin + 16, y);
           y += rLines.length * 11 + 6;
         });
@@ -283,7 +295,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
       doc.text(
-        'Verified GitFolioScore Technical Resume Summary · Certified client-side audit on Anna AI OS',
+        'Verified GitFolioScore Technical Resume Summary - Certified client-side audit on Anna AI OS',
         pageWidth / 2,
         doc.internal.pageSize.getHeight() - 25,
         { align: 'center' }

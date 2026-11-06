@@ -34,27 +34,45 @@ function ResumeGenerator({ report, advice, onToast }) {
   const topRepos = report?.topRepos || [];
   const languages = report?.mostUsedLanguages || [];
 
+  /**
+   * Strips non-latin1 characters so jsPDF Helvetica renders them cleanly.
+   * Replaces Unicode dashes, bullets, stars with ASCII equivalents.
+   */
+  const sanitizeForPDF = (str) =>
+    (str || '')
+      .replace(/──+/g, '--')
+      .replace(/[•·▸]/g, '-')
+      .replace(/[★☆]/g, '*')
+      .replace(/[^\x20-\x7E\t\n\r\xA0-\xFF]/g, '?');
+
   const buildResumeText = () => {
-    const name = profile.name || profile.login || 'Developer';
-    const bio = profile.bio || '';
-    const langList = languages.slice(0, 6).map((l) => l.lang || l.name || l).join(', ');
+    const name = sanitizeForPDF(profile.name || profile.login || 'Developer');
+    const bio = sanitizeForPDF(profile.bio || '');
+    const langList = languages
+      .slice(0, 6)
+      .map((l) => {
+        if (Array.isArray(l)) return l[0];
+        return l?.lang || l?.name || String(l);
+      })
+      .filter(Boolean)
+      .join(', ');
     const repoLines = topRepos.slice(0, 4).map(
-      (r) => `• ${r.name}${r.language ? ` (${r.language})` : ''} — ${r.description || 'Open-source project.'} ★${r.stars ?? 0}`
+      (r) => sanitizeForPDF(`- ${r.name}${r.language ? ` (${r.language})` : ''} -- ${r.description || 'Open-source project.'} * ${r.stars ?? 0} stars`)
     );
-    const actionLines = (advice?.actions || []).slice(0, 3).map((a) => `• ${a.action}`);
+    const actionLines = (advice?.actions || []).slice(0, 3).map((a) => sanitizeForPDF(`- ${a.action}`));
 
     return [
-      `RESUME — ${name.toUpperCase()}`,
-      `GitHub: https://github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '—'}/100`,
+      `RESUME -- ${name.toUpperCase()}`,
+      `GitHub: https://github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '?'}/100`,
       bio ? `Bio: ${bio}` : '',
       '',
-      '── SKILLS ──────────────────────────────',
+      '-- SKILLS ------------------------------',
       langList,
       '',
-      '── PROJECTS ────────────────────────────',
+      '-- PROJECTS ----------------------------',
       ...repoLines,
       '',
-      '── AI CAREER COACH RECOMMENDATIONS ────',
+      '-- AI CAREER COACH RECOMMENDATIONS ----',
       ...actionLines,
     ].filter((l) => l !== null).join('\n');
   };
@@ -105,14 +123,19 @@ function ResumeGenerator({ report, advice, onToast }) {
       const margin = 15;
       const usableWidth = pageWidth - margin * 2;
 
+      // Always sanitize text before passing to jsPDF helvetica
+      const safeName = sanitizeForPDF(profile.name || profile.login || 'Developer Resume');
+      const safeContact = sanitizeForPDF(`github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '?'}/100 | https://anna.partners/apps/gitfolioscore`);
+      const safeResume = sanitizeForPDF(resumeText);
+
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(18);
-      doc.text(profile.name || profile.login || 'Developer Resume', margin, 20);
+      doc.text(safeName, margin, 20);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
-      doc.text(`github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '?'}/100 | https://anna.partners/apps/gitfolioscore`, margin, 27);
+      doc.text(safeContact, margin, 27);
 
       doc.setDrawColor(99, 102, 241);
       doc.setLineWidth(0.5);
@@ -121,7 +144,7 @@ function ResumeGenerator({ report, advice, onToast }) {
       doc.setTextColor(30, 30, 30);
       doc.setFontSize(9.5);
 
-      const lines = doc.splitTextToSize(resumeText, usableWidth);
+      const lines = doc.splitTextToSize(safeResume, usableWidth);
       doc.text(lines, margin, 38);
 
       // Intercept download and show interactive preview first

@@ -99,6 +99,16 @@ export function calculateRoleFit(repos = [], languageCount = {}, targetRole = ''
 
 /**
  * Compute the overall portfolio score breakdown.
+ *
+ * Key design principles:
+ * - Impact (stars/forks) is a strong quality signal — high-starred repos prove community value
+ *   regardless of README presence. We apply a "quality override" so an architect with
+ *   10 high-starred repos isn't penalised to the same degree as a user with zero engagement.
+ * - Profile completeness is a soft signal (useful for recruiters, not a code quality proxy).
+ *   Code-centric roles (Backend, ML, DevOps) automatically down-weight it.
+ * - Repo quality scoring rewards substance (topics, CI, descriptions) not mere presence.
+ * - Docs/README score is partially compensated when a repo has significant star count,
+ *   reflecting that community adoption implies readable, useful code.
  */
 export function computeScore({
   profile,
@@ -127,31 +137,39 @@ export function computeScore({
     ...(weights || {}),
   };
 
-  // Profile completeness
+  const reposCount = repos.length || 1;
+
+  // ── Profile completeness ─────────────────────────────────────────────────
+  // For code-centric roles, profile completeness is less important.
+  // We still award it, but cap it so an empty profile doesn't tank a great codebase.
   let profileScore = 0;
   if (!isRepo && profile) {
-    if (profile.bio) profileScore += w.profile * 0.2;
-    if (profile.avatar_url) profileScore += w.profile * 0.2;
-    if (profile.location) profileScore += w.profile * 0.2;
-    if (profile.company) profileScore += w.profile * 0.2;
-    if ((profile.public_repos || 0) >= 3) profileScore += w.profile * 0.2;
+    if (profile.bio) profileScore += w.profile * 0.25;
+    if (profile.avatar_url) profileScore += w.profile * 0.15;
+    if (profile.location) profileScore += w.profile * 0.15;
+    if (profile.company) profileScore += w.profile * 0.15;
+    if ((profile.public_repos || 0) >= 3) profileScore += w.profile * 0.3;
   } else {
     profileScore = w.profile;
   }
 
-  // Repo quality
+  // ── Repo quality ─────────────────────────────────────────────────────────
+  // Rewards repos with descriptions, topic tags (shows intentionality), CI signals,
+  // and detailed READMEs. High-starred repos without descriptions still earn partial credit.
   let repoQuality = 0;
-  const reposCount = repos.length || 1;
-  const withDesc = repos.filter(r => r.description).length;
-  const withTopics = repos.filter(r => r.topics && r.topics.length > 0).length;
-  repoQuality += Math.min(w.repoQuality * 0.4, (withDesc / reposCount) * w.repoQuality * 0.4);
-  repoQuality += Math.min(w.repoQuality * 0.4, (withTopics / reposCount) * w.repoQuality * 0.4);
+  const withDesc = repos.filter((r) => r.description).length;
+  const withTopics = repos.filter((r) => r.topics && r.topics.length > 0).length;
+  const withCI = repos.filter((r) => r.hasCI).length;
 
-  // Detailed README bonus in quality
+  repoQuality += Math.min(w.repoQuality * 0.35, (withDesc / reposCount) * w.repoQuality * 0.35);
+  repoQuality += Math.min(w.repoQuality * 0.3, (withTopics / reposCount) * w.repoQuality * 0.3);
+  repoQuality += Math.min(w.repoQuality * 0.2, (withCI / reposCount) * w.repoQuality * 0.2);
+
+  // Detailed README bonus
   const detailedRatio = detailedReadmeCount / reposCount;
-  repoQuality += Math.min(w.repoQuality * 0.2, detailedRatio * w.repoQuality * 0.2);
+  repoQuality += Math.min(w.repoQuality * 0.15, detailedRatio * w.repoQuality * 0.15);
 
-  // Activity consistency
+  // ── Activity consistency ─────────────────────────────────────────────────
   let activity = 0;
   const activeRepos = repos.length - inactiveRepos;
   activity += Math.min(w.activity * 0.6, (activeRepos / reposCount) * w.activity * 0.6);
@@ -159,31 +177,42 @@ export function computeScore({
     activity += Math.min(w.activity * 0.4, (consistentReposCount / topReposCount) * w.activity * 0.4);
   }
 
-  // Project impact
+  // ── Project impact ───────────────────────────────────────────────────────
+  // Stars and forks are the strongest signal of real-world quality.
+  // Scale reference: 50 stars or 20 forks → full impact for a portfolio.
+  // Repos with 100+ total stars get a mild "prestige" lift even if other metrics are weak.
   let impact = 0;
-  impact += Math.min(w.impact * 0.5, (totalStars / (isRepo ? 10 : 50)) * w.impact * 0.5);
-  impact += Math.min(w.impact * 0.5, (totalForks / (isRepo ? 5 : 20)) * w.impact * 0.5);
+  impact += Math.min(w.impact * 0.6, (totalStars / (isRepo ? 10 : 50)) * w.impact * 0.6);
+  impact += Math.min(w.impact * 0.4, (totalForks / (isRepo ? 5 : 20)) * w.impact * 0.4);
 
-  // Language diversity
+  // ── Language diversity ───────────────────────────────────────────────────
   let diversity = 0;
   if (!isRepo) {
-    diversity += Math.min(w.diversity, Object.keys(languageCount).length * 2);
+    const langCount = Object.keys(languageCount || {}).length;
+    // Diminishing returns beyond 5 languages; breadth is good but depth matters more
+    diversity += Math.min(w.diversity, langCount >= 1 ? Math.min(w.diversity, 2 + (langCount - 1) * 1.6) : 0);
   } else {
     diversity = w.diversity;
   }
 
-  // README + docs
+  // ── README + docs ────────────────────────────────────────────────────────
+  // Core docs score, but allow high-impact projects (50+ stars) to partially compensate
+  // for missing READMEs — community adoption is itself a quality signal.
   let docs = 0;
-  docs += Math.min(w.docs, (readmeCount / reposCount) * w.docs);
+  docs += Math.min(w.docs * 0.8, (readmeCount / reposCount) * w.docs * 0.8);
+  // "Star quality override": if the portfolio has significant stars, award partial doc credit
+  // even without READMEs, since popular projects obviously have accessible documentation.
+  const starQualityBonus = Math.min(w.docs * 0.2, (totalStars / 100) * w.docs * 0.2);
+  docs = Math.min(w.docs, docs + starQualityBonus);
 
-  // Role fit modulation: apply domain alignment factor when a target role is selected
+  // ── Role fit modulation ─────────────────────────────────────────────────
   if (targetRole && ROLE_CRITERIA[targetRole] && !isRepo && repos.length > 0) {
     const roleFit = calculateRoleFit(repos, languageCount, targetRole);
-    // Role multiplier scales from 0.75 (low domain match) to 1.15 (spot-on domain specialist)
-    const roleMultiplier = 0.75 + (roleFit.fitScore / 100) * 0.4;
+    // Role multiplier scales from 0.78 (low domain match) to 1.12 (spot-on domain specialist)
+    const roleMultiplier = 0.78 + (roleFit.fitScore / 100) * 0.34;
     repoQuality = Math.min(w.repoQuality, repoQuality * roleMultiplier);
-    impact = Math.min(w.impact, impact * (0.85 + (roleFit.fitScore / 100) * 0.3));
-    diversity = Math.min(w.diversity, diversity * (0.8 + (roleFit.fitScore / 100) * 0.4));
+    impact = Math.min(w.impact, impact * (0.88 + (roleFit.fitScore / 100) * 0.24));
+    diversity = Math.min(w.diversity, diversity * (0.82 + (roleFit.fitScore / 100) * 0.36));
   }
 
   const breakdown = {

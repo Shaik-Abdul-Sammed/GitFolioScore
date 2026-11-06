@@ -46,6 +46,7 @@ import LanguageTrendsPredictor from './components/LanguageTrendsPredictor';
 import TimeMachineView from './components/TimeMachineView';
 import OpenToWorkBanner from './components/OpenToWorkBanner';
 import Trophies from './components/Trophies';
+import GrowthGoalTracker from './components/GrowthGoalTracker';
 import { playLevelUpSound, playTypewriterClick } from './lib/audio';
 import OnboardingModal from './components/OnboardingModal';
 import QuotaModal from './components/QuotaModal';
@@ -1746,6 +1747,18 @@ function App() {
               onRewardXP={handleRewardXP}
             />
           </div>
+
+          {/* Growth Goal Tracker — Re-audit & Track Progress CTA */}
+          {myPortfolioUsername && myPortfolioUsername.toLowerCase() === (data.profile?.login || username || '').toLowerCase() && (
+            <div className="max-w-4xl mx-auto">
+              <GrowthGoalTracker
+                score={data.score}
+                username={username}
+                onReAudit={() => handleAnalyze(username)}
+                onToast={showToast}
+              />
+            </div>
+          )}
         </div>
       )}
 

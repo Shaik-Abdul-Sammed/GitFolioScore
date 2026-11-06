@@ -1,16 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExternalLink, X, Globe, Shield, RefreshCw } from 'lucide-react';
 
 function IframePreviewModal({ url, repoName, onClose }) {
   const [loading, setLoading] = useState(true);
   const [blocked, setBlocked] = useState(false);
 
+  useEffect(() => {
+    if (!url) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    const origOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = origOverflow;
+    };
+  }, [url, onClose]);
+
   if (!url) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
       <div
-        className="w-full max-w-5xl h-[85vh] max-h-[85vh] overflow-y-auto pb-20 rounded-2xl border shadow-2xl flex flex-col"
+        className="relative z-10 w-full max-w-5xl h-[85vh] max-h-[85vh] overflow-y-auto pb-20 rounded-2xl border shadow-2xl flex flex-col"
         style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
       >
         {/* Browser-style address bar header */}

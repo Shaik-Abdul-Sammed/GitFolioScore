@@ -15,6 +15,15 @@ function TerminalEasterEgg({ username, score, data, advice }) {
   const bottomRef = useRef(null);
 
   useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open]);
+
+  useEffect(() => {
     if (open && !minimized) {
       if (typeof bottomRef.current?.scrollIntoView === 'function') {
         bottomRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -241,7 +250,7 @@ function TerminalEasterEgg({ username, score, data, advice }) {
           {!minimized && (
             <div className="flex flex-col h-[320px]">
               {/* Output area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-xs">
+              <div className="flex-1 overflow-y-auto overflow-x-auto p-4 space-y-2 font-mono text-xs break-words">
                 {history.map((h, i) => (
                   <div
                     key={i}

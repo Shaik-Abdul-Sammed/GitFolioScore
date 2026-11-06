@@ -73,6 +73,7 @@ import {
   Compass,
   AlertTriangle,
   Crown,
+  WifiOff,
 } from 'lucide-react';
 import { fetchProfile, fetchRepos } from './lib/github';
 import { calculateReport } from './lib/score';
@@ -340,6 +341,25 @@ function App() {
     };
   }, []);
 
+  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' && !navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      showToast('Network restored! You are back online.', 'success');
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      showToast('You are offline. Cached audits and features remain available.', 'warning');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const handleRewardXP = async (amount, reason) => {
     try {
       const res = await addXPPoints(amount);
@@ -553,8 +573,18 @@ function App() {
   };
 
   const handleAnalyze = async (overrideUsername, overrideRole, overrideRoast, overridePersona) => {
-    const activeUsername = (overrideUsername !== undefined ? overrideUsername : username).trim();
-    if (!activeUsername) return;
+    const rawUsername = (overrideUsername !== undefined ? overrideUsername : username).trim().replace(/^@+/, '');
+    if (!rawUsername) return;
+
+    // Validate GitHub username format: 1-39 alphanumeric chars or single hyphens
+    const isValidUsername = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(rawUsername);
+    if (!isValidUsername) {
+      setErrorMessage(`"${rawUsername}" is not a valid GitHub username format.`);
+      setState('fetch_failed');
+      return;
+    }
+
+    const activeUsername = rawUsername;
     if (overrideUsername !== undefined) setUsername(activeUsername);
 
     const reqId = ++currentRequestId.current;
@@ -957,7 +987,7 @@ function App() {
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
               </svg>
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-1.5">
+            <h1 className="text-base sm:text-xl font-bold text-white tracking-tight flex items-center gap-1.5">
               GitFolio<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300">Score</span>
               <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">AI OS</span>
             </h1>
@@ -1018,6 +1048,17 @@ function App() {
           </div>
         </div>
       </nav>
+
+      {/* Offline Status Alert Banner */}
+      {isOffline && (
+        <div
+          role="status"
+          className="w-full bg-amber-500/20 border-b border-amber-500/40 text-amber-200 text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2"
+        >
+          <WifiOff className="w-4 h-4 text-amber-400" />
+          <span>Offline mode active. Showing cached reports and local analysis.</span>
+        </div>
+      )}
 
       {/* Hero Header */}
       <header className="relative py-12 md:py-16" style={{ background: 'var(--gradient-hero)' }}>
@@ -1258,7 +1299,7 @@ function App() {
 
       {/* Fetch Error Display */}
       {state === 'fetch_failed' && errorMessage && (
-        <div className="max-w-4xl mx-auto px-4 mt-6 animate-fade-in-up">
+        <div className="max-w-4xl mx-auto px-4 mt-6 animate-fade-in-up" role="alert" aria-live="assertive">
           {errorMessage.includes('limit reached') || errorMessage.includes('rate limit') ? (
             <div className="flex items-center justify-between p-4 rounded-2xl border bg-amber-500/10 border-amber-500/30 text-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.2)] backdrop-blur-md">
               <div className="flex items-center gap-3">
@@ -1385,7 +1426,7 @@ function App() {
 
             {/* AI Advisor Panel */}
             <div
-              className={`rounded-2xl p-6 border shadow-lg transition-all ${
+              className={`premium-card manga-halftone-card p-6 border shadow-lg transition-all ${
                 state === 'advising' ? 'animate-ai-glow' : ''
               } ${
                 roastMode ? 'border-orange-500/50 bg-gradient-to-b from-orange-500/5 to-transparent' : ''

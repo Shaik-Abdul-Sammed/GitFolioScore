@@ -106,7 +106,18 @@ async function persistAuditHistory(list) {
 
   try {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+      try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+      } catch {
+        // Handle QuotaExceededError safely by evicting older history
+        if (list.length > 10) {
+          try {
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list.slice(0, 10)));
+          } catch {
+            // full, ignore
+          }
+        }
+      }
     }
   } catch {
     // Ignore

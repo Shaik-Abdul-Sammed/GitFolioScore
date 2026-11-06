@@ -79,8 +79,8 @@ function CommitActivityGraph({ commitActivity, repos, showEmptyState = true }) {
   const consistencyPercent = Math.round((activeWeeksCount / (weeklyTotals.length || 1)) * 100);
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Activity className="w-5 h-5" style={{ color: 'var(--primary)' }} />
@@ -108,7 +108,9 @@ function CommitActivityGraph({ commitActivity, repos, showEmptyState = true }) {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
+      <div className="w-full overflow-x-auto">
+        <div className="min-w-[460px]">
+          <ResponsiveContainer width="100%" height={300}>
         <AreaChart data={data}>
           <defs>
             {repoNames.map((repo, i) => (
@@ -145,6 +147,8 @@ function CommitActivityGraph({ commitActivity, repos, showEmptyState = true }) {
           ))}
         </AreaChart>
       </ResponsiveContainer>
+        </div>
+      </div>
 
       {/* Legend & Stats */}
       <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>

@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, Copy, Check, Code, ExternalLink, ShieldCheck } from 'lucide-react';
 
 function ReadmeWidgetGenerator({ username, score = 88, tier = 'Senior Developer', onToast }) {
   const [copiedType, setCopiedType] = useState(null);
   const [badgeStyle, setBadgeStyle] = useState('for-the-badge'); // 'for-the-badge' | 'flat-square' | 'plastic'
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const scoreColor = score >= 80 ? '6366f1' : score >= 60 ? '10b981' : 'f59e0b';
   const shieldsUrl = `https://img.shields.io/badge/GitFolioScore-${score}%2F100-${scoreColor}?style=${badgeStyle}&logo=github&logoColor=white`;
@@ -13,31 +20,43 @@ function ReadmeWidgetGenerator({ username, score = 88, tier = 'Senior Developer'
   const htmlSnippet = `<a href="${appUrl}"><img src="${shieldsUrl}" alt="GitFolioScore ${score}/100" /></a>`;
 
   const handleCopy = (text, type) => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(text);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+    } catch {
+      // fallback
     }
     setCopiedType(type);
     if (onToast) {
       onToast(`Copied ${type} snippet to clipboard!`, 'success');
     }
-    setTimeout(() => setCopiedType(null), 2500);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopiedType(null), 2500);
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 transition-all hover:border-indigo-500/30">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up transition-all hover:border-indigo-500/40">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               {'"Hype" README Widget Generator'}
               <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                 Markdown / SVG
               </span>
             </h3>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               Embed your verified GitFolioScore directly in your GitHub profile README.
             </p>
           </div>
@@ -69,7 +88,7 @@ function ReadmeWidgetGenerator({ username, score = 88, tier = 'Senior Developer'
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <a href={appUrl} target="_blank" rel="noreferrer" className="hover:opacity-90 transition">
+            <a href={appUrl} target="_blank" rel="noopener noreferrer" className="hover:opacity-90 transition">
               <img src={shieldsUrl} alt={`GitFolioScore ${score}/100`} className="rounded shadow-lg" />
             </a>
           </div>

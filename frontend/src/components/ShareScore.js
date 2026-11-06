@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Share2, RefreshCw } from 'lucide-react';
 
 function getPercentile(score) {
@@ -14,50 +14,70 @@ function getPercentile(score) {
 function ShareScore({ score, username, onToast }) {
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const timersRef = useRef([]);
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
+  const addTimer = (fn, delay) => {
+    const t = setTimeout(fn, delay);
+    timersRef.current.push(t);
+    return t;
+  };
+
   const percentile = getPercentile(score);
   const link = 'https://anna.partners/apps/gitfolioscore';
   const text = `I just scored ${score}/100 on GitFolioScore! I'm in the top ${percentile}% of developers. Analyze your GitHub at ${link}`;
+
+  const safeWriteClipboard = async (str) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(str);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = str;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const shareTwitter = () => {
     setSharing(true);
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(tweetUrl, '_blank', 'noopener,noreferrer');
-    setTimeout(() => setSharing(false), 800);
+    addTimer(() => setSharing(false), 800);
   };
 
   const shareLinkedIn = async () => {
     setSharing(true);
     const linkedInPostText = `I just scored ${score}/100 on GitFolioScore! 🚀 It uses AI to audit GitHub portfolios against real hiring criteria. Analyze your GitHub at https://anna.partners/apps/gitfolioscore #softwareengineering #career`;
-    try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(linkedInPostText);
-      }
-    } catch {
-      // Best effort clipboard
-    }
+    await safeWriteClipboard(linkedInPostText);
     window.open('https://www.linkedin.com/feed/?shareActive=true', '_blank', 'noopener,noreferrer');
     if (onToast) {
       onToast('Professional LinkedIn post copied to clipboard! Just press Ctrl+V to paste.', 'success');
     }
-    setTimeout(() => setSharing(false), 800);
+    addTimer(() => setSharing(false), 800);
   };
 
   const copyToClipboard = async () => {
     setSharing(true);
     setCopied(true);
-    try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      }
-      if (onToast) {
-        onToast('Score link copied to clipboard!', 'success');
-      }
-    } catch {
-      // Best effort clipboard
-    } finally {
-      setTimeout(() => setSharing(false), 800);
-      setTimeout(() => setCopied(false), 1500);
+    await safeWriteClipboard(text);
+    if (onToast) {
+      onToast('Score link copied to clipboard!', 'success');
     }
+    addTimer(() => setSharing(false), 800);
+    addTimer(() => setCopied(false), 1500);
   };
 
   return (

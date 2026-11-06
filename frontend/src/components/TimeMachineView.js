@@ -48,21 +48,35 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
   const scoreDiff = Math.max(0, currentScore - pastScore);
   const growthPercent = pastScore > 0 ? Math.round((scoreDiff / pastScore) * 100) : 100;
 
+  if (!repos || repos.length === 0) {
+    return (
+      <div className="premium-card manga-halftone-card p-6 animate-fade-in-up transition-all hover:border-cyan-500/40">
+        <div className="text-center py-6 space-y-2">
+          <History className="w-8 h-8 mx-auto text-cyan-400" />
+          <h4 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>No Historical Repositories</h4>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            This account does not have public repositories to compute a 1-year trajectory.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 transition-all hover:border-cyan-500/30">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up transition-all hover:border-cyan-500/40">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
             <History className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               {'The "Time Machine" Growth View'}
               <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                 1-Year Trajectory
               </span>
             </h3>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               Compare your GitHub stats and portfolio score from 1 year ago against today.
             </p>
           </div>
@@ -75,7 +89,7 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
               activeTab === 'comparison'
                 ? 'bg-cyan-500 text-white shadow-md'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-300 hover:text-white hover:bg-white/10'
             }`}
           >
             Growth Delta
@@ -86,7 +100,7 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
               activeTab === 'past'
                 ? 'bg-cyan-500 text-white shadow-md'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-300 hover:text-white hover:bg-white/10'
             }`}
           >
             1 Year Ago
@@ -97,7 +111,7 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
               activeTab === 'present'
                 ? 'bg-cyan-500 text-white shadow-md'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-300 hover:text-white hover:bg-white/10'
             }`}
           >
             Today

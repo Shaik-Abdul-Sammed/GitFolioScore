@@ -28,12 +28,28 @@ async function handleResponse(response) {
     return response.json();
   }
 
-  if (response.status === 403) {
+  if (response.status === 403 || response.status === 429) {
+    let minutesWait = 15;
+    try {
+      const resetHeader = response.headers?.get ? response.headers.get('x-ratelimit-reset') : null;
+      if (resetHeader) {
+        const resetEpoch = parseInt(resetHeader, 10);
+        if (!isNaN(resetEpoch)) {
+          const diffMinutes = Math.ceil((resetEpoch * 1000 - Date.now()) / 60000);
+          if (diffMinutes > 0 && diffMinutes <= 60) {
+            minutesWait = diffMinutes;
+          }
+        }
+      }
+    } catch {
+      // fallback to 15
+    }
     const error = createGitHubError(
-      'GitHub API limit reached for your network. Please wait 15 minutes.',
+      `GitHub API limit reached for your network. Please wait ${minutesWait} minutes.`,
       'RATE_LIMIT_EXCEEDED'
     );
     error.isRateLimit = true;
+    error.minutesWait = minutesWait;
     throw error;
   }
 

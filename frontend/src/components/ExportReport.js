@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Image, FileText, Check, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { sanitizeForPDF } from '../lib/pdfSanitizer';
 import ExportPreviewModal from './ExportPreviewModal';
 
 function ExportReport({ targetRef, data, username, targetRole, advice, onToast, onExport }) {
@@ -83,18 +84,6 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
   };
 
   const exportAsPDF = async () => {
-    /**
-     * Strips non-latin1 characters so jsPDF Helvetica renders them cleanly.
-     */
-    const sanitizeForPDF = (str) =>
-      (str || '')
-        .replace(/──+/g, '--')
-        .replace(/[•·▸]/g, '-')
-        .replace(/[★☆]/g, '*')
-        .replace(/—/g, '-')
-        .replace(/·/g, '.')
-        .replace(/[^\x20-\x7E\t\n\r\xA0-\xFF]/g, '?');
-
     try {
       setExporting(true);
       const doc = new jsPDF('p', 'pt', 'a4');

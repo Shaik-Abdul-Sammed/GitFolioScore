@@ -112,20 +112,20 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
   const currentCompany = COMPANIES.find((c) => c.id === selectedCompany) || COMPANIES[0];
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 transition-all hover:border-indigo-500/30">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up transition-all hover:border-indigo-500/40">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
             <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              AI Target Company OSINT & Gap Analysis
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              AI Target Company OSINT &amp; Gap Analysis
               <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                 Company Match
               </span>
             </h3>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               Benchmark your GitHub against the specific hiring criteria of world-class tech firms.
             </p>
           </div>

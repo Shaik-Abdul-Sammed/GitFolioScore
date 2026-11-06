@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, ShieldCheck, Lock, RefreshCw, X, AlertTriangle, CheckCircle } from 'lucide-react';
 import { waitForAnna } from '../lib/llm';
 
@@ -6,6 +6,22 @@ function SecurityScanModal({ username, repos = [], profile = {}, onToast, onRewa
   const [isOpen, setIsOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [report, setReport] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   const handleStartScan = async () => {
     setScanning(true);
@@ -99,20 +115,20 @@ Generate a realistic cybersecurity hygiene report in ONLY valid JSON:
   return (
     <>
       {/* Trigger Card / Button */}
-      <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 transition-all hover:border-emerald-500/30">
+      <div className="premium-card manga-halftone-card p-6 animate-fade-in-up transition-all hover:border-cyan-500/40">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                Simulated Dark Web & Secret Exposure Scan
+              <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                Simulated Dark Web &amp; Secret Exposure Scan
                 <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                   Security OSINT
                 </span>
               </h3>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 Audit commit history for leaked API secrets, exposed emails, and historical data breach exposure.
               </p>
             </div>

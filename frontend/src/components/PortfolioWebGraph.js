@@ -74,25 +74,29 @@ function PortfolioWebGraph({ repos = [], languages = [] }) {
   if (langNodes.length === 0 && repoNodes.length === 0) return null;
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Network className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            Portfolio Web Connectivity
-          </h3>
-          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">
-            Node Graph
-          </span>
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-400 border border-indigo-500/30">
+            <Network className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              Portfolio Web Connectivity
+              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                Node Graph
+              </span>
+            </h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Interactive visualization connecting your primary tech stacks to active repositories.
+            </p>
+          </div>
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 mb-4">
-        Interactive visualization connecting your primary tech stacks to active repositories.
-      </p>
-
-      <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950/60 p-2 overflow-hidden shadow-inner">
-        <svg
+      <div className="relative w-full rounded-2xl border border-white/10 bg-slate-950/60 p-2 overflow-x-auto shadow-inner">
+        <div className="min-w-[360px]">
+          <svg
           viewBox="0 0 460 270"
           className="w-full h-auto"
           style={{ minHeight: '220px' }}
@@ -205,6 +209,7 @@ function PortfolioWebGraph({ repos = [], languages = [] }) {
             );
           })}
         </svg>
+        </div>
 
         {/* Legend */}
         <div className="flex items-center justify-between px-3 py-1.5 border-t border-white/5 text-[11px] text-gray-400">

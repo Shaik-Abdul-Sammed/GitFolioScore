@@ -146,6 +146,22 @@ Open source under standard permissive licensing.`;
     setTimeout(() => setReadmeCopied(false), 2000);
   };
 
+  useEffect(() => {
+    if (!readmeModalRepo) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setReadmeModalRepo(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [readmeModalRepo]);
+
   if (!repos || repos.length === 0) return null;
 
   return (
@@ -184,7 +200,7 @@ Open source under standard permissive licensing.`;
                       <Star className="w-3 h-3 fill-amber-400" /> {repo.stars ?? 0}
                     </span>
                   </div>
-                  <h5 className="font-semibold text-xs truncate" style={{ color: 'var(--text-primary)' }}>
+                  <h5 title={repo.name} className="font-semibold text-xs truncate" style={{ color: 'var(--text-primary)' }}>
                     {repo.name}
                   </h5>
                   <p className="text-[11px] line-clamp-2 text-gray-400 mt-1">
@@ -392,6 +408,7 @@ function RepoCard({ repo, username, demoStatus, onGenerateReadme, onOpenPreview 
             href={username ? `https://github.com/${username}/${repo.name}` : '#'}
             target="_blank"
             rel="noopener noreferrer"
+            title={repo.name}
             className="font-semibold text-sm truncate group-hover:text-indigo-400 transition-colors flex items-center gap-1"
             style={{ color: 'var(--text-primary)' }}
           >

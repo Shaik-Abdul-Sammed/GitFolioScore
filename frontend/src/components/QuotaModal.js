@@ -1,7 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CreditCard, X, ExternalLink } from 'lucide-react';
 
 function QuotaModal({ isOpen, onClose }) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    const origOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = origOverflow;
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -21,7 +35,7 @@ function QuotaModal({ isOpen, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -49,7 +63,7 @@ function QuotaModal({ isOpen, onClose }) {
           <a
             href="https://anna.partners"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition"
           >
             <span>Anna Settings</span>

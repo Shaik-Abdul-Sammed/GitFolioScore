@@ -96,11 +96,13 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
   };
 
   return (
-    <div className="premium-card p-6 border-blue-500/30 shadow-lg animate-fade-in-up">
+    <div className="premium-card manga-halftone-card p-6 border-blue-500/30 shadow-lg animate-fade-in-up">
       {/* Header bar */}
       <div
         className="flex items-center justify-between cursor-pointer select-none"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-controls="linkedin-sync-content"
       >
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
@@ -109,7 +111,7 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
-                LinkedIn Sync & Consistency Audit
+                LinkedIn Sync &amp; Consistency Audit
               </h3>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30 font-gaming">
                 PORTAL · 2 STEPS
@@ -125,6 +127,8 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
           type="button"
           className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition"
           aria-label={isOpen ? 'Collapse LinkedIn Sync' : 'Expand LinkedIn Sync'}
+          aria-expanded={isOpen}
+          aria-controls="linkedin-sync-content"
         >
           {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
@@ -132,7 +136,7 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
 
       {/* Expandable content */}
       {isOpen && (
-        <div className="mt-5 space-y-5 animate-fade-in pt-3 border-t border-white/10">
+        <div id="linkedin-sync-content" className="mt-5 space-y-5 animate-fade-in pt-3 border-t border-white/10">
           {/* Step Indicator */}
           <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-white/10 text-xs font-gaming">
             <div className="flex items-center gap-2">
@@ -210,6 +214,11 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
                   value={linkedInText}
                   onChange={(e) => setLinkedInText(e.target.value)}
                 />
+                <div className="flex justify-end pr-1 mt-1">
+                  <span className="text-[10px] text-gray-400">
+                    {linkedInText.length} characters
+                  </span>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">

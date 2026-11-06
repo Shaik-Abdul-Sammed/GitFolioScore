@@ -1,5 +1,5 @@
-import React from 'react';
-import { Sliders, RotateCcw, X, Check } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Sliders, RotateCcw, X, Check, Scale } from 'lucide-react';
 
 const weightMeta = {
   profile: { label: 'Profile', stat: '[VIT] VITALITY', icon: '👤', max: 30 },
@@ -23,8 +23,45 @@ function WeightsForm({ weights, setWeights, dark = true, isModal = false, onClos
   const total = Object.values(weights || {}).reduce((a, b) => a + b, 0);
   const isBalanced = total === 100;
 
+  useEffect(() => {
+    if (!isModal && !onClose) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isModal, onClose]);
+
   const handleReset = () => {
     setWeights(DEFAULT_WEIGHTS);
+  };
+
+  const handleNormalize = () => {
+    if (total === 0) {
+      setWeights(DEFAULT_WEIGHTS);
+      return;
+    }
+    const factor = 100 / total;
+    const entries = Object.entries(weights || DEFAULT_WEIGHTS);
+    let runningSum = 0;
+    const newWeights = {};
+    entries.forEach(([k, v], idx) => {
+      if (idx === entries.length - 1) {
+        newWeights[k] = Math.max(0, 100 - runningSum);
+      } else {
+        const val = Math.round(v * factor);
+        newWeights[k] = val;
+        runningSum += val;
+      }
+    });
+    setWeights(newWeights);
   };
 
   const content = (
@@ -133,16 +170,30 @@ function WeightsForm({ weights, setWeights, dark = true, isModal = false, onClos
         })}
       </div>
 
-      <div className="flex items-center justify-between gap-3 mt-6 pt-4 border-t border-white/10">
-        <button
-          type="button"
-          onClick={handleReset}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-300 hover:text-white hover:bg-white/10 transition border border-white/10 active:scale-95"
-          title="Reset weights to default: 15, 25, 20, 20, 10, 10"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reset to Default</span>
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-6 pt-4 border-t border-white/10">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-300 hover:text-white hover:bg-white/10 transition border border-white/10 active:scale-95"
+            title="Reset weights to default: 15, 25, 20, 20, 10, 10"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset to Default</span>
+          </button>
+
+          {!isBalanced && (
+            <button
+              type="button"
+              onClick={handleNormalize}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 transition active:scale-95"
+              title="Automatically normalize weights so they sum strictly to 100%"
+            >
+              <Scale className="w-3.5 h-3.5" />
+              <span>Auto-Balance to 100%</span>
+            </button>
+          )}
+        </div>
 
         {onClose && (
           <button

@@ -23,6 +23,9 @@ import {
   setClaimedPortfolio,
 } from '../lib/auditHistory';
 
+const DEFAULT_AVATAR =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%231e293b"/><path d="M50 30a15 15 0 100 30 15 15 0 000-30zm-24 45c0-10 10-15 24-15s24 5 24 15v5H26v-5z" fill="%2394a3b8"/></svg>';
+
 const ROLES = [
   'All Roles',
   'Fullstack Engineer',
@@ -62,7 +65,20 @@ export default function AuditHistoryModal({
   useEffect(() => {
     if (!isOpen) return;
     refreshData();
-  }, [isOpen]);
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   const refreshData = async () => {
     setLoading(true);
@@ -382,6 +398,20 @@ export default function AuditHistoryModal({
                   ? 'No records match your active search and filter criteria.'
                   : 'You have not audited any GitHub portfolios yet. Search for a profile above to start building your audit timeline!'}
               </p>
+              {(searchQuery || selectedRole !== 'All Roles' || selectedTier !== 'All Scores' || onlyMyPortfolio) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedRole('All Roles');
+                    setSelectedTier('All Scores');
+                    setOnlyMyPortfolio(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 transition active:scale-95"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="relative pl-6 sm:pl-8 space-y-6 before:content-[''] before:absolute before:left-2.5 sm:before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-indigo-500 before:via-purple-500 before:to-slate-800">
@@ -410,13 +440,13 @@ export default function AuditHistoryModal({
                         {/* User & Role info */}
                         <div className="flex items-center gap-3">
                           <img
-                            src={entry.avatar_url}
+                            src={entry.avatar_url || DEFAULT_AVATAR}
                             alt={entry.username}
                             crossOrigin="anonymous"
                             className="w-10 h-10 rounded-full border border-gray-700 object-cover flex-shrink-0"
                             onError={(e) => {
                               e.currentTarget.onerror = null;
-                              e.currentTarget.src = `https://avatars.githubusercontent.com/${entry.username}`;
+                              e.currentTarget.src = DEFAULT_AVATAR;
                             }}
                           />
                           <div>

@@ -65,13 +65,13 @@ const CustomTooltip = ({ active, payload }) => {
 
 export function EmptyState({ message = 'No repositories found to analyze.' }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[220px]">
+    <div className="premium-card manga-halftone-card p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[220px]">
       <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
         <Code2 className="w-6 h-6" />
       </div>
       <div className="space-y-1 max-w-sm">
-        <h4 className="text-sm font-bold text-white">Empty Portfolio</h4>
-        <p className="text-xs text-gray-400 leading-relaxed">{message}</p>
+        <h4 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Empty Portfolio</h4>
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{message}</p>
       </div>
     </div>
   );
@@ -153,7 +153,7 @@ function LanguageChart({ languages, repos, showEmptyState = true }) {
   });
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up">
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up">
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Code2 className="w-5 h-5" style={{ color: 'var(--accent)' }} />

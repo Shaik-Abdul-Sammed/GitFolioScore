@@ -79,6 +79,16 @@ function ScoreExplainerModal({
     }
   }, [isOpen, activeRole, loadExplanation, report]);
 
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   // Handle ESC key close
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -118,10 +128,36 @@ function ScoreExplainerModal({
       `Recruiter Pitch: ${explanation.flagshipProjectIdea?.recruiterAppeal || ''}`,
     ].join('\n');
 
-    navigator.clipboard.writeText(roadmapText);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(roadmapText).catch(() => {
+          fallbackCopy(roadmapText);
+        });
+      } else {
+        fallbackCopy(roadmapText);
+      }
+    } catch {
+      fallbackCopy(roadmapText);
+    }
+
     setCopied(true);
     onToast?.('Career Strategy Roadmap copied to clipboard!');
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const fallbackCopy = (text) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch {
+      // ignore clipboard error
+    }
   };
 
   const score = report?.score ?? 0;

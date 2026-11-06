@@ -225,8 +225,12 @@ function ScoreSimulator({ data, weights }) {
             max="150"
             step="5"
             value={extraStars}
+            aria-label="Simulate adding extra stars"
+            aria-valuemin={0}
+            aria-valuemax={150}
+            aria-valuenow={extraStars}
             onChange={(e) => setExtraStars(parseInt(e.target.value, 10))}
-            className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-800 accent-indigo-500"
+            className="w-full h-3 rounded-full appearance-none cursor-pointer bg-slate-800 accent-indigo-500 py-1"
             style={{
               background: `linear-gradient(to right, #6366f1 ${(extraStars / 150) * 100}%, #1e293b ${(extraStars / 150) * 100}%)`,
             }}
@@ -234,7 +238,7 @@ function ScoreSimulator({ data, weights }) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-          <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition">
+          <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition select-none">
             <input
               type="checkbox"
               checked={addReadmes}
@@ -244,7 +248,7 @@ function ScoreSimulator({ data, weights }) {
             <span className="text-xs text-gray-200 font-medium">Add READMEs to all repos</span>
           </label>
 
-          <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition">
+          <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition select-none">
             <input
               type="checkbox"
               checked={addTopics}
@@ -254,7 +258,7 @@ function ScoreSimulator({ data, weights }) {
             <span className="text-xs text-gray-200 font-medium">Add topics &amp; tags</span>
           </label>
 
-          <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition">
+          <label className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition select-none">
             <input
               type="checkbox"
               checked={boostActivity}

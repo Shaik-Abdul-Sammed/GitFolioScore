@@ -284,6 +284,22 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
     return `${years} ${years === 1 ? 'year' : 'years'}`;
   };
 
+  useEffect(() => {
+    if (!showBioModal) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setShowBioModal(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showBioModal]);
+
   // SVG ring parameters
   const radius = 54;
   const circumference = 2 * Math.PI * radius;

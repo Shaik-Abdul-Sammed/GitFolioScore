@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Award, Copy, CheckCircle } from 'lucide-react';
 
 function LinkedInBadge({ username, score }) {
   const [copied, setCopied] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const scoreColor = score >= 80 ? '#10b981' : score >= 60 ? '#3b82f6' : score >= 40 ? '#f59e0b' : '#ef4444';
   const scoreLabel = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Work';
@@ -11,9 +18,36 @@ function LinkedInBadge({ username, score }) {
   const badgeMarkdown = `[![GitFolioScore: ${score}/100](https://img.shields.io/badge/GitFolioScore-${score}%2F100-${scoreColor.replace('#', '')}?style=for-the-badge&logo=github)](${appUrl})`;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(badgeMarkdown);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(badgeMarkdown).catch(() => {
+          fallbackCopy(badgeMarkdown);
+        });
+      } else {
+        fallbackCopy(badgeMarkdown);
+      }
+    } catch {
+      fallbackCopy(badgeMarkdown);
+    }
+
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopied(false), 2000);
+  };
+
+  const fallbackCopy = (text) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch {
+      // ignore
+    }
   };
 
   return (
@@ -53,14 +87,15 @@ function LinkedInBadge({ username, score }) {
         </label>
         <div className="flex gap-2">
           <code
-            className="flex-1 text-xs px-3 py-2 rounded-lg overflow-hidden text-ellipsis whitespace-nowrap"
+            title={badgeMarkdown}
+            className="flex-1 text-xs px-3 py-2 rounded-lg overflow-hidden text-ellipsis whitespace-nowrap cursor-pointer select-all"
             style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
           >
             {badgeMarkdown}
           </code>
           <button
             onClick={handleCopy}
-            className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-2"
+            className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-2 min-w-[80px] justify-center"
           >
             {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
             {copied ? 'Copied!' : 'Copy'}

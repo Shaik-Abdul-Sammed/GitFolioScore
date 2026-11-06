@@ -19,8 +19,8 @@
   --bg-secondary: #ffffff;
   --bg-glass: rgba(255, 255, 255, 0.7);
   --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-secondary: #334155;
+  --text-muted: #475569;
   --border: #e2e8f0;
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
@@ -52,7 +52,7 @@
   --bg-glass: rgba(30, 41, 59, 0.7);
   --text-primary: #f1f5f9;
   --text-secondary: #cbd5e1;
-  --text-muted: #64748b;
+  --text-muted: #94a3b8;
   --border: #334155;
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
   --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
@@ -883,13 +883,13 @@ button:hover .anime-eye-gleam {
 /* 11. Manga Halftone Dot Overlay */
 .manga-halftone-card {
   position: relative;
-  overflow: hidden;
 }
 
 .manga-halftone-card::after {
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1.2px, transparent 1.2px);
   background-size: 8px 8px;
   opacity: 0;
@@ -937,6 +937,36 @@ button:hover .anime-eye-gleam {
 .jojo-arrow-bounce {
   animation: jojo-bounce 1.6s ease-in-out infinite;
 }
+
+/* 14. Global Overflow & Accessibility Guards */
+html, body, #root {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary, #6366f1);
+  outline-offset: 2px;
+}
+
+button:disabled, input:disabled, select:disabled {
+  cursor: not-allowed !important;
+}
+
+select {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+button {
+  transition: transform 0.15s ease-out, background-color 0.15s ease-out, border-color 0.15s ease-out, opacity 0.15s ease-out;
+}
+
 
 
 

@@ -1,9 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wrench, Copy, Check, X, GitPullRequest, AlertCircle, ExternalLink } from 'lucide-react';
 
 function QuickFixModal({ redFlag, username, topRepos = [], onClose }) {
   const [tab, setTab] = useState('issue');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   const targetRepo = topRepos?.[0]?.name || 'my-repository';
   const repoUrl = username ? `https://github.com/${username}/${targetRepo}` : '#';
@@ -43,16 +58,35 @@ Resolves GitFolioScore audit recommendation: **${redFlag}**
   const contentToCopy = tab === 'issue' ? issueTemplate : prTemplate;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(contentToCopy);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(contentToCopy);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = contentToCopy;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+    } catch {
+      // fallback
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md modal-backdrop-fade">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md modal-backdrop-fade"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-lg rounded-2xl border shadow-2xl overflow-y-auto max-h-[85vh] pb-20 flex flex-col manga-panel-modal"
         style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>

@@ -68,8 +68,19 @@ function FakePRGenerator({ username, repos = [], onToast }) {
   )}`;
 
   const handleCopy = () => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(readmeContent);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(readmeContent);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = readmeContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+    } catch {
+      // fallback
     }
     setCopied(true);
     if (onToast) {
@@ -79,20 +90,20 @@ function FakePRGenerator({ username, repos = [], onToast }) {
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 transition-all hover:border-emerald-500/30">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up transition-all hover:border-emerald-500/40">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
             <GitPullRequest className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               {'Instant "1-Click PR" README Generator'}
               <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 1-Click GitHub
               </span>
             </h3>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               Instantly open GitHub with a pre-filled, production-ready README pull request.
             </p>
           </div>
@@ -125,7 +136,7 @@ function FakePRGenerator({ username, repos = [], onToast }) {
               Score Boost: +8.5 pts
             </span>
           </div>
-          <pre className="text-[11px] font-mono text-gray-300 max-h-48 overflow-y-auto whitespace-pre-wrap p-2 bg-black/40 rounded-lg">
+          <pre className="text-[11px] font-mono text-gray-300 max-h-48 overflow-y-auto overflow-x-auto max-w-full whitespace-pre-wrap break-words p-2 bg-black/40 rounded-lg">
             {readmeContent}
           </pre>
         </div>
@@ -135,7 +146,7 @@ function FakePRGenerator({ username, repos = [], onToast }) {
           <a
             href={prUrl}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold text-white shadow-xl transition active:scale-95"
             style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
           >

@@ -34,20 +34,20 @@ function RecruiterSwipeMode({ repos = [], username }) {
   const archived = activeRepos.filter((r) => decisions[r.name] === 'archive');
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 shadow-[inset_0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-6 transition-all hover:border-pink-500/30">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up transition-all hover:border-pink-500/40">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-pink-500/20 text-pink-400 border border-pink-500/30">
             <Heart className="w-5 h-5 fill-pink-500/20" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               {'Recruiter "Tinder" Mode'}
               <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
                 Interactive Deck
               </span>
             </h3>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               Swipe right to Feature, swipe left to Archive. Curate a spotless recruiter showcase.
             </p>
           </div>

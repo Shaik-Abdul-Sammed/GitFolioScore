@@ -87,7 +87,7 @@ function GrowthGoalTracker({ score, username, onReAudit, onToast }) {
   };
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
       <div className="flex items-center justify-between mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, RefreshCw, AlertCircle } from 'lucide-react';
 import { waitForAnna } from '../lib/llm';
+import { sanitizeForPDF } from '../lib/pdfSanitizer';
 import ExportPreviewModal from './ExportPreviewModal';
 
 /**
@@ -11,6 +12,7 @@ function ResumeGenerator({ report, advice, onToast }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState('');
+  const [showDraft, setShowDraft] = useState(false);
   const [previewData, setPreviewData] = useState(null);
 
   // Revoke Blob URL on unmount or before setting new previewData
@@ -33,17 +35,6 @@ function ResumeGenerator({ report, advice, onToast }) {
   const profile = report?.profile || {};
   const topRepos = report?.topRepos || [];
   const languages = report?.mostUsedLanguages || [];
-
-  /**
-   * Strips non-latin1 characters so jsPDF Helvetica renders them cleanly.
-   * Replaces Unicode dashes, bullets, stars with ASCII equivalents.
-   */
-  const sanitizeForPDF = (str) =>
-    (str || '')
-      .replace(/──+/g, '--')
-      .replace(/[•·▸]/g, '-')
-      .replace(/[★☆]/g, '*')
-      .replace(/[^\x20-\x7E\t\n\r\xA0-\xFF]/g, '?');
 
   const buildResumeText = () => {
     const name = sanitizeForPDF(profile.name || profile.login || 'Developer');
@@ -189,22 +180,35 @@ function ResumeGenerator({ report, advice, onToast }) {
   };
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            AI Resume Generator
-          </h3>
-          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30">
-            PDF Export
-          </span>
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-400 border border-indigo-500/30">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              AI Resume Generator
+              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                PDF Export
+              </span>
+            </h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Uses your top repositories, bio, and AI coaching data to generate a professional 1-page PDF resume.
+            </p>
+          </div>
         </div>
-      </div>
 
-      <p className="text-xs text-gray-400 mb-4">
-        Uses your top repositories, bio, and AI coaching data to generate a professional 1-page PDF resume.
-      </p>
+        {preview && (
+          <button
+            type="button"
+            onClick={() => setShowDraft(!showDraft)}
+            className="self-start sm:self-center text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 text-gray-300 font-medium transition active:scale-95"
+          >
+            {showDraft ? 'Hide Draft Text' : 'View Draft Text'}
+          </button>
+        )}
+      </div>
 
       {error && (
         <div className="flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs mb-4">
@@ -213,9 +217,9 @@ function ResumeGenerator({ report, advice, onToast }) {
         </div>
       )}
 
-      {preview && (
-        <div className="mb-4 p-3 rounded-xl border border-white/10 bg-black/30 max-h-48 overflow-y-auto">
-          <pre className="text-[10px] text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">{preview}</pre>
+      {showDraft && preview && (
+        <div className="mb-4 p-3.5 rounded-xl border border-white/10 bg-black/40 max-h-48 overflow-y-auto overflow-x-auto animate-fade-in">
+          <pre className="text-[10px] text-gray-300 whitespace-pre-wrap break-words font-mono leading-relaxed overflow-x-auto">{preview}</pre>
         </div>
       )}
 

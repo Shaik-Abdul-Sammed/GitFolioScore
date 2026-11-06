@@ -27,31 +27,34 @@ function NetworkMatcher({ languages = [], targetRole = '' }) {
   };
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            Company & Career Matcher
-          </h3>
-          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">
-            Startups · FinTech · FAANG
-          </span>
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-400 border border-indigo-500/30">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              Company &amp; Career Matcher
+              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                Startups · FinTech · FAANG
+              </span>
+            </h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Based on your top languages and activity, evaluate which company types you are best suited for right now.
+            </p>
+          </div>
         </div>
         <button
           onClick={handleFetch}
           disabled={loading}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+          className="self-start sm:self-center flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
           style={{ background: 'var(--gradient-primary)' }}
         >
           {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Network className="w-3.5 h-3.5" />}
           {suggestions ? 'Refresh Matches' : 'Match Companies'}
         </button>
       </div>
-
-      <p className="text-xs text-gray-400 mb-4">
-        Based on your top languages and activity, our AI evaluates which company types (e.g. <b>Product Startups</b>, <b>FinTech</b>, <b>FAANG/Big Tech</b>) you are best suited for right now.
-      </p>
 
       {error && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">

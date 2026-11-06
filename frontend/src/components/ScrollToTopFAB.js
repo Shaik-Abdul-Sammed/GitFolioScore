@@ -32,7 +32,7 @@ function ScrollToTopFAB() {
       onClick={scrollToTop}
       aria-label="Scroll to top"
       title="Scroll to top"
-      className="fixed bottom-6 right-6 z-40 p-3 rounded-full text-white shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 animate-fade-in flex items-center justify-center border border-white/20 backdrop-blur-md"
+      className="fixed bottom-6 right-6 z-40 w-12 h-12 min-w-[44px] min-h-[44px] rounded-full text-white shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 animate-fade-in flex items-center justify-center border border-white/20 backdrop-blur-md"
       style={{
         background: 'var(--gradient-primary)',
         boxShadow: '0 8px 30px rgba(99, 102, 241, 0.4)',

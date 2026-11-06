@@ -76,7 +76,7 @@ function ThemeCustomizer() {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="p-2 rounded-lg border border-white/20 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 transition-all flex items-center justify-center"
+        className="min-w-[44px] min-h-[44px] p-2.5 rounded-lg border border-white/20 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 transition-all flex items-center justify-center"
         aria-label="Customize Theme Accent"
         title="Theme Accent Color"
       >
@@ -92,7 +92,8 @@ function ThemeCustomizer() {
             <button
               key={theme.id}
               onClick={() => handleSelect(theme.id)}
-              className="w-7 h-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow"
+              aria-label={`Select ${theme.name} theme`}
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow"
               style={{ background: theme.gradient }}
               title={theme.name}
             >

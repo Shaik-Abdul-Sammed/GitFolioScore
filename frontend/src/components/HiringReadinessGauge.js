@@ -23,19 +23,26 @@ function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
   const strokeDashoffset = circumference - (readiness / 100) * (circumference * 0.75);
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Target className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            Hiring Readiness Index
-          </h3>
-          <Tooltip content="Weighted career readiness index combining verified GitHub codebase quality (70%) and declared LinkedIn career alignment (30%).">
-            <HelpCircle className="w-3.5 h-3.5 text-gray-400 hover:text-indigo-400 cursor-pointer" />
-          </Tooltip>
-          <span className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold border" style={{ background: status.bg, borderColor: status.border, color: status.color }}>
-            {status.label}
-          </span>
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-400 border border-indigo-500/30">
+            <Target className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              Hiring Readiness Index
+              <Tooltip content="Weighted career readiness index combining verified GitHub codebase quality (70%) and declared LinkedIn career alignment (30%).">
+                <HelpCircle className="w-3.5 h-3.5 text-gray-400 hover:text-indigo-400 cursor-pointer" />
+              </Tooltip>
+              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold border" style={{ background: status.bg, borderColor: status.border, color: status.color }}>
+                {status.label}
+              </span>
+            </h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Weighted career readiness combining verified GitHub codebase audit (70%) and LinkedIn alignment (30%).
+            </p>
+          </div>
         </div>
       </div>
 

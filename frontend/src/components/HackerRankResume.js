@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileCode, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { sanitizeForPDF } from '../lib/pdfSanitizer';
 import ExportPreviewModal from './ExportPreviewModal';
 
 function HackerRankResume({ report, advice, onToast }) {
@@ -28,17 +29,6 @@ function HackerRankResume({ report, advice, onToast }) {
   const profile = report?.profile || {};
   const topRepos = report?.topRepos || [];
   const languages = report?.mostUsedLanguages || [];
-
-  /**
-   * Strips non-latin1 characters so jsPDF Helvetica renders them cleanly.
-   */
-  const sanitizeForPDF = (str) =>
-    (str || '')
-      .replace(/──+/g, '--')
-      .replace(/[•·▸]/g, '-')
-      .replace(/[★☆]/g, '*')
-      .replace(/—/g, '-')
-      .replace(/[^\x20-\x7E\t\n\r\xA0-\xFF]/g, '?');
 
   const handleDownloadPDF = () => {
     setDownloading(true);
@@ -232,22 +222,25 @@ function HackerRankResume({ report, advice, onToast }) {
   };
 
   return (
-    <div className="premium-card p-6 animate-fade-in-up">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <FileCode className="w-5 h-5 text-emerald-400" />
-          <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            HackerRank-Style Resume
-          </h3>
-          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
-            Standard Format
-          </span>
+    <div className="premium-card manga-halftone-card p-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30">
+            <FileCode className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              HackerRank-Style Resume
+              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Standard Format
+              </span>
+            </h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Export an ATS-optimized, black-and-white HackerRank format 1-page PDF resume with standard Helvetica typography.
+            </p>
+          </div>
         </div>
       </div>
-
-      <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-        Export an ATS-optimized, black-and-white HackerRank format 1-page PDF resume with standard Helvetica typography, right-aligned metrics, and bold tech stack callouts.
-      </p>
 
       <button
         type="button"

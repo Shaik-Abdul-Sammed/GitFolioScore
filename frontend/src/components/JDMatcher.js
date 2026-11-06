@@ -24,30 +24,35 @@ function JDMatcher({ report }) {
   };
 
   return (
-    <div className="premium-card p-6 border-indigo-500/30 shadow-lg animate-fade-in-up">
+    <div className="premium-card manga-halftone-card p-6 border-indigo-500/30 shadow-lg animate-fade-in-up">
       <div
         className="flex items-center justify-between cursor-pointer select-none"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-controls="jd-matcher-content"
       >
         <div className="flex items-center gap-2.5">
           <Briefcase className="w-5 h-5 text-indigo-400" />
           <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            Job Description Matcher & ATS Keyword Scanner
+            Job Description Matcher &amp; ATS Keyword Scanner
           </h3>
           <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">
             ATS AI
           </span>
         </div>
         <button
-          className="p-1 rounded-lg text-gray-400 hover:text-white transition"
+          type="button"
+          className="p-1.5 rounded-lg text-gray-400 hover:text-white transition"
           aria-label={isOpen ? 'Collapse JD Matcher' : 'Expand JD Matcher'}
+          aria-expanded={isOpen}
+          aria-controls="jd-matcher-content"
         >
           {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
       </div>
 
       {isOpen && (
-        <div className="mt-5 space-y-4 animate-fade-in">
+        <div id="jd-matcher-content" className="mt-5 space-y-4 animate-fade-in">
           <p className="text-xs text-gray-400 leading-relaxed">
             Paste any job posting or requirements list. Our AI evaluates your repositories, languages, and technical depth to calculate an ATS match score and pinpoint missing keywords.
           </p>

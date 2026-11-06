@@ -71,7 +71,7 @@ export async function waitForAnna(timeoutMs = 15000) {
   }
 
   const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
-  const effectiveTimeout = isTest && timeoutMs === 15000 ? 150 : timeoutMs;
+  const effectiveTimeout = isTest ? Math.min(150, timeoutMs) : timeoutMs;
   const pollInterval = isTest ? 25 : 200;
 
   const startTime = Date.now();

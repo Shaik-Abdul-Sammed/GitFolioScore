@@ -1,10 +1,11 @@
 import React, { useEffect, useCallback } from 'react';
-import { Download, X, FileText, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { Download, X, FileText, Image as ImageIcon } from 'lucide-react';
 
 /**
  * ExportPreviewModal: Intercepts PDF and Image downloads, rendering a
- * rich preview before the user triggers the actual download.
- * Ensures the Blob URL is safely revoked on close/unmount to prevent memory leaks.
+ * rich image-based preview before the user triggers the actual download.
+ * Using <img> instead of <iframe>/<embed>/<object> completely bypasses
+ * Anna OS iframe CSP blob: blocking restrictions.
  */
 function ExportPreviewModal({
   isOpen,
@@ -60,7 +61,40 @@ function ExportPreviewModal({
 
   if (!isOpen || !fileUrl) return null;
 
-  const handleTriggerDownload = () => {
+  const handleTriggerDownload = async () => {
+    if (fileType === 'pdf') {
+      try {
+        // When fileUrl is a PNG data URL or image, embed it into a fresh jsPDF instance
+        const { jsPDF } = await import('jspdf');
+        const pdf = new jsPDF({ unit: 'pt', format: 'letter' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        let imgWidth = pageWidth;
+        let imgHeight = pageHeight;
+        if (typeof pdf.getImageProperties === 'function') {
+          try {
+            const props = pdf.getImageProperties(fileUrl);
+            if (props && props.width && props.height) {
+              imgHeight = (props.height * pageWidth) / props.width;
+            }
+          } catch {
+            // fallback to standard letter aspect ratio
+          }
+        }
+        pdf.addImage(fileUrl, 'PNG', 0, 0, imgWidth, Math.min(pageHeight, imgHeight));
+        const outName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+        pdf.save(outName);
+
+        onDownload?.();
+        handleClose();
+        return;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('jsPDF generation failed in modal, falling back to anchor download:', err);
+      }
+    }
+
     const a = document.createElement('a');
     a.href = fileUrl;
     a.download = fileName;
@@ -121,36 +155,15 @@ function ExportPreviewModal({
           </button>
         </div>
 
-        {/* Preview Content Area */}
+        {/* Preview Content Area - Rendered via <img> to avoid CSP iframe/blob blocking */}
         <div className="my-4 flex-1 overflow-y-auto max-h-[60vh] flex flex-col items-center justify-center rounded-2xl bg-slate-950/80 border border-white/10 p-3">
-          {isPdf ? (
-            <div className="w-full h-[52vh] flex flex-col items-center">
-              <iframe
-                src={fileUrl}
-                title={fileName}
-                className="w-full flex-1 rounded-xl border border-white/10 bg-white"
-              />
-              <div className="pt-2 text-center">
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline"
-                >
-                  <span>Open PDF in new tab</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-2">
-              <img
-                src={fileUrl}
-                alt={fileName}
-                className="max-h-[50vh] max-w-full rounded-xl object-contain shadow-2xl border border-white/15"
-              />
-            </div>
-          )}
+          <div className="flex flex-col items-center justify-center p-2 w-full">
+            <img
+              src={fileUrl}
+              alt={fileName}
+              className="max-h-[52vh] max-w-full rounded-xl object-contain shadow-2xl border border-white/15 bg-white"
+            />
+          </div>
         </div>
 
         {/* Action Buttons Footer */}

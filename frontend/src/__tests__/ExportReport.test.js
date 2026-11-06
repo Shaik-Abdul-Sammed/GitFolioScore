@@ -8,7 +8,7 @@ jest.mock('html2canvas', () => {
     return Promise.resolve({
       width: 800,
       height: 600,
-      toDataURL: () => 'data:image/png;base64,mockPng',
+      toDataURL: () => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       toBlob: (cb) => {
         if (typeof cb === 'function') cb(new Blob(['mockPng'], { type: 'image/png' }));
       },

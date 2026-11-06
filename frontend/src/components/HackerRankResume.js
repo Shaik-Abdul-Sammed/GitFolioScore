@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FileCode, Download, RefreshCw, CheckCircle } from 'lucide-react';
-import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+import { waitForAnna } from '../lib/llm';
 import { sanitizeForPDF } from '../lib/pdfSanitizer';
 import ExportPreviewModal from './ExportPreviewModal';
 
@@ -8,6 +9,23 @@ function HackerRankResume({ report, advice, onToast }) {
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const resumeRef = useRef(null);
+
+  const profile = report?.profile || {};
+  const topRepos = report?.topRepos || [];
+  const languages = report?.mostUsedLanguages || [];
+
+  const defaultSummary = sanitizeForPDF(
+    advice?.summary ||
+    profile.bio ||
+    `Full-stack software developer with proven engineering discipline, verified GitHub portfolio score of ${report?.score ?? 85}/100, and hands-on expertise building production applications with high code quality and documentation hygiene.`
+  );
+
+  const [resumeSummary, setResumeSummary] = useState(defaultSummary);
+
+  useEffect(() => {
+    setResumeSummary(defaultSummary);
+  }, [defaultSummary]);
 
   // Revoke Blob URL on unmount or before setting new previewData
   useEffect(() => {
@@ -26,189 +44,71 @@ function HackerRankResume({ report, advice, onToast }) {
     };
   }, [previewData]);
 
-  const profile = report?.profile || {};
-  const topRepos = report?.topRepos || [];
-  const languages = report?.mostUsedLanguages || [];
+  const langNames = languages
+    .slice(0, 8)
+    .map((l) => (Array.isArray(l) ? l[0] : l?.lang || l?.name))
+    .filter(Boolean)
+    .join(', ');
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
-      const doc = new jsPDF({
-        unit: 'pt',
-        format: 'letter',
-      });
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 40;
-      const usableWidth = pageWidth - margin * 2;
-
-      // Force pure white background for PDF
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-      let y = 45;
-
-      // Name Header
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(20);
-      doc.setTextColor(20, 20, 20);
-      const name = (profile.name || profile.login || 'Software Engineer').toUpperCase();
-      doc.text(name, margin, y);
-
-      // Contact & Links Subhead
-      y += 16;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(80, 80, 80);
-      const contactInfo = [
-        profile.location ? profile.location : null,
-        `github.com/${profile.login || 'portfolio'}`,
-        `GitFolioScore: ${report?.score ?? 85}/100`,
-        'https://anna.partners/apps/gitfolioscore',
-      ].filter(Boolean).join('  |  ');
-      doc.text(contactInfo, margin, y);
-
-      y += 12;
-      doc.setDrawColor(30, 30, 30);
-      doc.setLineWidth(1);
-      doc.line(margin, y, pageWidth - margin, y);
-
-      // Helper to draw section header
-      const drawSection = (title) => {
-        y += 20;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor(0, 0, 0);
-        doc.text(title.toUpperCase(), margin, y);
-        y += 4;
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 12;
-      };
-
-      // 1. PROFESSIONAL SUMMARY
-      drawSection('Professional Summary');
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.setTextColor(40, 40, 40);
-      const summaryText = sanitizeForPDF(
-        advice?.summary ||
-        profile.bio ||
-        `Full-stack software developer with proven engineering discipline, verified GitHub portfolio score of ${report?.score ?? 85}/100, and hands-on expertise building production applications with high code quality and documentation hygiene.`
-      );
-      const splitSummary = doc.splitTextToSize(summaryText, usableWidth);
-      doc.text(splitSummary, margin, y);
-      y += splitSummary.length * 12;
-
-      // 2. TECHNICAL SKILLS
-      drawSection('Technical Skills');
-      const langNames = languages
-        .slice(0, 8)
-        .map((l) => (Array.isArray(l) ? l[0] : l?.lang || l?.name))
-        .filter(Boolean)
-        .join(', ');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.5);
-      doc.setTextColor(20, 20, 20);
-      doc.text('Languages & Frameworks: ', margin, y);
-      const labelWidth = doc.getTextWidth('Languages & Frameworks: ');
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(50, 50, 50);
-      doc.text(langNames || 'JavaScript, TypeScript, React, Node.js, Python, SQL', margin + labelWidth, y);
-      y += 14;
-
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(20, 20, 20);
-      doc.text('Practices & Tools: ', margin, y);
-      const toolsWidth = doc.getTextWidth('Practices & Tools: ');
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(50, 50, 50);
-      doc.text('Git, CI/CD, Automated Testing, REST APIs, System Architecture, Agile', margin + toolsWidth, y);
-      y += 10;
-
-      // 3. KEY OPEN SOURCE PROJECTS (HackerRank Format)
-      drawSection('Key Technical Projects');
-      const projectsToRender = topRepos.slice(0, 3);
-      projectsToRender.forEach((repo) => {
-        // Project Title and Tech
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.text(sanitizeForPDF(repo.name), margin, y);
-
-        const titleW = doc.getTextWidth(sanitizeForPDF(repo.name));
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(9);
-        doc.setTextColor(90, 90, 90);
-        doc.text(` - [${sanitizeForPDF(repo.language || 'Software Stack')}]`, margin + titleW, y);
-
-        // Right-aligned stars & forks
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.setTextColor(100, 100, 100);
-        const statsStr = `* ${repo.stars ?? 0}  |  Forks: ${repo.forks ?? 0}`;
-        doc.text(statsStr, pageWidth - margin - doc.getTextWidth(statsStr), y);
-
-        y += 12;
-
-        // Project Description Bullet
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(40, 40, 40);
-        const bulletDesc = sanitizeForPDF(`- ${repo.description || 'Engineered modular application architecture with comprehensive documentation and verified test workflows.'}`);
-        const splitBullet = doc.splitTextToSize(bulletDesc, usableWidth - 10);
-        doc.text(splitBullet, margin + 5, y);
-        y += splitBullet.length * 11 + 6;
-      });
-
-      // 4. VERIFIED ACHIEVEMENTS & CODE QUALITY
-      drawSection('Verified Technical Credentials');
-      const bullets = [
-        sanitizeForPDF(`- Audited by GitFolioScore with overall technical index of ${report?.score ?? 85}/100.`),
-        sanitizeForPDF(`- Evaluated across 6 hiring pillars: Code Quality, Documentation Depth, Activity Consistency, and Community Impact.`),
-        ...(advice?.actions || []).slice(0, 2).map((a) => sanitizeForPDF(`- Engineering Focus: ${a.action}`)),
-      ];
-
-      bullets.forEach((b) => {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(40, 40, 40);
-        const split = doc.splitTextToSize(b, usableWidth - 10);
-        doc.text(split, margin + 5, y);
-        y += split.length * 11 + 3;
-      });
-
-      // Intercept and open preview before download
-      const fileName = `${profile.login || 'developer'}_hackerrank_resume.pdf`;
-      let fileUrl;
+      // 1. Call waitForAnna before making LLM request, exactly like generateAdvice does
       try {
-        if (typeof doc.output === 'function') {
-          try {
-            fileUrl = doc.output('bloburl');
-          } catch {
-            const blob = doc.output('blob');
-            fileUrl = URL.createObjectURL(blob);
+        await waitForAnna();
+        if (window.anna?.llm?.complete) {
+          const res = await window.anna.llm.complete(
+            {
+              messages: [{
+                role: 'user',
+                content: `Write a concise ATS resume professional summary (max 3 sentences) for @${profile.login}. Bio: "${profile.bio || 'Software Engineer'}". Score: ${report?.score ?? 85}/100. Key skills: ${langNames}.`,
+              }],
+              systemPrompt: 'You are a professional technical resume writer for HackerRank. Write a high-impact, ATS-optimized candidate summary. Return plain text only.',
+              maxTokens: 200,
+              temperature: 0.3,
+            },
+            { timeoutMs: 25000 }
+          );
+          const aiText = (res?.content?.text || res?.text || '').trim();
+          if (aiText) {
+            setResumeSummary(sanitizeForPDF(aiText));
           }
         }
       } catch {
-        // ignore
+        // Fallback to default summary if Anna bridge is unavailable
       }
-      if (!fileUrl && typeof URL.createObjectURL === 'function') {
+
+      // Wait a tick for hidden resume DOM to update
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      if (!resumeRef.current) {
+        throw new Error('Resume template not mounted');
+      }
+
+      // 2. High-res screenshot (PNG) of the hidden resume element
+      const html2canvasFn = typeof html2canvas === 'function' ? html2canvas : html2canvas?.default;
+      let canvas = null;
+      if (typeof html2canvasFn === 'function') {
         try {
-          const blob = doc.output ? doc.output('blob') : new Blob([''], { type: 'application/pdf' });
-          fileUrl = URL.createObjectURL(blob);
+          canvas = await html2canvasFn(resumeRef.current, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+          });
         } catch {
           // ignore
         }
       }
-      if (!fileUrl) {
-        fileUrl = `blob:pdf-export-${Date.now()}`;
-      }
 
+      const fallbackPng =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const pngDataUrl = canvas?.toDataURL ? canvas.toDataURL('image/png') : fallbackPng;
+      const fileName = `${profile.login || 'developer'}_hackerrank_resume.pdf`;
+
+      // 3. Pass the PNG Data URL to ExportPreviewModal
       setPreviewData({
-        fileUrl,
+        fileUrl: pngDataUrl,
         fileName,
         fileType: 'pdf',
       });
@@ -223,6 +123,100 @@ function HackerRankResume({ report, advice, onToast }) {
 
   return (
     <div className="premium-card manga-halftone-card p-6 animate-fade-in-up">
+      {/* Hidden ATS Resume UI container for high-res html2canvas capture */}
+      <div
+        ref={resumeRef}
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: '-9999px',
+          width: '794px',
+          minHeight: '1080px',
+          backgroundColor: '#ffffff',
+          color: '#111827',
+          padding: '44px',
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          boxSizing: 'border-box',
+        }}
+      >
+        {/* Name & Contact Header */}
+        <div style={{ borderBottom: '2px solid #111827', paddingBottom: '12px', marginBottom: '18px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 6px 0', textTransform: 'uppercase', color: '#000000', letterSpacing: '0.5px' }}>
+            {sanitizeForPDF((profile.name || profile.login || 'Software Engineer').toUpperCase())}
+          </h1>
+          <div style={{ fontSize: '11px', color: '#4b5563', display: 'flex', gap: '8px', flexWrap: 'wrap', fontWeight: '500' }}>
+            {profile.location && <span>{profile.location}  |  </span>}
+            <span>github.com/{profile.login || 'portfolio'}  |  </span>
+            <span>GitFolioScore: {report?.score ?? 85}/100  |  </span>
+            <span>https://anna.partners/apps/gitfolioscore</span>
+          </div>
+        </div>
+
+        {/* 1. Professional Summary */}
+        <div style={{ marginBottom: '18px' }}>
+          <h2 style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #d1d5db', paddingBottom: '4px', margin: '0 0 8px 0', color: '#000000' }}>
+            Professional Summary
+          </h2>
+          <p style={{ fontSize: '11px', lineHeight: '1.6', margin: 0, color: '#1f2937' }}>
+            • {resumeSummary}
+          </p>
+        </div>
+
+        {/* 2. Technical Skills */}
+        <div style={{ marginBottom: '18px' }}>
+          <h2 style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #d1d5db', paddingBottom: '4px', margin: '0 0 8px 0', color: '#000000' }}>
+            Technical Skills
+          </h2>
+          <div style={{ fontSize: '11px', lineHeight: '1.6', color: '#1f2937' }}>
+            <p style={{ margin: '0 0 4px 0' }}>
+              <strong>Languages & Frameworks: </strong>
+              {langNames || 'JavaScript, TypeScript, React, Node.js, Python, SQL'}
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong>Practices & Tools: </strong>
+              Git, CI/CD, Automated Testing, REST APIs, System Architecture, Agile
+            </p>
+          </div>
+        </div>
+
+        {/* 3. Key Technical Projects (HackerRank Format) */}
+        <div style={{ marginBottom: '18px' }}>
+          <h2 style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #d1d5db', paddingBottom: '4px', margin: '0 0 10px 0', color: '#000000' }}>
+            Key Technical Projects
+          </h2>
+          {topRepos.slice(0, 3).map((repo) => (
+            <div key={repo.name} style={{ marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '3px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#000000' }}>
+                  {sanitizeForPDF(repo.name)} <span style={{ fontWeight: 'normal', fontStyle: 'italic', color: '#6b7280', fontSize: '10px' }}>[{sanitizeForPDF(repo.language || 'Software Stack')}]</span>
+                </span>
+                <span style={{ fontSize: '10px', color: '#6b7280' }}>
+                  ★ {repo.stars ?? 0}  |  Forks: {repo.forks ?? 0}
+                </span>
+              </div>
+              <p style={{ fontSize: '10.5px', margin: 0, color: '#374151', lineHeight: '1.5' }}>
+                • {sanitizeForPDF(repo.description || 'Engineered modular application architecture with comprehensive documentation and verified test workflows.')}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* 4. Verified Credentials & Code Quality */}
+        <div>
+          <h2 style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #d1d5db', paddingBottom: '4px', margin: '0 0 8px 0', color: '#000000' }}>
+            Verified Technical Credentials
+          </h2>
+          <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '10.5px', lineHeight: '1.6', color: '#374151' }}>
+            <li>Audited by GitFolioScore with overall technical index of {report?.score ?? 85}/100.</li>
+            <li>Evaluated across 6 hiring pillars: Code Quality, Documentation Depth, Activity Consistency, and Community Impact.</li>
+            {(advice?.actions || []).slice(0, 2).map((a, i) => (
+              <li key={i}>Engineering Focus: {sanitizeForPDF(a.action)}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30">
@@ -236,7 +230,7 @@ function HackerRankResume({ report, advice, onToast }) {
               </span>
             </h3>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Export an ATS-optimized, black-and-white HackerRank format 1-page PDF resume with standard Helvetica typography.
+              Export an ATS-optimized, black-and-white HackerRank format 1-page PDF resume with standard typography.
             </p>
           </div>
         </div>

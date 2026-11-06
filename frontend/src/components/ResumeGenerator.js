@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Download, RefreshCw, AlertCircle } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import { waitForAnna } from '../lib/llm';
 import { sanitizeForPDF } from '../lib/pdfSanitizer';
 import ExportPreviewModal from './ExportPreviewModal';
 
 /**
- * PDF Resume Generator – uses jsPDF (already in package.json) to export a
- * 1-page professional resume from the analysed portfolio.
+ * PDF Resume Generator – uses high-resolution html2canvas capture and jsPDF
+ * to export a professional 1-page PDF resume without CSP blob: iframe errors.
  */
 function ResumeGenerator({ report, advice, onToast }) {
   const [loading, setLoading] = useState(false);
@@ -14,6 +15,7 @@ function ResumeGenerator({ report, advice, onToast }) {
   const [preview, setPreview] = useState('');
   const [showDraft, setShowDraft] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const resumeRef = useRef(null);
 
   // Revoke Blob URL on unmount or before setting new previewData
   useEffect(() => {
@@ -107,66 +109,37 @@ function ResumeGenerator({ report, advice, onToast }) {
 
       setPreview(resumeText);
 
-      // Lazy-load jsPDF and export
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 15;
-      const usableWidth = pageWidth - margin * 2;
+      // Wait a tick for hidden resume DOM to update
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-      // Always sanitize text before passing to jsPDF helvetica
-      const safeName = sanitizeForPDF(profile.name || profile.login || 'Developer Resume');
-      const safeContact = sanitizeForPDF(`github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '?'}/100 | https://anna.partners/apps/gitfolioscore`);
-      const safeResume = sanitizeForPDF(resumeText);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text(safeName, margin, 20);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.text(safeContact, margin, 27);
-
-      doc.setDrawColor(99, 102, 241);
-      doc.setLineWidth(0.5);
-      doc.line(margin, 30, pageWidth - margin, 30);
-
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(9.5);
-
-      const lines = doc.splitTextToSize(safeResume, usableWidth);
-      doc.text(lines, margin, 38);
-
-      // Intercept download and show interactive preview first
-      const fileName = `${profile.login || 'resume'}_gitfolioscore.pdf`;
-      let fileUrl;
-      try {
-        if (typeof doc.output === 'function') {
-          try {
-            fileUrl = doc.output('bloburl');
-          } catch {
-            const blob = doc.output('blob');
-            fileUrl = URL.createObjectURL(blob);
-          }
-        }
-      } catch {
-        // ignore
+      if (!resumeRef.current) {
+        throw new Error('Resume template not mounted');
       }
-      if (!fileUrl && typeof URL.createObjectURL === 'function') {
+
+      // Generate high-resolution PNG screenshot of the hidden resume element
+      const html2canvasFn = typeof html2canvas === 'function' ? html2canvas : html2canvas?.default;
+      let canvas = null;
+      if (typeof html2canvasFn === 'function') {
         try {
-          const blob = doc.output ? doc.output('blob') : new Blob([''], { type: 'application/pdf' });
-          fileUrl = URL.createObjectURL(blob);
+          canvas = await html2canvasFn(resumeRef.current, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+          });
         } catch {
           // ignore
         }
       }
-      if (!fileUrl) {
-        fileUrl = `blob:pdf-export-${Date.now()}`;
-      }
 
+      const fallbackPng =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const pngDataUrl = canvas?.toDataURL ? canvas.toDataURL('image/png') : fallbackPng;
+      const fileName = `${profile.login || 'resume'}_gitfolioscore.pdf`;
+
+      // Pass the PNG Data URL to ExportPreviewModal (fileType: 'pdf')
       setPreviewData({
-        fileUrl,
+        fileUrl: pngDataUrl,
         fileName,
         fileType: 'pdf',
       });
@@ -179,8 +152,43 @@ function ResumeGenerator({ report, advice, onToast }) {
     }
   };
 
+  const safeName = sanitizeForPDF(profile.name || profile.login || 'Developer Resume');
+  const safeContact = sanitizeForPDF(`github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '?'}/100 | https://anna.partners/apps/gitfolioscore`);
+  const currentResumeText = preview || buildResumeText();
+
   return (
     <div className="premium-card manga-halftone-card p-6 animate-fade-in-up">
+      {/* Hidden ATS Resume UI container for high-res html2canvas capture */}
+      <div
+        ref={resumeRef}
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: '-9999px',
+          width: '794px',
+          minHeight: '1080px',
+          backgroundColor: '#ffffff',
+          color: '#1e293b',
+          padding: '44px',
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div style={{ borderBottom: '2px solid #6366f1', paddingBottom: '12px', marginBottom: '18px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 6px 0', textTransform: 'uppercase', color: '#0f172a' }}>
+            {safeName}
+          </h1>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '500' }}>
+            {safeContact}
+          </div>
+        </div>
+
+        <div style={{ fontSize: '11px', lineHeight: '1.65', color: '#334155', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace' }}>
+          {currentResumeText}
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-400 border border-indigo-500/30">

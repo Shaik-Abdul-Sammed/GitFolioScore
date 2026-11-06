@@ -290,17 +290,29 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
         { align: 'center' }
       );
 
-      let blobUrl = '';
-      if (typeof doc.output === 'function') {
+      let previewUrl = '';
+      if (targetRef?.current) {
         try {
-          blobUrl = doc.output('bloburl');
-        } catch (e) {
-          const blob = doc.output('blob');
-          blobUrl = URL.createObjectURL(blob);
+          const canvas = await html2canvas(targetRef.current, {
+            backgroundColor: '#0f172a',
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            logging: false,
+          });
+          if (canvas?.toDataURL) {
+            previewUrl = canvas.toDataURL('image/png');
+          }
+        } catch {
+          // ignore
         }
       }
+      if (!previewUrl) {
+        previewUrl = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000"><rect width="800" height="1000" fill="%230f172a"/><text x="400" y="500" fill="white" font-size="20" text-anchor="middle">GitFolioScore PDF Audit</text></svg>';
+      }
+
       setPreviewData({
-        fileUrl: blobUrl,
+        fileUrl: previewUrl,
         fileType: 'pdf',
         fileName: `GitFolioScore-${username || 'Developer'}-Resume-Audit.pdf`,
       });

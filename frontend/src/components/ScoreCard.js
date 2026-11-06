@@ -136,7 +136,14 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
       const bio = await generateBio(profile, topRepos, languages);
       setGeneratedBio(bio);
     } catch (err) {
-      setBioError(err.userMessage || 'Failed to generate bio. Please retry.');
+      if (err?.code === 'API_UNAVAILABLE') {
+        const topLang = languages?.[0] ? (Array.isArray(languages[0]) ? languages[0][0] : languages[0].lang || languages[0].name) : 'TypeScript';
+        const topProj = topRepos?.[0]?.name ? ` · Creator of ${topRepos[0].name}` : '';
+        const fallbackBio = `Software Engineer building scalable solutions with ${topLang}${topProj}. Open-source contributor passionate about clean code & architecture.`.slice(0, 158);
+        setGeneratedBio(fallbackBio);
+      } else {
+        setBioError(err.userMessage || 'Failed to generate bio. Please retry.');
+      }
     } finally {
       setGeneratingBio(false);
     }

@@ -14,30 +14,36 @@ function CommitRoaster({ username, repos = [] }) {
     setRoast(null);
 
     let foundCommits = [];
+    const cleanUser = (username || '').trim().replace(/^@+/, '');
     try {
       // 1. Try public events API first
-      const res = await fetch(`https://api.github.com/users/${username}/events`, {
-        headers: { Accept: 'application/vnd.github.v3+json' },
-      });
-      if (res.ok) {
-        const events = await res.json();
-        const pushEvents = (events || []).filter((e) => e.type === 'PushEvent');
-        for (const ev of pushEvents) {
-          if (ev.payload?.commits) {
-            foundCommits.push(...ev.payload.commits.map((c) => c.message));
+      if (cleanUser) {
+        const res = await fetch(`https://api.github.com/users/${encodeURIComponent(cleanUser)}/events`, {
+          headers: { Accept: 'application/vnd.github.v3+json' },
+        }).catch(() => null);
+        if (res && res.ok) {
+          const events = await res.json().catch(() => []);
+          const pushEvents = (events || []).filter((e) => e.type === 'PushEvent');
+          for (const ev of pushEvents) {
+            if (ev.payload?.commits) {
+              foundCommits.push(...ev.payload.commits.map((c) => c.message));
+            }
           }
         }
       }
 
       // 2. Fallback to top repo commits if needed
-      if (foundCommits.length === 0 && repos.length > 0) {
+      if (foundCommits.length === 0 && repos.length > 0 && cleanUser) {
         const topRepo = repos[0]?.name;
         if (topRepo) {
-          const repoRes = await fetch(`https://api.github.com/repos/${username}/${topRepo}/commits?per_page=10`, {
-            headers: { Accept: 'application/vnd.github.v3+json' },
-          });
-          if (repoRes.ok) {
-            const repoData = await repoRes.json();
+          const repoRes = await fetch(
+            `https://api.github.com/repos/${encodeURIComponent(cleanUser)}/${encodeURIComponent(topRepo)}/commits?per_page=10`,
+            {
+              headers: { Accept: 'application/vnd.github.v3+json' },
+            }
+          ).catch(() => null);
+          if (repoRes && repoRes.ok) {
+            const repoData = await repoRes.json().catch(() => []);
             foundCommits = (repoData || []).map((c) => c.commit?.message).filter(Boolean);
           }
         }

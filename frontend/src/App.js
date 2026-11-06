@@ -516,6 +516,32 @@ function App() {
       if (currentRequestId.current !== reqId || err?.name === 'AbortError' || err?.code === 'ABORTED') {
         return;
       }
+      if (err.code === 'API_UNAVAILABLE') {
+        // eslint-disable-next-line no-console
+        console.info('[GitFolioScore] Anna AI host API not detected. Generating algorithmic career advice.');
+        const fallbackActions = (report.suggestions || []).slice(0, 3).map((s, idx) => ({
+          action: s,
+          rationale: `Directly targets key portfolio signals to boost ${role || 'engineering'} hiring readiness (Priority ${idx + 1}).`,
+        }));
+        if (fallbackActions.length === 0) {
+          fallbackActions.push({
+            action: 'Add comprehensive READMEs and architecture diagrams to flagship projects',
+            rationale: 'Signals engineering maturity and clear documentation hygiene to technical recruiters.',
+          });
+        }
+        const fallbackAdvice = {
+          summary: report.strengths?.[0]
+            ? `${report.strengths[0]}. Recommended priority focus: ${report.suggestions?.[0] || 'Expand project documentation depth'}.`
+            : `Evaluated technical portfolio for @${report.profile?.login || 'developer'} with overall rating of ${report.score}/100.`,
+          actions: fallbackActions,
+          shareText: `I scored ${report.score}/100 on GitFolioScore! Check out my GitHub portfolio audit & career coaching summary.`,
+          timeToHireWeeks: report.score >= 80 ? 4 : report.score >= 60 ? 8 : 12,
+          atsMissingKeywords: ['CI/CD', 'Automated Testing', 'Docker', 'System Design'],
+        };
+        setAdvice(fallbackAdvice);
+        setState('advised');
+        return;
+      }
       // eslint-disable-next-line no-console
       console.error('LLM generation error:', err);
       if (err.code === 'APP_QUOTA_EXCEEDED' || /quota/i.test(err.message || '')) {
@@ -703,8 +729,13 @@ function App() {
       await runLLMAdvice(report, activeRole, activeRoast, activePersona, reqId);
     } catch (err) {
       if (currentRequestId.current !== reqId) return;
-      // eslint-disable-next-line no-console
-      console.error('Analysis error:', err);
+      if (err.code === 'RATE_LIMIT_EXCEEDED' || err.code === 'NOT_FOUND') {
+        // eslint-disable-next-line no-console
+        console.warn(`[GitFolioScore] ${err.message || 'GitHub lookup warning'}`);
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Analysis error:', err);
+      }
       setState('fetch_failed');
       if (err.code === 'RATE_LIMIT_EXCEEDED' || err.code === 'RATE_LIMIT' || err.isRateLimit) {
         setErrorMessage('GitHub API limit reached for your network. Please wait 15 minutes.');

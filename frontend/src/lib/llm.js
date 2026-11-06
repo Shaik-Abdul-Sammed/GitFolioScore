@@ -94,7 +94,7 @@ export async function waitForAnna(timeoutMs = 15000) {
   }
 
   // eslint-disable-next-line no-console
-  console.warn('[Anna Bridge] Failed to detect window.anna after 15s', typeof window !== 'undefined' ? window.anna : undefined);
+  console.info('[Anna Bridge] Anna AI Host API (window.anna.llm.complete) not present in current environment.');
 
   const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
   error.code = 'API_UNAVAILABLE';

@@ -281,6 +281,20 @@ function App() {
   const [auditCount, setAuditCount] = useState(0);
   const { i18n } = useTranslation();
 
+  // Force clear cache on fresh install / new version (v0.3.7)
+  useEffect(() => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        if (localStorage.getItem('app_version') !== 'v0.3.7') {
+          localStorage.clear();
+          localStorage.setItem('app_version', 'v0.3.7');
+        }
+      }
+    } catch {
+      // ignore storage access errors
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     // Expose window.resetXP for reviewer/developer quick testing

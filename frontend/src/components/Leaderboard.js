@@ -32,32 +32,40 @@ function MessageModal({ username, repos, onClose }) {
     const generate = async () => {
       setLoading(true);
       setError('');
+      const repoList = (repos || []).slice(0, 3).map((r) => r.name || r).join(', ');
       try {
-        await waitForAnna();
-        const repoList = (repos || []).slice(0, 3).map((r) => r.name || r).join(', ');
-        const response = await window.anna.llm.complete(
-          {
-            messages: [{
-              role: 'user',
-              content: `Draft a short, warm, professional LinkedIn connection request to @${username} (a developer whose GitHub repos include: ${repoList || 'various projects'}). Max 300 characters. Be genuine and specific.`,
-            }],
-            systemPrompt: 'You are a professional networking coach. Write warm, specific, non-generic connection requests.',
-            maxTokens: 150,
-            temperature: 0.7,
-            modelPreferences: {
-              speedPriority: 0.9,
-              intelligencePriority: 0.7,
-              costPriority: 0.6,
+        await waitForAnna(2500);
+        if (window?.anna?.llm?.complete) {
+          const response = await window.anna.llm.complete(
+            {
+              messages: [{
+                role: 'user',
+                content: `Draft a short, warm, professional LinkedIn connection request to @${username} (a developer whose GitHub repos include: ${repoList || 'various projects'}). Max 300 characters. Be genuine and specific.`,
+              }],
+              systemPrompt: 'You are a professional networking coach. Write warm, specific, non-generic connection requests.',
+              maxTokens: 150,
+              temperature: 0.7,
+              modelPreferences: {
+                speedPriority: 0.9,
+                intelligencePriority: 0.7,
+                costPriority: 0.6,
+              },
             },
-          },
-          { timeoutMs: 45000 }
-        );
-        setMessage(((response?.content?.text || response?.text) || '').trim());
-      } catch (err) {
-        setError(err.userMessage || err.message || 'Could not draft message.');
+            { timeoutMs: 5000 }
+          );
+          const text = ((response?.content?.text || response?.text) || '').trim();
+          if (text) {
+            setMessage(text);
+            return;
+          }
+        }
+      } catch {
+        // Fallback below
       } finally {
         setLoading(false);
       }
+
+      setMessage(`Hi @${username}, I came across your GitHub profile and repos (${repoList || 'open-source work'}). Really impressive engineering! Would love to connect here on LinkedIn and follow your projects.`);
     };
     generate();
   }, [username, repos]);

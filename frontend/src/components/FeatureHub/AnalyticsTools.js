@@ -10,6 +10,7 @@ import {
   Check,
   RefreshCw,
   Terminal,
+  AlertCircle,
 } from 'lucide-react';
 import { waitForAnna } from '../../lib/llm';
 
@@ -244,6 +245,7 @@ export function GrowthVelocityModal({ score, topRepos = [], onClose }) {
 export function WhatToBuildNextModal({ username, score, topRepos = [], languages = [], onClose, onToast }) {
   const [loading, setLoading] = useState(false);
   const [ideas, setIdeas] = useState(null);
+  const [isFallback, setIsFallback] = useState(false);
 
   const primaryLang = languages?.[0]
     ? (Array.isArray(languages[0]) ? languages[0][0] : languages[0].lang || languages[0].name || 'TypeScript')
@@ -251,8 +253,9 @@ export function WhatToBuildNextModal({ username, score, topRepos = [], languages
 
   const handleGenerate = async () => {
     setLoading(true);
+    setIsFallback(false);
     try {
-      await waitForAnna();
+      await waitForAnna(2500);
       if (window?.anna?.llm?.complete) {
         const prompt = `Analyze developer @${username}'s portfolio.
 Current Score: ${score}/100
@@ -288,7 +291,7 @@ Output ONLY valid JSON:
           system: 'You are a Principal Engineering Director. Output ONLY valid JSON.',
           prompt,
           temperature: 0.5,
-        });
+        }, { timeoutMs: 5000 });
 
         setIdeas(JSON.parse(resp.text || '{}').recommendations || null);
         if (onToast) onToast('AI project proposals generated!', 'success');
@@ -296,9 +299,12 @@ Output ONLY valid JSON:
       }
     } catch {
       // Fallback
+      setIsFallback(true);
     } finally {
       setLoading(false);
     }
+
+    setIsFallback(true);
 
     setIdeas([
       {
@@ -356,6 +362,12 @@ Output ONLY valid JSON:
         </div>
       ) : (
         <div className="space-y-3 animate-fade-in max-h-72 overflow-y-auto pr-1">
+          {isFallback && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+              <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
+            </div>
+          )}
           {ideas.map((item, idx) => (
             <div key={idx} className="p-3.5 rounded-xl bg-slate-950/70 border border-white/10 space-y-1.5 text-xs">
               <div className="flex items-center justify-between">

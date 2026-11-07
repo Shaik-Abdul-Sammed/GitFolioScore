@@ -331,13 +331,15 @@ export function PrReviewSimulatorModal({ onClose, onToast, onRewardXP }) {
 }`);
   const [reviewing, setReviewing] = useState(false);
   const [review, setReview] = useState(null);
+  const [isFallback, setIsFallback] = useState(false);
 
   const handleReview = async () => {
     setReviewing(true);
+    setIsFallback(false);
     if (onRewardXP) onRewardXP(15, 'Code Review Simulation');
 
     try {
-      await waitForAnna();
+      await waitForAnna(2500);
       if (window?.anna?.llm?.complete) {
         const prompt = `Act as an uncompromising Senior Staff Software Engineer conducting a thorough code review.
 Review this code diff:
@@ -364,7 +366,7 @@ Output ONLY valid JSON:
           system: 'You are a Senior Staff Code Reviewer. Output ONLY valid JSON.',
           prompt,
           temperature: 0.3,
-        });
+        }, { timeoutMs: 5000 });
 
         setReview(JSON.parse(resp.text || '{}'));
         if (onToast) onToast('Senior Engineer review complete!', 'success');
@@ -372,9 +374,12 @@ Output ONLY valid JSON:
       }
     } catch {
       // Fallback
+      setIsFallback(true);
     } finally {
       setReviewing(false);
     }
+
+    setIsFallback(true);
 
     setReview({
       summary: 'Critical security vulnerability (SQL Injection) and severe N+1 database performance antipattern.',
@@ -445,6 +450,12 @@ Output ONLY valid JSON:
 
       {review && (
         <div className="space-y-3 pt-1 animate-fade-in text-xs">
+          {isFallback && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+              <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
+            </div>
+          )}
           <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-200">
             <span className="font-bold text-red-300 block mb-0.5">Review Summary (Score: {review.score}/10)</span>
             <p>{review.summary}</p>

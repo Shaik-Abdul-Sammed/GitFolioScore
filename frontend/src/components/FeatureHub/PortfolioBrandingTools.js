@@ -10,6 +10,7 @@ import {
   Check,
   Download,
   RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 import { waitForAnna } from '../../lib/llm';
 
@@ -174,13 +175,15 @@ export function CaseStudyGeneratorModal({ username, topRepos = [], onClose, onTo
   const [loading, setLoading] = useState(false);
   const [caseStudy, setCaseStudy] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isFallback, setIsFallback] = useState(false);
 
   const handleGenerate = async () => {
     setLoading(true);
+    setIsFallback(false);
     const repoObj = topRepos.find((r) => r.name === selectedRepo) || topRepos[0] || {};
 
     try {
-      await waitForAnna();
+      await waitForAnna(2500);
       if (window?.anna?.llm?.complete) {
         const prompt = `Write a comprehensive, deep 500-word software engineering case study blog post for repository "${repoObj.name}".
 Author: @${username}
@@ -200,7 +203,7 @@ Structure:
           system: 'You are a Senior Staff Engineer writing an in-depth technical post for the Netflix/Uber tech blog.',
           prompt,
           temperature: 0.5,
-        });
+        }, { timeoutMs: 5000 });
 
         setCaseStudy(resp.text || '');
         if (onToast) onToast('Case study generated with AI!', 'success');
@@ -208,9 +211,12 @@ Structure:
       }
     } catch {
       // Fallback
+      setIsFallback(true);
     } finally {
       setLoading(false);
     }
+
+    setIsFallback(true);
 
     setCaseStudy(`# Engineering Case Study: Architectural Deep-Dive into ${selectedRepo}
 **Author:** @${username} · **Language:** ${repoObj.language || 'TypeScript'} · **Impact:** Open Source
@@ -289,6 +295,12 @@ Building ${selectedRepo} reinforced that clean software architecture is an itera
 
       {caseStudy && (
         <div className="space-y-3 pt-1">
+          {isFallback && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+              <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
+            </div>
+          )}
           <div className="p-4 rounded-xl bg-slate-950/80 border border-white/10 max-h-64 overflow-y-auto">
             <pre className="text-xs text-gray-200 font-sans whitespace-pre-wrap leading-relaxed">
               {caseStudy}
@@ -453,13 +465,15 @@ export function ResumeScannerModal({ onClose, onToast, onRewardXP }) {
 - Created unit tests for the main web application.`);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
+  const [isFallback, setIsFallback] = useState(false);
 
   const handleScan = async () => {
     setScanning(true);
+    setIsFallback(false);
     if (onRewardXP) onRewardXP(15, 'ATS Resume Optimization');
 
     try {
-      await waitForAnna();
+      await waitForAnna(2500);
       if (window?.anna?.llm?.complete) {
         const prompt = `You are a Principal Tech Recruiter and ATS resume auditor.
 Candidate pasted bullet points:
@@ -480,7 +494,7 @@ Output ONLY valid JSON:
           system: 'You are an ATS resume optimization engine. Output ONLY valid JSON.',
           prompt,
           temperature: 0.3,
-        });
+        }, { timeoutMs: 5000 });
 
         setResult(JSON.parse(resp.text || '{}'));
         if (onToast) onToast('Resume bullet scan complete!', 'success');
@@ -488,9 +502,12 @@ Output ONLY valid JSON:
       }
     } catch {
       // Fallback
+      setIsFallback(true);
     } finally {
       setScanning(false);
     }
+
+    setIsFallback(true);
 
     setResult({
       atsScore: 64,
@@ -551,6 +568,12 @@ Output ONLY valid JSON:
 
       {result && (
         <div className="space-y-3 pt-1 animate-fade-in text-xs">
+          {isFallback && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+              <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
+            </div>
+          )}
           <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-white/10">
             <span className="text-gray-300 font-medium">ATS Impact Score</span>
             <span className="font-bold text-amber-300 font-mono text-sm">{result.atsScore} / 100</span>

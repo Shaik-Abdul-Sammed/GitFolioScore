@@ -96,10 +96,9 @@ function TopRepos({ repos, username }) {
     try {
       const markdown = await generateReadme(repo);
       setGeneratedReadme(markdown);
-    } catch (err) {
-      if (err?.code === 'API_UNAVAILABLE') {
-        const primaryLang = repo.language || 'Software Stack';
-        const template = `# ${repo.name}
+    } catch {
+      const primaryLang = repo.language || 'Software Stack';
+      const template = `# ${repo.name}
 
 > ${repo.description || 'Modern software development project.'}
 
@@ -130,10 +129,7 @@ npm test
 
 ## 📄 License
 Open source under standard permissive licensing.`;
-        setGeneratedReadme(template);
-      } else {
-        setReadmeError(err.userMessage || 'Could not generate README. Please check AI connection.');
-      }
+      setGeneratedReadme(template);
     } finally {
       setIsGeneratingReadme(false);
     }

@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Briefcase,
   ChevronRight,
+  AlertCircle,
 } from 'lucide-react';
 import { waitForAnna } from '../../lib/llm';
 
@@ -23,6 +24,7 @@ export function MockInterviewModal({ username, languages = [], onClose, onToast,
   const [answers, setAnswers] = useState(['', '', '']);
   const [evaluating, setEvaluating] = useState(false);
   const [evaluation, setEvaluation] = useState(null);
+  const [isFallback, setIsFallback] = useState(false);
 
   const defaultQuestions = [
     `How does memory management and garbage collection work in ${primaryLang}, and how do you prevent leaks in high-scale production apps?`,
@@ -40,10 +42,11 @@ export function MockInterviewModal({ username, languages = [], onClose, onToast,
 
   const handleEvaluate = async () => {
     setEvaluating(true);
+    setIsFallback(false);
     if (onRewardXP) onRewardXP(15, 'AI Mock Interview Completion');
 
     try {
-      await waitForAnna();
+      await waitForAnna(2500);
       if (window?.anna?.llm?.complete) {
         const prompt = `You are a Principal Software Engineer conducting a FAANG technical interview.
 Candidate: @${username}
@@ -72,7 +75,7 @@ Output ONLY valid JSON:
           system: 'You are a FAANG technical hiring panel. Output ONLY valid JSON.',
           prompt,
           temperature: 0.4,
-        });
+        }, { timeoutMs: 5000 });
 
         const parsed = JSON.parse(resp.text?.trim() || '{}');
         setEvaluation(parsed);
@@ -81,9 +84,12 @@ Output ONLY valid JSON:
       }
     } catch {
       // Fallback evaluation
+      setIsFallback(true);
     } finally {
       setEvaluating(false);
     }
+
+    setIsFallback(true);
 
     // High quality offline fallback
     setEvaluation({
@@ -181,6 +187,12 @@ Output ONLY valid JSON:
         </div>
       ) : (
         <div className="space-y-4 animate-fade-in">
+          {isFallback && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+              <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
+            </div>
+          )}
           <div className="flex items-center justify-between p-4 rounded-xl bg-slate-950/60 border border-indigo-500/30">
             <div>
               <span className="text-[10px] text-gray-400 font-gaming uppercase tracking-wider block">Verdict</span>
@@ -231,13 +243,15 @@ export function CoverLetterModal({ username, score, topRepos = [], onClose, onTo
   const [coverLetter, setCoverLetter] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isFallback, setIsFallback] = useState(false);
 
   const handleGenerate = async () => {
     setLoading(true);
+    setIsFallback(false);
     const repoContext = topRepos.slice(0, 3).map((r) => `${r.name} (${r.language || 'Code'}, ${r.stars || 0} stars): ${r.description || 'Core application'}`).join('; ');
 
     try {
-      await waitForAnna();
+      await waitForAnna(2500);
       if (window?.anna?.llm?.complete) {
         const prompt = `Write a compelling, professional 1-page software engineer cover letter for candidate @${username}.
 Target Company: ${company}
@@ -252,7 +266,7 @@ Ensure the tone is confident, humble, engineering-focused, and highlights measur
           system: 'You are an elite Silicon Valley executive career coach. Write concise, powerful cover letters.',
           prompt,
           temperature: 0.5,
-        });
+        }, { timeoutMs: 5000 });
 
         setCoverLetter(resp.text || '');
         if (onToast) onToast('Cover letter generated with AI!', 'success');
@@ -260,9 +274,12 @@ Ensure the tone is confident, humble, engineering-focused, and highlights measur
       }
     } catch {
       // Fallback
+      setIsFallback(true);
     } finally {
       setLoading(false);
     }
+
+    setIsFallback(true);
 
     const firstRepo = topRepos[0]?.name || 'distributed-sys';
     const fallbackText = `Dear Hiring Team at ${company},
@@ -348,6 +365,12 @@ GitHub: https://github.com/${username}`;
 
       {coverLetter && (
         <div className="space-y-3 pt-2">
+          {isFallback && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+              <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
+            </div>
+          )}
           <div className="p-4 rounded-xl bg-slate-950/80 border border-white/10 max-h-60 overflow-y-auto">
             <pre className="text-xs text-gray-200 whitespace-pre-wrap font-sans leading-relaxed">
               {coverLetter}

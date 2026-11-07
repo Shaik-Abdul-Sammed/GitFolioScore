@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, RefreshCw, CheckCircle2, AlertTriangle, ArrowRight, Target } from 'lucide-react';
+import { Building2, RefreshCw, CheckCircle2, AlertTriangle, ArrowRight, Target, AlertCircle } from 'lucide-react';
 import { waitForAnna } from '../lib/llm';
 
 const COMPANIES = [
@@ -16,11 +16,11 @@ function CompanyOSINT({ username, data, repos = [] }) {
   const [selectedCompany, setSelectedCompany] = useState(COMPANIES[0].id);
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState(null);
-  const [error, setError] = useState('');
+  const [isFallback, setIsFallback] = useState(false);
 
   const handleRunOSINT = async () => {
     setLoading(true);
-    setError('');
+    setIsFallback(false);
     const company = COMPANIES.find((c) => c.id === selectedCompany) || COMPANIES[0];
 
     const topLanguages = Array.from(new Set(repos.map((r) => r.language).filter(Boolean))).slice(0, 5);
@@ -55,7 +55,7 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
     try {
       let result = null;
       try {
-        await waitForAnna();
+        await waitForAnna(2500);
         if (window?.anna?.llm?.complete) {
           const resp = await window.anna.llm.complete(
             {
@@ -68,7 +68,7 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
                 costPriority: 0.5,
               },
             },
-            { timeoutMs: 45000 }
+            { timeoutMs: 5000 }
           );
 
           const raw = resp?.text || resp?.content?.text || '';
@@ -77,11 +77,13 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
             result = JSON.parse(match[0]);
           }
         }
-      } catch {
-        // Fallback to heuristic
+      } catch (bridgeErr) {
+        // eslint-disable-next-line no-console
+        console.warn('Anna Bridge unavailable/timed out in CompanyOSINT:', bridgeErr);
       }
 
       if (!result) {
+        setIsFallback(true);
         // High quality heuristic fallback
         result = {
           matchPercent: Math.min(92, Math.max(58, (data?.score || 75) - 6)),
@@ -103,7 +105,14 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
 
       setAnalysis(result);
     } catch {
-      setError('Could not run OSINT analysis right now. Please try again.');
+      setIsFallback(true);
+      setAnalysis({
+        matchPercent: 72,
+        barVerdict: `${company.name} engineering assessment based on repository telemetry.`,
+        companyFits: [`Demonstrated proficiency in ${topLanguages[0] || 'core technologies'}`],
+        criticalGaps: ['Add unit testing and automated CI workflows'],
+        actionPlan30Days: ['Set up GitHub Actions and README performance architecture'],
+      });
     } finally {
       setLoading(false);
     }
@@ -166,9 +175,10 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
         <span className="text-gray-300">{currentCompany.tags}</span>
       </div>
 
-      {error && (
-        <div className="p-3 mb-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
-          {error}
+      {isFallback && analysis && (
+        <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+          <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
         </div>
       )}
 

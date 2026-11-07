@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Network, Building2, GitFork, Users2, RefreshCw, AlertCircle } from 'lucide-react';
-import { suggestNetworkMatches } from '../lib/llm';
+import { suggestNetworkMatches, waitForAnna } from '../lib/llm';
 
 const TYPE_CONFIG = {
   company: { icon: Building2, color: '#6366f1', label: 'Company Tier Match' },
@@ -8,19 +8,44 @@ const TYPE_CONFIG = {
   community: { icon: Users2, color: '#f59e0b', label: 'Tech Community' },
 };
 
+const getDeterministicNetworkMatches = (languages = [], targetRole = '') => {
+  const topLang = languages[0]
+    ? (Array.isArray(languages[0]) ? languages[0][0] : languages[0].lang || languages[0].name || (typeof languages[0] === 'string' ? languages[0] : 'TypeScript'))
+    : 'TypeScript';
+  return [
+    {
+      type: 'company',
+      name: `${topLang}-Focused Engineering Tier (Stripe / Datadog / Vercel)`,
+      reason: `Actively recruiting developers with demonstrated ${topLang} repositories and high git commit velocity for ${targetRole || 'Software Engineer'} roles.`,
+    },
+    {
+      type: 'opensource',
+      name: `${topLang} Core Ecosystem Libraries`,
+      reason: `Contributing to trending open-source tools matching your ${topLang} stack will boost your public credibility and attract engineering recruiters.`,
+    },
+    {
+      type: 'community',
+      name: `${topLang} Global Developer & Hackathon Network`,
+      reason: `High-signal technical communities where hiring managers and staff engineers actively scout verified portfolio talent.`,
+    },
+  ];
+};
+
 function NetworkMatcher({ languages = [], targetRole = '' }) {
   const [suggestions, setSuggestions] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isFallback, setIsFallback] = useState(false);
 
   const handleFetch = async () => {
     setLoading(true);
-    setError('');
+    setIsFallback(false);
     try {
+      await waitForAnna(2500);
       const result = await suggestNetworkMatches(languages, targetRole);
-      setSuggestions(result.suggestions || []);
-    } catch (err) {
-      setError(err.userMessage || 'Could not fetch suggestions.');
+      setSuggestions(result.suggestions || getDeterministicNetworkMatches(languages, targetRole));
+    } catch {
+      setIsFallback(true);
+      setSuggestions(getDeterministicNetworkMatches(languages, targetRole));
     } finally {
       setLoading(false);
     }
@@ -56,10 +81,10 @@ function NetworkMatcher({ languages = [], targetRole = '' }) {
         </button>
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
+      {isFallback && suggestions && (
+        <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+          <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
         </div>
       )}
 

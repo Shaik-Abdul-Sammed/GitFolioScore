@@ -5,12 +5,12 @@ import { waitForAnna } from '../lib/llm';
 function CommitRoaster({ username, repos = [] }) {
   const [loading, setLoading] = useState(false);
   const [roast, setRoast] = useState(null);
-  const [error, setError] = useState('');
+  const [isFallback, setIsFallback] = useState(false);
 
   const fetchAndRoast = async () => {
     if (!username) return;
     setLoading(true);
-    setError('');
+    setIsFallback(false);
     setRoast(null);
 
     let foundCommits = [];
@@ -85,8 +85,9 @@ Produce a humorous and insightful JSON response in this exact format:
 }`;
 
       let roastData = null;
+      let usedFallback = false;
       try {
-        await waitForAnna();
+        await waitForAnna(2500);
         if (window?.anna?.llm?.complete) {
           const resp = await window.anna.llm.complete(
             {
@@ -99,7 +100,7 @@ Produce a humorous and insightful JSON response in this exact format:
                 costPriority: 0.6,
               },
             },
-            { timeoutMs: 45000 }
+            { timeoutMs: 5000 }
           );
 
           const raw = resp?.text || resp?.content?.text || '';
@@ -108,11 +109,13 @@ Produce a humorous and insightful JSON response in this exact format:
             roastData = JSON.parse(match[0]);
           }
         }
-      } catch {
-        // Fallback to heuristic
+      } catch (bridgeErr) {
+        // eslint-disable-next-line no-console
+        console.warn('Anna Bridge unavailable/timed out in CommitRoaster:', bridgeErr);
       }
 
       if (!roastData) {
+        usedFallback = true;
         // Fallback roast heuristic
         roastData = {
           hygieneScore: Math.max(30, Math.floor(Math.random() * 45) + 30),
@@ -126,9 +129,17 @@ Produce a humorous and insightful JSON response in this exact format:
         };
       }
 
+      setIsFallback(usedFallback);
       setRoast(roastData);
-    } catch (err) {
-      setError('Could not generate roast right now. Please try again.');
+    } catch {
+      setIsFallback(true);
+      setRoast({
+        hygieneScore: 40,
+        headline: 'Deterministic Git Commit Analysis',
+        roastComment: 'Commit messages could use standardized conventional commit prefixes.',
+        worstOffenders: [{ commit: 'update', critique: 'Lacks scoping and context.' }],
+        improvedSuggestion: 'chore: update project configuration and dependencies',
+      });
     } finally {
       setLoading(false);
     }
@@ -170,9 +181,10 @@ Produce a humorous and insightful JSON response in this exact format:
         </button>
       </div>
 
-      {error && (
-        <div className="p-3 mb-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
-          {error}
+      {isFallback && roast && (
+        <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+          <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
         </div>
       )}
 

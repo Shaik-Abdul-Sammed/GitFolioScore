@@ -18,7 +18,7 @@ describe('TerminalEasterEgg', () => {
 
     const input = screen.getByPlaceholderText(/type a command/i);
     fireEvent.change(input, { target: { value: 'help' } });
-    fireEvent.submit(input.closest('form'));
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
 
     expect(screen.getByText(/Available commands:/i)).toBeInTheDocument();
   });
@@ -37,7 +37,7 @@ describe('TerminalEasterEgg', () => {
 
     const input = screen.getByPlaceholderText(/type a command/i);
     fireEvent.change(input, { target: { value: 'sudo make me a sandwich' } });
-    fireEvent.submit(input.closest('form'));
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
 
     await waitFor(() => {
       expect(screen.getByText(/AI Sandwich/i)).toBeInTheDocument();

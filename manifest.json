@@ -17,7 +17,8 @@
       "format": "static-spa",
       "external_origins": [
         "https://api.github.com",
-        "https://avatars.githubusercontent.com"
+        "https://avatars.githubusercontent.com",
+        "https://img.shields.io"
       ]
     },
     "views": [

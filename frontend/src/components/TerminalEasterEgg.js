@@ -291,9 +291,8 @@ function TerminalEasterEgg({ username, score, data, advice }) {
                 <div ref={bottomRef} />
               </div>
 
-              {/* Input Form */}
-              <form
-                onSubmit={handleCommand}
+              {/* Input Bar */}
+              <div
                 className="flex items-center gap-2 px-3 py-2 bg-black/40 border-t border-white/10"
               >
                 <span className="text-emerald-400 font-mono text-xs select-none">&gt;</span>
@@ -301,19 +300,26 @@ function TerminalEasterEgg({ username, score, data, advice }) {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCommand(e);
+                    }
+                  }}
                   placeholder="type a command (e.g. help, score, sudo make me a sandwich)..."
                   className="flex-1 bg-transparent text-xs font-mono text-white focus:outline-none placeholder:text-gray-500"
                   autoFocus
                 />
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleCommand}
                   disabled={!input.trim()}
                   className="p-1 rounded text-gray-400 hover:text-emerald-400 disabled:opacity-30 transition"
                   aria-label="Send command"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>
-              </form>
+              </div>
             </div>
           )}
         </div>

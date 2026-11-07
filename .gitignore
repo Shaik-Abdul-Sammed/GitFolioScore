@@ -48,6 +48,7 @@ __pycache__/
 # Archive & Media
 *.zip
 *.zip.bak
+*.pdf
 # Allow videos specifically in these folders
 !demo/*.mp4
 !demo/*.webm

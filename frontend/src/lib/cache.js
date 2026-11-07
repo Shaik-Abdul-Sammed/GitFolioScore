@@ -32,9 +32,8 @@ export async function cacheGet(username) {
     }
 
     return data;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('Anna storage.get failed (continuing without cache):', err);
+  } catch {
+    // Fail silently without console warnings
     return null;
   }
 }
@@ -53,20 +52,21 @@ export async function cacheSet(username, data) {
   const cleanKey = username.trim().toLowerCase();
 
   try {
-    const payload = {
-      profile: data.profile,
-      repos: data.repos,
-      report: data.report,
-      cachedAt: Date.now(),
-    };
+    const payload = JSON.parse(
+      JSON.stringify({
+        profile: data.profile || null,
+        repos: Array.isArray(data.repos) ? data.repos : [],
+        report: data.report || null,
+        cachedAt: Date.now(),
+      })
+    );
 
     await window.anna.storage.set({
       key: cleanKey,
       value: payload,
       ttl_seconds: 86400, // 24h auto-expiry in APS
     });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('Anna storage.set failed (non-blocking):', err);
+  } catch {
+    // Fail silently without console warnings
   }
 }

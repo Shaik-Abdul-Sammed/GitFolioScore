@@ -22,9 +22,9 @@ export const LEVELS = [
 ];
 
 async function getAnnaStorage(key) {
-  if (typeof window === 'undefined' || !window.anna?.storage?.get) return null;
+  if (typeof window === 'undefined' || !window.anna?.storage?.get || !key) return null;
   try {
-    const res = await window.anna.storage.get({ key });
+    const res = await window.anna.storage.get({ key: String(key) });
     if (res && typeof res === 'object') {
       if ('value' in res) {
         return res.value;
@@ -32,24 +32,17 @@ async function getAnnaStorage(key) {
     }
     return res;
   } catch {
-    try {
-      return await window.anna.storage.get(key);
-    } catch {
-      return null;
-    }
+    return null;
   }
 }
 
 async function setAnnaStorage(key, value) {
-  if (typeof window === 'undefined' || !window.anna?.storage?.set) return;
+  if (typeof window === 'undefined' || !window.anna?.storage?.set || !key) return;
   try {
-    await window.anna.storage.set({ key, value });
+    const safeValue = typeof value === 'number' ? value : JSON.parse(JSON.stringify(value ?? null));
+    await window.anna.storage.set({ key: String(key), value: safeValue });
   } catch {
-    try {
-      await window.anna.storage.set(key, value);
-    } catch {
-      // ignore
-    }
+    // Fail silently, do not spam console
   }
 }
 

@@ -329,7 +329,7 @@ function App() {
           localStorage.removeItem('gitfolioscore_xp');
           localStorage.setItem('gitfolioscore_xp', '0');
           if (window?.anna?.storage?.set) {
-            window.anna.storage.set('gitfolioscore_xp', 0).catch(() => {});
+            window.anna.storage.set({ key: 'gitfolioscore_xp', value: 0 }).catch(() => {});
           }
         }
       } catch {
@@ -338,15 +338,17 @@ function App() {
 
       loadXP().then((val) => {
         if (isMounted) setXp(typeof val === 'object' && val !== null ? val.xp : (val || 0));
-      });
+      }).catch(() => {});
 
       getClaimedPortfolio().then((u) => {
-        if (isMounted && u) setMyPortfolioUsername(u);
-      });
+        if (isMounted && u && typeof u === 'string' && u.trim() !== '' && u !== 'null' && u !== 'undefined') {
+          setMyPortfolioUsername(u.trim());
+        }
+      }).catch(() => {});
 
       loadAuditHistory().then((h) => {
         if (isMounted && Array.isArray(h)) setAuditCount(h.length);
-      });
+      }).catch(() => {});
 
       const checkOnboarded = async () => {
         try {
@@ -512,10 +514,19 @@ function App() {
         try {
           if (window.anna?.storage?.get) {
             const res = await window.anna.storage.get({ key: 'recent_profiles' });
-            if (isMounted && Array.isArray(res?.value)) setRecentProfiles(res.value);
+            if (isMounted && Array.isArray(res?.value)) {
+              const valid = res.value.filter((p) => p && typeof p === 'string' && p.trim() !== '' && p !== 'null' && p !== 'undefined');
+              setRecentProfiles(valid);
+            }
           } else if (typeof localStorage !== 'undefined') {
             const stored = localStorage.getItem('recent_profiles');
-            if (isMounted && stored) setRecentProfiles(JSON.parse(stored));
+            if (isMounted && stored) {
+              const parsed = JSON.parse(stored);
+              if (Array.isArray(parsed)) {
+                const valid = parsed.filter((p) => p && typeof p === 'string' && p.trim() !== '' && p !== 'null' && p !== 'undefined');
+                setRecentProfiles(valid);
+              }
+            }
           }
         } catch {
           // Storage is best effort

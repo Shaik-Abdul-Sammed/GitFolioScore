@@ -77,6 +77,9 @@ async function handleResponse(response) {
  */
 export async function fetchProfile(username) {
   const cleanUsername = (username || '').trim().replace(/^@+/, '');
+  if (!cleanUsername) {
+    throw createGitHubError('GitHub user not found.', 'NOT_FOUND');
+  }
   const url = `${GITHUB_API_BASE}/users/${encodeURIComponent(cleanUsername)}`;
 
   try {
@@ -104,6 +107,9 @@ export async function fetchProfile(username) {
  */
 export async function fetchRepos(username) {
   const cleanUsername = (username || '').trim().replace(/^@+/, '');
+  if (!cleanUsername) {
+    return [];
+  }
   const url = `${GITHUB_API_BASE}/users/${encodeURIComponent(cleanUsername)}/repos?per_page=100&sort=updated`;
 
   try {

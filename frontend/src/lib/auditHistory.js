@@ -39,8 +39,8 @@ export async function setClaimedPortfolio(username) {
     if (window.anna?.storage?.set) {
       if (clean) {
         await window.anna.storage.set({ key: MY_PORTFOLIO_KEY, value: clean });
-      } else if (window.anna?.storage?.delete) {
-        await window.anna.storage.delete({ key: MY_PORTFOLIO_KEY });
+      } else {
+        await window.anna.storage.set({ key: MY_PORTFOLIO_KEY, value: '' });
       }
     }
   } catch {
@@ -97,8 +97,9 @@ export async function loadAuditHistory() {
  */
 async function persistAuditHistory(list) {
   try {
+    const safeList = Array.isArray(list) ? JSON.parse(JSON.stringify(list)) : [];
     if (window.anna?.storage?.set) {
-      await window.anna.storage.set({ key: HISTORY_STORAGE_KEY, value: list });
+      await window.anna.storage.set({ key: HISTORY_STORAGE_KEY, value: safeList });
     }
   } catch {
     // Ignore

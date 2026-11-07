@@ -85,12 +85,18 @@ export async function searchGitHubUsers(query, { signal, recentProfiles = [] } =
     return [];
   }
 
+  const localMatches = getLocalUserMatches(clean, recentProfiles);
+
+  // Validate GitHub username pattern before querying API to prevent 400s
+  const isValidPattern = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(clean);
+  if (!isValidPattern) {
+    return localMatches;
+  }
+
   const cacheKey = clean.toLowerCase();
   if (memoryCache.has(cacheKey)) {
     return memoryCache.get(cacheKey);
   }
-
-  const localMatches = getLocalUserMatches(clean, recentProfiles);
 
   try {
     const res = await fetch(

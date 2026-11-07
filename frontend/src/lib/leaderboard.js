@@ -6,9 +6,10 @@ const LEADERBOARD_KEY = 'gitfolio_leaderboard_v1';
 const NETWORK_KEY = 'gitfolio_my_network_v1';
 
 async function storageGet(key) {
+  if (!key) return null;
   try {
     if (window.anna?.storage?.get) {
-      const res = await window.anna.storage.get({ key });
+      const res = await window.anna.storage.get({ key: String(key) });
       return res?.value ?? null;
     }
     const raw = localStorage.getItem(key);
@@ -19,14 +20,16 @@ async function storageGet(key) {
 }
 
 async function storageSet(key, value) {
+  if (!key) return;
   try {
+    const cleanValue = JSON.parse(JSON.stringify(value ?? null));
     if (window.anna?.storage?.set) {
-      await window.anna.storage.set({ key, value });
+      await window.anna.storage.set({ key: String(key), value: cleanValue });
     } else {
-      localStorage.setItem(key, JSON.stringify(value));
+      localStorage.setItem(key, JSON.stringify(cleanValue));
     }
   } catch {
-    // best effort
+    // best effort silent
   }
 }
 

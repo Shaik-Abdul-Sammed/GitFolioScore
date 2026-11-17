@@ -63,3 +63,10 @@ dataset/archive.zip
 .gemini/
 .agent/
 brain/
+
+# Anna App Developer CLI & Credentials
+.anna/credentials.json
+.anna/*.token
+.anna/cache/
+.anna/*.log
+

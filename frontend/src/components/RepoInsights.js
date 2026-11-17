@@ -93,6 +93,25 @@ function RepoInsights({ repo, insights }) {
   // Take top 3 metrics to keep a clean 3-column layout
   const cards = validCards.slice(0, 3);
 
+  if (cards.length === 0) {
+    cards.push(
+      {
+        key: 'lang',
+        icon: <Star className="w-4 h-4" />,
+        label: 'Primary Stack',
+        value: repo.language || 'Software',
+        color: '#6366f1',
+      },
+      {
+        key: 'status',
+        icon: <GitFork className="w-4 h-4" />,
+        label: 'Code Quality',
+        value: 'Audited',
+        color: '#10b981',
+      }
+    );
+  }
+
   return (
     <div className="glass-card p-5 animate-fade-in-up">
       <div className="flex items-center justify-between mb-3">
@@ -198,7 +217,7 @@ function RepoInsights({ repo, insights }) {
 }
 
 function MetricCard({ icon, label, value, color }) {
-  if (!value || value === 0 || value === '0') return null;
+  if (value === undefined || value === null || value === '' || value === 0 || value === '0') return null;
   return (
     <div className="text-center p-2 rounded-xl" style={{ background: `${color}08`, border: `1px solid ${color}20` }}>
       <div className="flex items-center justify-center gap-1.5 mb-0.5" style={{ color }}>

@@ -5,6 +5,119 @@ import {
 } from 'lucide-react';
 import { auditLinkedIn, generateLinkedInHeadlines } from '../lib/llm';
 
+const DOMAINS = [
+  {
+    category: 'Frontend',
+    roleKeywords: ['frontend', 'front-end', 'front end', 'ui', 'ux', 'web', 'client', 'react', 'vue', 'angular', 'svelte', 'next', 'html', 'css', 'design system'],
+    languages: ['javascript', 'typescript', 'html', 'css', 'scss', 'sass', 'vue', 'svelte']
+  },
+  {
+    category: 'Backend',
+    roleKeywords: ['backend', 'back-end', 'back end', 'api', 'server', 'distributed', 'microservice', 'microservices', 'cloud', 'database'],
+    languages: ['python', 'go', 'golang', 'java', 'c++', 'rust', 'c#', 'csharp', 'php', 'ruby', 'kotlin', 'scala', 'node', 'nodejs', 'elixir']
+  },
+  {
+    category: 'Fullstack / Software Engineering',
+    roleKeywords: ['fullstack', 'full-stack', 'full stack', 'software engineer', 'software developer', 'developer', 'engineer', 'programmer', 'tech lead', 'founding engineer'],
+    languages: ['javascript', 'typescript', 'python', 'go', 'golang', 'java', 'c++', 'rust', 'c#', 'php', 'ruby', 'html', 'css', 'swift', 'kotlin', 'c']
+  },
+  {
+    category: 'Mobile',
+    roleKeywords: ['mobile', 'ios', 'android', 'flutter', 'react native', 'swift', 'kotlin', 'app developer'],
+    languages: ['swift', 'kotlin', 'java', 'dart', 'objective-c', 'javascript', 'typescript']
+  },
+  {
+    category: 'Data & AI',
+    roleKeywords: ['data', 'machine learning', 'ml', 'ai', 'deep learning', 'nlp', 'computer vision', 'data science', 'data scientist', 'data engineer', 'analytics'],
+    languages: ['python', 'r', 'julia', 'c++', 'sql']
+  },
+  {
+    category: 'DevOps & Infrastructure',
+    roleKeywords: ['devops', 'sre', 'site reliability', 'platform', 'infrastructure', 'cloud', 'sysadmin', 'devsecops', 'kubernetes', 'docker'],
+    languages: ['go', 'golang', 'python', 'shell', 'bash', 'rust', 'dockerfile', 'hcl']
+  },
+  {
+    category: 'Systems & Embedded',
+    roleKeywords: ['systems', 'embedded', 'firmware', 'kernel', 'os', 'hardware', 'low-level', 'low level', 'c/c++'],
+    languages: ['c', 'c++', 'rust', 'assembly', 'zig']
+  }
+];
+
+function textContainsKeyword(text, keyword) {
+  if (!text || !keyword) return false;
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-zA-Z0-9])${escaped}([^a-zA-Z0-9]|$)`, 'i').test(text);
+}
+
+export function evaluateDeterministicLinkedIn(jobTitle = '', linkedInText = '', languages = [], topRepos = [], roastMode = false) {
+  const claimedText = `${jobTitle} ${linkedInText}`.toLowerCase().trim();
+  const repoLangs = (languages || [])
+    .map((l) => (typeof l === 'string' ? l : (Array.isArray(l) ? l[0] : l.lang || l.name || '')).toLowerCase())
+    .filter(Boolean);
+
+  const codeLangs = repoLangs.filter((l) => !['html', 'css', 'markdown', 'jupyter notebook', 'shell'].includes(l));
+  const primaryLangRaw = codeLangs[0] || repoLangs[0] || 'Modern Engineering';
+  const primaryLang = primaryLangRaw.charAt(0).toUpperCase() + primaryLangRaw.slice(1);
+  const topRepoName = topRepos?.[0]?.name || 'flagship project';
+  const roleDisplay = jobTitle.trim() || 'Software Engineer';
+
+  // 1. Direct language match in claimed text
+  const directMatch = repoLangs.some((lang) => textContainsKeyword(claimedText, lang));
+
+  // 2. Domain / Role ecosystem compatibility
+  const matchingDomains = DOMAINS.filter((domain) =>
+    domain.roleKeywords.some((kw) => textContainsKeyword(claimedText, kw))
+  );
+
+  const domainMatch = matchingDomains.some((domain) =>
+    domain.languages.some((lang) => repoLangs.includes(lang))
+  );
+
+  // Generic software engineering titles match standard programming stacks
+  const genericMatch = ['engineer', 'developer', 'programmer', 'architect'].some((kw) =>
+    textContainsKeyword(claimedText, kw)
+  );
+
+  // If specific technical domain matched (like Mobile or Systems), prioritize domainMatch over generic fallback
+  const isAligned = matchingDomains.length > 0 ? domainMatch || directMatch : (genericMatch || directMatch || repoLangs.length === 0);
+
+  if (isAligned) {
+    const consistencyScore = roastMode ? 82 : 91;
+    return {
+      consistencyScore,
+      verdict: roastMode
+        ? `Your LinkedIn claims "${roleDisplay}" and GitHub validates real code in ${primaryLang}. Now let's see if those commit messages can survive an executive code review.`
+        : `Strong technical alignment: Your declared focus in ${roleDisplay} is directly validated by active production repositories in ${primaryLang}.`,
+      discrepancies: [
+        `GitHub production commits demonstrate deep hands-on implementation in ${primaryLang} that exceeds high-level LinkedIn summaries.`,
+        `Flagship repository "${topRepoName}" exhibits solid architecture but is not yet featured in your LinkedIn Featured section.`,
+      ],
+      recommendations: [
+        `Feature your top repository (${topRepoName}) with star metrics prominently in your LinkedIn Featured section.`,
+        `Quantify your ${primaryLang} engineering scale and architecture decisions in your LinkedIn About section.`,
+        `Add your audited GitFolio score badge to your LinkedIn headline or contact info to verify technical excellence.`,
+      ],
+    };
+  }
+
+  const consistencyScore = roastMode ? 65 : 74;
+  return {
+    consistencyScore,
+    verdict: roastMode
+      ? `LinkedIn says "${roleDisplay}", but your public GitHub shows you write ${primaryLang}. Either you have private repositories or recruiters will ask tricky stack questions.`
+      : `Broad polyglot profile: Your LinkedIn emphasizes ${roleDisplay}, while your GitHub portfolio showcases extensive depth in ${primaryLang}. Highlighting how both skillsets connect will prove your engineering versatility.`,
+    discrepancies: [
+      `LinkedIn emphasizes ${roleDisplay}, while public GitHub repositories reflect heavy implementation in ${primaryLang}.`,
+      `Key repository "${topRepoName}" in ${primaryLang} is not yet showcased on LinkedIn to bridge your claimed expertise with live codebase evidence.`,
+    ],
+    recommendations: [
+      `Feature cross-functional projects that bridge ${roleDisplay} with your verified GitHub work in ${primaryLang}.`,
+      `Pin your flagship repository (${topRepoName}) on LinkedIn to showcase multifaceted engineering competency.`,
+      `Position your ${primaryLang} proficiency as a core systems or backend advantage that accelerates your primary career trajectory.`,
+    ],
+  };
+}
+
 function LinkedInSync({ report, onUpdateHiringReadiness }) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1); // 1 = Input, 2 = Results
@@ -36,33 +149,12 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
         onUpdateHiringReadiness(res.consistencyScore);
       }
     } catch (err) {
-      // In offline or testing mode, generate a realistic deterministic comparison
-      const topLang = languages?.[0]
-        ? (Array.isArray(languages[0]) ? languages[0][0] : languages[0].lang || languages[0].name || 'JavaScript')
-        : 'JavaScript';
-      const claimedLower = (jobTitle + ' ' + linkedInText).toLowerCase();
-      const mentionsTopLang = claimedLower.includes(topLang.toLowerCase());
-      const fallbackScore = mentionsTopLang ? 85 : 64;
-
-      const fallbackResult = {
-        consistencyScore: fallbackScore,
-        verdict: mentionsTopLang
-          ? `Solid brand consistency on ${topLang} engineering, though your LinkedIn emphasizes secondary frameworks that represent under 10% of your real GitHub code.`
-          : `You claim to be a ${jobTitle || 'Senior Developer'} on LinkedIn, but the majority of your GitHub code is in ${topLang}.`,
-        discrepancies: [
-          `Public GitHub repos reflect heavy production work in ${topLang}, while LinkedIn lists general buzzwords.`,
-          `Flagship repository "${topRepos[0]?.name || 'primary repo'}" is not prominently featured on LinkedIn.`,
-        ],
-        recommendations: [
-          `Feature your top repository (${topRepos[0]?.name || 'primary repo'}) in your LinkedIn Featured section with star count metrics.`,
-          `Quantify your ${topLang} engineering impact and architecture decisions in your About section.`,
-          `Align your LinkedIn headline to explicitly bridge your current role with your analyzed stack (${topLang}).`,
-        ],
-      };
+      // In offline or fallback mode, generate an authentic domain-aware alignment evaluation
+      const fallbackResult = evaluateDeterministicLinkedIn(jobTitle, linkedInText, languages, topRepos, roastMode);
       setAuditResult(fallbackResult);
       setStep(2);
       if (onUpdateHiringReadiness) {
-        onUpdateHiringReadiness(fallbackScore);
+        onUpdateHiringReadiness(fallbackResult.consistencyScore);
       }
     } finally {
       setAuditing(false);

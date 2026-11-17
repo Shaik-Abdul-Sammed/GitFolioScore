@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Download, RefreshCw, AlertCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { waitForAnna } from '../lib/llm';
+import { waitForAnna, getLLMResponseText } from '../lib/llm';
 import { sanitizeForPDF } from '../lib/pdfSanitizer';
 import { calculatePercentile } from '../lib/score';
 import ExportPreviewModal from './ExportPreviewModal';
@@ -100,7 +100,7 @@ function ResumeGenerator({ report, advice, onToast }) {
             },
             { timeoutMs: 5000 }
           );
-          resumeText = (response?.content?.text || response?.text || '').trim();
+          resumeText = getLLMResponseText(response);
         }
       } catch {
         // Fall back to static deterministic resume silently

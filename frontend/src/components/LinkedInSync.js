@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Linkedin, Sparkles, Flame, Check, Copy, AlertCircle, RefreshCw, ChevronDown, ChevronUp,
-  ShieldCheck, ArrowRight, Gauge, Briefcase, RotateCcw, CheckCircle2,
+  ShieldCheck, ArrowRight, Gauge, Briefcase, RotateCcw, CheckCircle2, Rocket, ExternalLink,
 } from 'lucide-react';
 import { auditLinkedIn, generateLinkedInHeadlines } from '../lib/llm';
 
@@ -121,6 +121,7 @@ export function evaluateDeterministicLinkedIn(jobTitle = '', linkedInText = '', 
 function LinkedInSync({ report, onUpdateHiringReadiness }) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1); // 1 = Input, 2 = Results
+  const [noLinkedInMode, setNoLinkedInMode] = useState(false);
   const [jobTitle, setJobTitle] = useState('');
   const [linkedInText, setLinkedInText] = useState('');
   const [roastMode, setRoastMode] = useState(false);
@@ -132,16 +133,53 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
   const [headlines, setHeadlines] = useState(null);
   const [copiedIndex, setCopiedIndex] = useState(null);
 
+  const [fullProfile, setFullProfile] = useState(null);
+  const [copiedPart, setCopiedPart] = useState('');
+
   const profile = report?.profile || {};
   const topRepos = report?.topRepos || [];
   const languages = report?.mostUsedLanguages || [];
 
+  const handleCopyPart = (text, key) => {
+    navigator.clipboard.writeText(text);
+    setCopiedPart(key);
+    setTimeout(() => setCopiedPart(''), 2000);
+  };
+
+  const handleGenerateFullProfile = () => {
+    const rawTopLang = languages?.[0]
+      ? (typeof languages[0] === 'string' ? languages[0] : (Array.isArray(languages[0]) ? languages[0][0] : languages[0].lang || languages[0].name || 'Software'))
+      : 'Software';
+    const topLang = rawTopLang.charAt(0).toUpperCase() + rawTopLang.slice(1);
+    const topProject = topRepos[0]?.name || 'Flagship Repository';
+    const scoreVal = report?.score || 85;
+    const devName = profile?.name || `@${profile?.login || 'developer'}`;
+    const targetRole = jobTitle.trim() || `${topLang} Engineer`;
+
+    const generated = {
+      headline: `${targetRole} | Specialized in ${topLang} & Scalable Systems | ${scoreVal}/100 Audited GitHub Portfolio`,
+      about: `Hi, I'm ${devName}. I build high-performance software applications with a deep focus on ${topLang}, clean system architecture, and automated testing workflows.\n\nMy open-source work on GitHub includes flagship projects like "${topProject}", demonstrating robust repository hygiene, modular codebase design, and consistent deployment practices. Recently calibrated on GitFolioScore with a verified technical score of ${scoreVal}/100.\n\nOpen to ${targetRole} opportunities, open-source initiatives, and impactful technical collaborations. Let's connect!`,
+      featured: (topRepos || []).slice(0, 3).map((r) => ({
+        name: r.name,
+        stars: r.stargazers_count ?? r.stars ?? 0,
+        lang: r.language || topLang,
+        desc: r.description || `Production-grade ${r.language || topLang} implementation with clean architecture.`,
+        url: r.html_url || `https://github.com/${profile?.login || 'dev'}/${r.name}`,
+      })),
+    };
+
+    setFullProfile(generated);
+  };
+
   const handleAudit = async () => {
-    if (!linkedInText.trim() && !jobTitle.trim()) return;
+    const effectiveRole = jobTitle.trim() || (noLinkedInMode ? 'Software Engineer' : '');
+    const effectiveText = linkedInText.trim() || (noLinkedInMode ? `Targeting ${effectiveRole} engineering positions based on active GitHub production code.` : '');
+    if (!effectiveText && !effectiveRole) return;
+
     setAuditing(true);
     setAuditError('');
     try {
-      const combinedInput = `Job Titles / Target Role: ${jobTitle || 'Software Engineer'}\n\nLinkedIn About & Experience:\n${linkedInText}`;
+      const combinedInput = `Job Titles / Target Role: ${effectiveRole || 'Software Engineer'}\n\nLinkedIn About & Experience:\n${effectiveText}`;
       const res = await auditLinkedIn(profile, topRepos, languages, combinedInput, roastMode);
       setAuditResult(res);
       setStep(2);
@@ -150,7 +188,7 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
       }
     } catch (err) {
       // In offline or fallback mode, generate an authentic domain-aware alignment evaluation
-      const fallbackResult = evaluateDeterministicLinkedIn(jobTitle, linkedInText, languages, topRepos, roastMode);
+      const fallbackResult = evaluateDeterministicLinkedIn(effectiveRole, effectiveText, languages, topRepos, roastMode);
       setAuditResult(fallbackResult);
       setStep(2);
       if (onUpdateHiringReadiness) {
@@ -261,15 +299,56 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
           {/* STEP 1: INPUT VIEW */}
           {step === 1 && (
             <div className="space-y-4 animate-fade-in">
+              {/* Profile Mode Switcher */}
+              <div className="flex flex-wrap items-center gap-2 p-1 rounded-xl bg-slate-950/60 border border-white/10 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setNoLinkedInMode(false)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    !noLinkedInMode
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  I Have a LinkedIn Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNoLinkedInMode(true)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                    noLinkedInMode
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <span>No LinkedIn? Target Role Mode</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+                    KICKSTART
+                  </span>
+                </button>
+              </div>
+
+              {noLinkedInMode && (
+                <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-200/90 leading-relaxed space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-indigo-300">
+                    <Rocket className="w-3.5 h-3.5" />
+                    <span>No LinkedIn account? No problem!</span>
+                  </div>
+                  <p className="text-[11px] text-gray-300">
+                    Audit your GitHub repositories directly against your target job title, or auto-generate a complete, recruiter-ready LinkedIn profile presence directly from your audited code.
+                  </p>
+                </div>
+              )}
+
               {/* Job Title Input */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5 text-blue-400" />
-                  <span>LinkedIn Job Title(s) / Headline:</span>
+                  <span>{noLinkedInMode ? 'Target Career Role / Desired Job Title:' : 'LinkedIn Job Title(s) / Headline:'}</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Senior Fullstack Engineer | React, Node.js & Cloud Architect"
+                  placeholder={noLinkedInMode ? 'e.g. Frontend Engineer, Cloud Architect, Fullstack Developer' : 'e.g. Senior Fullstack Engineer | React, Node.js & Cloud Architect'}
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
                   className="w-full text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-500"
@@ -281,7 +360,7 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-gray-300">
-                    Paste your LinkedIn &ldquo;About&rdquo; Summary or Experience:
+                    {noLinkedInMode ? 'Quick Bio / Skills Background (Optional):' : 'Paste your LinkedIn "About" Summary or Experience:'}
                   </label>
 
                   {/* Roast Mode Toggle */}
@@ -295,14 +374,14 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
                     }`}
                   >
                     <Flame className={`w-3.5 h-3.5 ${roastMode ? 'text-orange-400 fill-orange-400' : ''}`} />
-                    <span>{roastMode ? '🔥 Roast Mode ON' : 'Roast My LinkedIn'}</span>
+                    <span>{roastMode ? '🔥 Roast Mode ON' : 'Roast Mode'}</span>
                   </button>
                 </div>
 
                 <textarea
                   className="w-full h-28 text-xs p-3 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-500"
                   style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                  placeholder="e.g. Passionate full-stack engineer with 4 years building reactive user interfaces in React and robust backend microservices in Node..."
+                  placeholder={noLinkedInMode ? 'e.g. Building full-stack web applications with React and Node.js; exploring cloud deployment with Docker...' : 'e.g. Passionate full-stack engineer with 4 years building reactive user interfaces in React and robust backend microservices in Node...'}
                   value={linkedInText}
                   onChange={(e) => setLinkedInText(e.target.value)}
                 />
@@ -318,23 +397,115 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
                   type="button"
                   onClick={handleAudit}
                   aria-label="Audit Consistency Score"
-                  disabled={auditing || (!linkedInText.trim() && !jobTitle.trim())}
+                  disabled={auditing || (!noLinkedInMode && !linkedInText.trim() && !jobTitle.trim())}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs text-white shadow-lg transition-all disabled:opacity-40 active:scale-95 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/25 font-gaming"
                 >
                   {auditing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                  <span>{auditing ? 'Auditing Alignment...' : 'Sync Profile & Audit Consistency'}</span>
+                  <span>{auditing ? 'Auditing Alignment...' : (noLinkedInMode ? 'Audit Target Role Readiness' : 'Sync Profile & Audit Consistency')}</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleGenerateHeadlines}
-                  disabled={generatingHeadlines}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-200 transition active:scale-95 disabled:opacity-40"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                  <span>{generatingHeadlines ? 'Writing Headlines...' : 'Auto-Generate Headlines'}</span>
-                </button>
+                {noLinkedInMode ? (
+                  <button
+                    type="button"
+                    onClick={handleGenerateFullProfile}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-indigo-500/40 bg-indigo-600/20 hover:bg-indigo-600/30 text-xs font-semibold text-indigo-200 transition active:scale-95"
+                  >
+                    <Rocket className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>🚀 Launch: Generate LinkedIn from GitHub</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleGenerateHeadlines}
+                    disabled={generatingHeadlines}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-200 transition active:scale-95 disabled:opacity-40"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                    <span>{generatingHeadlines ? 'Writing Headlines...' : 'Auto-Generate Headlines'}</span>
+                  </button>
+                )}
               </div>
+
+              {/* Full Profile Kickstart Card (for users without LinkedIn) */}
+              {fullProfile && (
+                <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-indigo-950/40 via-slate-900 to-slate-950 border border-indigo-500/30 space-y-4 animate-fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                    <div className="flex items-center gap-2">
+                      <Rocket className="w-4 h-4 text-indigo-400" />
+                      <span className="text-xs font-bold text-white font-gaming">Your Generated LinkedIn Profile Presence:</span>
+                    </div>
+                    <a
+                      href="https://www.linkedin.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold"
+                    >
+                      Open LinkedIn <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  {/* Headline */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Suggested Headline:</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPart(fullProfile.headline, 'headline')}
+                        className="text-[10px] text-indigo-400 hover:text-white flex items-center gap-1"
+                      >
+                        {copiedPart === 'headline' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedPart === 'headline' ? 'Copied!' : 'Copy'}</span>
+                      </button>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-950/80 border border-white/10 text-xs text-gray-200 font-mono">
+                      {fullProfile.headline}
+                    </div>
+                  </div>
+
+                  {/* About Summary */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Suggested About Summary:</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPart(fullProfile.about, 'about')}
+                        className="text-[10px] text-indigo-400 hover:text-white flex items-center gap-1"
+                      >
+                        {copiedPart === 'about' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedPart === 'about' ? 'Copied!' : 'Copy'}</span>
+                      </button>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-950/80 border border-white/10 text-xs text-gray-200 whitespace-pre-line leading-relaxed">
+                      {fullProfile.about}
+                    </div>
+                  </div>
+
+                  {/* Featured Projects */}
+                  {fullProfile.featured?.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Featured Projects to Add:</span>
+                      <div className="space-y-1.5">
+                        {fullProfile.featured.map((proj, pIdx) => (
+                          <div key={pIdx} className="p-2.5 rounded-lg bg-slate-950/80 border border-white/10 flex items-center justify-between text-xs">
+                            <div>
+                              <div className="font-bold text-white">{proj.name} ({proj.lang})</div>
+                              <div className="text-[11px] text-gray-400">{proj.desc}</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyPart(`${proj.name} - ${proj.desc} (${proj.url})`, `proj_${pIdx}`)}
+                              className="text-[10px] text-indigo-400 hover:text-white flex items-center gap-1 ml-2 flex-shrink-0"
+                            >
+                              {copiedPart === `proj_${pIdx}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              <span>{copiedPart === `proj_${pIdx}` ? 'Copied!' : 'Copy'}</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -346,7 +517,7 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
                   <div className="flex items-center gap-2">
                     <Gauge className="w-4 h-4 text-blue-400" />
-                    <span className="text-xs font-bold text-blue-200 font-gaming">Brand Consistency Score:</span>
+                    <span className="text-xs font-bold text-blue-200 font-gaming">{noLinkedInMode ? 'Target Role Readiness Score:' : 'Brand Consistency Score:'}</span>
                   </div>
                   <span
                     className={`text-base font-extrabold px-3 py-1 rounded-xl border font-mono shadow-md ${
@@ -363,7 +534,7 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
 
                 <div className="p-3 rounded-xl bg-slate-950/70 border border-white/10">
                   <span className="text-[10px] text-gray-400 font-gaming uppercase tracking-wider block mb-1">
-                    Brand Alignment Verdict
+                    {noLinkedInMode ? 'Target Role Readiness Verdict' : 'Brand Alignment Verdict'}
                   </span>
                   <p className="text-xs text-gray-200 leading-relaxed font-medium">
                     {auditResult.verdict}

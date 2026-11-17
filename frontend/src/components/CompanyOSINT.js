@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Building2, RefreshCw, CheckCircle2, AlertTriangle, ArrowRight, Target } from 'lucide-react';
-import { waitForAnna } from '../lib/llm';
+import { waitForAnna, safeExtractJSON } from '../lib/llm';
 
 const COMPANIES = [
   { id: 'google', name: 'Google', tags: 'Distributed Systems, C++, Go, Python, Testing Rigor' },
@@ -70,11 +70,7 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
             { timeoutMs: 15000 }
           );
 
-          const raw = resp?.text || resp?.content?.text || (typeof resp === 'string' ? resp : '');
-          const match = raw.match(/\{[\s\S]*\}/);
-          if (match) {
-            result = JSON.parse(match[0]);
-          }
+          result = safeExtractJSON(resp);
         }
       } catch {
         // Fall back to deterministic match silently

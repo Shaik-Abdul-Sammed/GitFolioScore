@@ -12,7 +12,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from 'lucide-react';
-import { waitForAnna } from '../../lib/llm';
+import { waitForAnna, safeExtractJSON, getLLMResponseText } from '../../lib/llm';
 
 export function PortfolioSiteGeneratorModal({ username, profile = {}, topRepos = [], languages = [], onClose, onToast }) {
   const [copied, setCopied] = useState(false);
@@ -199,15 +199,21 @@ Structure:
 ## 4. Testing, Telemetry & CI/CD
 ## 5. Key Takeaways & What's Next`;
 
-        const resp = await window.anna.llm.complete({
-          system: 'You are a Senior Staff Engineer writing an in-depth technical post for the Netflix/Uber tech blog.',
-          prompt,
-          temperature: 0.5,
-        }, { timeoutMs: 5000 });
+        const resp = await window.anna.llm.complete(
+          {
+            messages: [{ role: 'user', content: prompt }],
+            systemPrompt: 'You are a Senior Staff Engineer writing an in-depth technical post for the Netflix/Uber tech blog.',
+            temperature: 0.5,
+          },
+          { timeoutMs: 15000 }
+        );
 
-        setCaseStudy(resp.text || '');
-        if (onToast) onToast('Case study generated with AI!', 'success');
-        return;
+        const text = getLLMResponseText(resp);
+        if (text) {
+          setCaseStudy(text);
+          if (onToast) onToast('Case study generated with AI!', 'success');
+          return;
+        }
       }
     } catch {
       // Fallback
@@ -490,15 +496,21 @@ Output ONLY valid JSON:
   ]
 }`;
 
-        const resp = await window.anna.llm.complete({
-          system: 'You are an ATS resume optimization engine. Output ONLY valid JSON.',
-          prompt,
-          temperature: 0.3,
-        }, { timeoutMs: 5000 });
+        const resp = await window.anna.llm.complete(
+          {
+            messages: [{ role: 'user', content: prompt }],
+            systemPrompt: 'You are an ATS resume optimization engine. Output ONLY valid JSON.',
+            temperature: 0.3,
+          },
+          { timeoutMs: 15000 }
+        );
 
-        setResult(JSON.parse(resp.text || '{}'));
-        if (onToast) onToast('Resume bullet scan complete!', 'success');
-        return;
+        const parsed = safeExtractJSON(resp);
+        if (parsed && typeof parsed.atsScore === 'number') {
+          setResult(parsed);
+          if (onToast) onToast('Resume bullet scan complete!', 'success');
+          return;
+        }
       }
     } catch {
       // Fallback

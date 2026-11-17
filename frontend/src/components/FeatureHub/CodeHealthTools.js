@@ -11,7 +11,7 @@ import {
   RefreshCw,
   Terminal,
 } from 'lucide-react';
-import { waitForAnna } from '../../lib/llm';
+import { waitForAnna, safeExtractJSON } from '../../lib/llm';
 import { detectLicense, getBuildToolchain } from '../../lib/projectStackHelper';
 
 export function DependencyCheckerModal({ repos = [], onClose, onToast, onRewardXP }) {
@@ -377,15 +377,21 @@ Output ONLY valid JSON:
   "refactoredCode": "async function getUserPortfolio(userId) {\\n  const user = await db.query('SELECT * FROM users WHERE id = $1', [userId]);\\n  const repos = await db.query('SELECT r.*, COUNT(s.id) as stars_count FROM repos r LEFT JOIN stars s ON s.repo_id = r.id WHERE r.user_id = $1 GROUP BY r.id', [userId]);\\n  return { user: user.rows[0], repos: repos.rows };\\n}"
 }`;
 
-        const resp = await window.anna.llm.complete({
-          system: 'You are a Senior Staff Code Reviewer. Output ONLY valid JSON.',
-          prompt,
-          temperature: 0.3,
-        }, { timeoutMs: 5000 });
+        const resp = await window.anna.llm.complete(
+          {
+            messages: [{ role: 'user', content: prompt }],
+            systemPrompt: 'You are a Senior Staff Code Reviewer. Output ONLY valid JSON.',
+            temperature: 0.3,
+          },
+          { timeoutMs: 15000 }
+        );
 
-        setReview(JSON.parse(resp.text || '{}'));
-        if (onToast) onToast('Senior Engineer review complete!', 'success');
-        return;
+        const parsed = safeExtractJSON(resp);
+        if (parsed && (parsed.summary || parsed.comments)) {
+          setReview(parsed);
+          if (onToast) onToast('Senior Engineer review complete!', 'success');
+          return;
+        }
       }
     } catch {
       // Fallback

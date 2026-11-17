@@ -281,13 +281,19 @@ function App() {
   const [auditCount, setAuditCount] = useState(0);
   const { i18n } = useTranslation();
 
-  // Force clear cache on fresh install / new version (v0.3.7)
+  // Force clear stale cache on fresh install / new version (v0.4.7)
   useEffect(() => {
+    const CURRENT_VERSION = 'v0.4.7';
     try {
       if (typeof localStorage !== 'undefined') {
-        if (localStorage.getItem('app_version') !== 'v0.4.0') {
+        if (localStorage.getItem('app_version') !== CURRENT_VERSION) {
           localStorage.clear();
-          localStorage.setItem('app_version', 'v0.4.0');
+          localStorage.setItem('app_version', CURRENT_VERSION);
+          localStorage.setItem('gitfolioscore_xp', '0');
+          if (window.anna?.storage?.set) {
+            window.anna.storage.set({ key: 'gitfolioscore_xp', value: 0 }).catch(() => {});
+          }
+          setXp(0);
         }
       }
     } catch {
@@ -313,7 +319,7 @@ function App() {
         }
         if (isMounted) setXp(0);
         // eslint-disable-next-line no-console
-        console.log('[GitFolioScore] Developer XP reset to Level 1 (0 XP)');
+        console.log('[GitFolioScore] Developer XP reset to Level 0 (0 XP)');
         if (typeof window.location?.reload === 'function') {
           window.location.reload();
         }
@@ -321,8 +327,8 @@ function App() {
     }
 
     if (process.env.NODE_ENV !== 'test') {
-      // Force one-time reset of any cached/stale legacy XP key so everyone starts fresh at Level 1 (0 XP)
-      const XP_RESET_KEY = 'gitfolioscore_xp_reset_to_zero_v2';
+      // Force one-time reset of any cached/stale legacy XP key so everyone starts fresh at Level 0 (0 XP)
+      const XP_RESET_KEY = 'gitfolioscore_xp_reset_to_zero_v3';
       try {
         if (typeof localStorage !== 'undefined' && !localStorage.getItem(XP_RESET_KEY)) {
           localStorage.setItem(XP_RESET_KEY, 'true');
@@ -331,6 +337,7 @@ function App() {
           if (window?.anna?.storage?.set) {
             window.anna.storage.set({ key: 'gitfolioscore_xp', value: 0 }).catch(() => {});
           }
+          if (isMounted) setXp(0);
         }
       } catch {
         // ignore legacy storage reset errors

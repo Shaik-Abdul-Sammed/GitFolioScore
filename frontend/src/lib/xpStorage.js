@@ -7,18 +7,18 @@ const STORAGE_KEY = 'gitfolioscore_xp';
 
 export const DEFAULT_INITIAL_STATE = {
   xp: 0,
-  level: 1,
+  level: 0,
   title: 'Code Initiate',
 };
 
 export const LEVELS = [
-  { level: 1, title: 'Code Initiate', minXP: 0, maxXP: 50, icon: '🌱', perk: 'Basic Profile Audits' },
-  { level: 2, title: 'Terminal Apprentice', minXP: 50, maxXP: 150, icon: '⚡', perk: 'Role Benchmarking' },
-  { level: 3, title: 'Code Craftsperson', minXP: 150, maxXP: 300, icon: '🛠️', perk: 'ATS Resume Generator' },
-  { level: 4, title: 'Senior Repo Architect', minXP: 300, maxXP: 500, icon: '🏛️', perk: '1v1 VS Battle Mode' },
-  { level: 5, title: 'Lead Tech Evaluator', minXP: 500, maxXP: 750, icon: '🔮', perk: 'Audit Timeline & CRUD' },
-  { level: 6, title: 'Legendary Open Sourcerer', minXP: 750, maxXP: 1200, icon: '👑', perk: 'Recruiter Badge Sync' },
-  { level: 7, title: 'Mythic Code Sage', minXP: 1200, maxXP: 2500, icon: '🌌', perk: 'Grandmaster Auditor' },
+  { level: 0, title: 'Code Initiate', minXP: 0, maxXP: 50, icon: '🌱', perk: 'Basic Profile Audits' },
+  { level: 1, title: 'Terminal Apprentice', minXP: 50, maxXP: 150, icon: '⚡', perk: 'Role Benchmarking' },
+  { level: 2, title: 'Code Craftsperson', minXP: 150, maxXP: 300, icon: '🛠️', perk: 'ATS Resume Generator' },
+  { level: 3, title: 'Senior Repo Architect', minXP: 300, maxXP: 500, icon: '🏛️', perk: '1v1 VS Battle Mode' },
+  { level: 4, title: 'Lead Tech Evaluator', minXP: 500, maxXP: 750, icon: '🔮', perk: 'Audit Timeline & CRUD' },
+  { level: 5, title: 'Legendary Open Sourcerer', minXP: 750, maxXP: 1200, icon: '👑', perk: 'Recruiter Badge Sync' },
+  { level: 6, title: 'Mythic Code Sage', minXP: 1200, maxXP: 2500, icon: '🌌', perk: 'Grandmaster Auditor' },
 ];
 
 async function getAnnaStorage(key) {

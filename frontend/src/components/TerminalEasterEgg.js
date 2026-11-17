@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Terminal, X, Minimize2, Maximize2, Send } from 'lucide-react';
-import { waitForAnna } from '../lib/llm';
+import { waitForAnna, getLLMResponseText } from '../lib/llm';
 
 function TerminalEasterEgg({ username, score, data, advice }) {
   const [open, setOpen] = useState(false);
@@ -143,13 +143,14 @@ function TerminalEasterEgg({ username, score, data, advice }) {
         if (window?.anna?.llm?.complete) {
           const res = await window.anna.llm.complete(
             {
-              system: 'You are a humorous Linux terminal kernel. The user typed "sudo make me a sandwich". Give a short witty response granting the sandwich.',
-              prompt: 'sudo make me a sandwich',
+              messages: [{ role: 'user', content: 'sudo make me a sandwich' }],
+              systemPrompt: 'You are a humorous Linux terminal kernel. The user typed "sudo make me a sandwich". Give a short witty response granting the sandwich.',
               modelPreferences: { speedPriority: 0.95, costPriority: 0.8, intelligencePriority: 0.6 },
             },
-            { timeoutMs: 45000 }
+            { timeoutMs: 15000 }
           );
-          if (res?.text || res?.content?.text) reply = (res.text || res.content.text).trim();
+          const extracted = getLLMResponseText(res);
+          if (extracted) reply = extracted;
         }
         setHistory((prev) => [...prev, { text: reply, type: 'success' }]);
       } catch {
@@ -182,14 +183,15 @@ function TerminalEasterEgg({ username, score, data, advice }) {
       if (window?.anna?.llm?.complete) {
         const resp = await window.anna.llm.complete(
           {
-            system: 'You are a helpful UNIX CLI terminal assistant for a GitHub portfolio auditor. Answer very concisely in 1-2 sentences.',
-            prompt: cmd,
+            messages: [{ role: 'user', content: cmd }],
+            systemPrompt: 'You are a helpful UNIX CLI terminal assistant for a GitHub portfolio auditor. Answer very concisely in 1-2 sentences.',
             modelPreferences: { speedPriority: 0.95, costPriority: 0.8, intelligencePriority: 0.6 },
           },
-          { timeoutMs: 45000 }
+          { timeoutMs: 15000 }
         );
-        if (resp?.text || resp?.content?.text) {
-          aiText = (resp.text || resp.content.text).trim();
+        const extracted = getLLMResponseText(resp);
+        if (extracted) {
+          aiText = extracted;
         }
       }
       setHistory((prev) => [...prev, { text: aiText, type: 'output' }]);

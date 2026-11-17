@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, ShieldCheck, Lock, RefreshCw, X, AlertTriangle, CheckCircle } from 'lucide-react';
-import { waitForAnna } from '../lib/llm';
+import { waitForAnna, safeExtractJSON } from '../lib/llm';
 
 function SecurityScanModal({ username, repos = [], profile = {}, onToast, onRewardXP }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -60,8 +60,8 @@ Generate a realistic cybersecurity hygiene report in ONLY valid JSON:
 
           const resp = await window.anna.llm.complete(
             {
-              system: 'You are a cybersecurity penetration testing auditor. Output ONLY valid JSON.',
-              prompt,
+              messages: [{ role: 'user', content: prompt }],
+              systemPrompt: 'You are a cybersecurity penetration testing auditor. Output ONLY valid JSON.',
               temperature: 0.5,
               modelPreferences: {
                 intelligencePriority: 0.85,
@@ -69,14 +69,10 @@ Generate a realistic cybersecurity hygiene report in ONLY valid JSON:
                 costPriority: 0.5,
               },
             },
-            { timeoutMs: 45000 }
+            { timeoutMs: 15000 }
           );
 
-          const raw = resp?.text || resp?.content?.text || '';
-          const match = raw.match(/\{[\s\S]*\}/);
-          if (match) {
-            scanResult = JSON.parse(match[0]);
-          }
+          scanResult = safeExtractJSON(resp);
         }
       } catch {
         // Fallback to simulation

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TrendingUp, AlertTriangle, Sparkles, RefreshCw, Compass } from 'lucide-react';
-import { waitForAnna } from '../lib/llm';
+import { waitForAnna, safeExtractJSON } from '../lib/llm';
 
 function LanguageTrendsPredictor({ repos = [], username }) {
   const [loading, setLoading] = useState(false);
@@ -44,8 +44,8 @@ Return ONLY valid JSON:
         if (window?.anna?.llm?.complete) {
           const resp = await window.anna.llm.complete(
             {
-              system: 'You are a veteran Silicon Valley tech career architect. Return ONLY valid raw JSON with keys: obsolescenceRisk, surgingSkill, recommendedNext, recommendedReason, marketValueForecast.',
-              prompt,
+              messages: [{ role: 'user', content: prompt }],
+              systemPrompt: 'You are a veteran Silicon Valley tech career architect. Return ONLY valid raw JSON with keys: obsolescenceRisk, surgingSkill, recommendedNext, recommendedReason, marketValueForecast.',
               temperature: 0.6,
               modelPreferences: {
                 intelligencePriority: 0.85,
@@ -53,14 +53,10 @@ Return ONLY valid JSON:
                 costPriority: 0.5,
               },
             },
-            { timeoutMs: 45000 }
+            { timeoutMs: 15000 }
           );
 
-          const raw = resp?.text || resp?.content?.text || '';
-          const match = raw.match(/\{[\s\S]*\}/);
-          if (match) {
-            result = JSON.parse(match[0]);
-          }
+          result = safeExtractJSON(resp);
         }
       } catch {
         // Fallback gracefully if Anna host API times out or is unavailable

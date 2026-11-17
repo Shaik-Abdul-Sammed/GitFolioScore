@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Flame, RefreshCw, GitCommit, AlertTriangle, CheckCircle } from 'lucide-react';
-import { waitForAnna } from '../lib/llm';
+import { waitForAnna, safeExtractJSON } from '../lib/llm';
 
 function CommitRoaster({ username, repos = [], onRewardXP }) {
   const [loading, setLoading] = useState(false);
@@ -101,11 +101,7 @@ Produce a humorous and insightful JSON response in this exact format:
             { timeoutMs: 15000 }
           );
 
-          const raw = resp?.text || resp?.content?.text || (typeof resp === 'string' ? resp : '');
-          const match = raw.match(/\{[\s\S]*\}/);
-          if (match) {
-            roastData = JSON.parse(match[0]);
-          }
+          roastData = safeExtractJSON(resp);
         }
       } catch {
         // Fall back to deterministic roast silently

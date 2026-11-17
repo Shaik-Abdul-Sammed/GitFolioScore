@@ -12,7 +12,7 @@ import {
   Terminal,
   AlertCircle,
 } from 'lucide-react';
-import { waitForAnna } from '../../lib/llm';
+import { waitForAnna, safeExtractJSON } from '../../lib/llm';
 
 export function CodeChurnModal({ topRepos = [], languages = [], onClose }) {
   const primaryLang = languages?.[0]
@@ -287,15 +287,21 @@ Output ONLY valid JSON:
   ]
 }`;
 
-        const resp = await window.anna.llm.complete({
-          system: 'You are a Principal Engineering Director. Output ONLY valid JSON.',
-          prompt,
-          temperature: 0.5,
-        }, { timeoutMs: 5000 });
+        const resp = await window.anna.llm.complete(
+          {
+            messages: [{ role: 'user', content: prompt }],
+            systemPrompt: 'You are a Principal Engineering Director. Output ONLY valid JSON.',
+            temperature: 0.5,
+          },
+          { timeoutMs: 15000 }
+        );
 
-        setIdeas(JSON.parse(resp.text || '{}').recommendations || null);
-        if (onToast) onToast('AI project proposals generated!', 'success');
-        return;
+        const parsed = safeExtractJSON(resp);
+        if (parsed?.recommendations) {
+          setIdeas(parsed.recommendations);
+          if (onToast) onToast('AI project proposals generated!', 'success');
+          return;
+        }
       }
     } catch {
       // Fallback

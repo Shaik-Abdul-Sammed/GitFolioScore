@@ -13,7 +13,7 @@ import {
   ChevronRight,
   AlertCircle,
 } from 'lucide-react';
-import { waitForAnna } from '../../lib/llm';
+import { waitForAnna, safeExtractJSON, getLLMResponseText } from '../../lib/llm';
 
 export function MockInterviewModal({ username, languages = [], onClose, onToast, onRewardXP }) {
   const primaryLang = languages?.[0]
@@ -71,16 +71,21 @@ Output ONLY valid JSON:
   "modelAnswerHighlights": "For Q1, emphasizing generational GC and profiling with heap snapshots demonstrates senior-level rigor."
 }`;
 
-        const resp = await window.anna.llm.complete({
-          system: 'You are a FAANG technical hiring panel. Output ONLY valid JSON.',
-          prompt,
-          temperature: 0.4,
-        }, { timeoutMs: 5000 });
+        const resp = await window.anna.llm.complete(
+          {
+            messages: [{ role: 'user', content: prompt }],
+            systemPrompt: 'You are a FAANG technical hiring panel. Output ONLY valid JSON.',
+            temperature: 0.4,
+          },
+          { timeoutMs: 10000 }
+        );
 
-        const parsed = JSON.parse(resp.text?.trim() || '{}');
-        setEvaluation(parsed);
-        if (onToast) onToast('Mock interview evaluation ready!', 'success');
-        return;
+        const parsed = safeExtractJSON(resp);
+        if (parsed && typeof parsed.score === 'number') {
+          setEvaluation(parsed);
+          if (onToast) onToast('Mock interview evaluation ready!', 'success');
+          return;
+        }
       }
     } catch {
       // Fallback evaluation
@@ -262,15 +267,21 @@ Target Job Requirements: ${jobDescription || 'Fullstack software development, di
 
 Ensure the tone is confident, humble, engineering-focused, and highlights measurable results.`;
 
-        const resp = await window.anna.llm.complete({
-          system: 'You are an elite Silicon Valley executive career coach. Write concise, powerful cover letters.',
-          prompt,
-          temperature: 0.5,
-        }, { timeoutMs: 5000 });
+        const resp = await window.anna.llm.complete(
+          {
+            messages: [{ role: 'user', content: prompt }],
+            systemPrompt: 'You are an elite Silicon Valley executive career coach. Write concise, powerful cover letters.',
+            temperature: 0.5,
+          },
+          { timeoutMs: 15000 }
+        );
 
-        setCoverLetter(resp.text || '');
-        if (onToast) onToast('Cover letter generated with AI!', 'success');
-        return;
+        const text = getLLMResponseText(resp);
+        if (text) {
+          setCoverLetter(text);
+          if (onToast) onToast('Cover letter generated with AI!', 'success');
+          return;
+        }
       }
     } catch {
       // Fallback

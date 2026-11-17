@@ -3,6 +3,12 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import './i18n';
+import { initAnnaSDK } from './lib/llm';
+
+// Trigger eager AnnaAppRuntime SDK connection handshake if running in Anna iframe
+if (typeof window !== 'undefined') {
+  initAnnaSDK().catch(() => {});
+}
 
 // Pre-mount mock window.anna when ?test=1 is present
 if (typeof window !== 'undefined') {

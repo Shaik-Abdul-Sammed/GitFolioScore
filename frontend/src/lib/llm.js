@@ -24,9 +24,64 @@ const PERSONA_PROMPTS = {
 
 export { PERSONA_PROMPTS };
 
+let annaInitPromise = null;
+
+/**
+ * Initializes connection to Anna App Runtime SDK (/static/anna-apps/_sdk/latest/index.js)
+ * when running inside an Anna OS host iframe (indicated by wid and t URL params).
+ */
+export async function initAnnaSDK() {
+  if (typeof window === 'undefined') return null;
+  if (window.anna?.llm?.complete) return window.anna;
+  if (annaInitPromise) return annaInitPromise;
+
+  annaInitPromise = (async () => {
+    // 1. Check if already present on window or parent
+    if (window.anna?.llm?.complete) return window.anna;
+    if (typeof window.parent !== 'undefined' && window.parent && window.parent !== window) {
+      try {
+        if (window.parent.anna?.llm?.complete) {
+          window.anna = window.parent.anna;
+          return window.anna;
+        }
+      } catch {
+        // Cross-origin iframe parent access might throw security error, ignore safely
+      }
+    }
+
+    // 2. Discover credentials from URL (wid & t)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const wid = params.get('wid');
+      const token = params.get('t');
+
+      if (wid && token) {
+        // Anna host serves the official runtime SDK at /static/anna-apps/_sdk/latest/index.js
+        // eslint-disable-next-line no-new-func
+        const importDynamic = new Function('url', 'return import(url)');
+        const mod = await importDynamic('/static/anna-apps/_sdk/latest/index.js');
+        if (mod && mod.AnnaAppRuntime) {
+          const rt = await mod.AnnaAppRuntime.connect({ windowUuid: wid, token });
+          window.anna = rt;
+          // eslint-disable-next-line no-console
+          console.log('[Anna Bridge] Successfully connected to AnnaAppRuntime!');
+          return rt;
+        }
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[Anna Bridge] AnnaAppRuntime dynamic connect skipped/failed:', err?.message || err);
+    }
+
+    return window.anna || null;
+  })();
+
+  return annaInitPromise;
+}
+
 /**
  * Wait for the Anna Host API bridge (window.anna.llm.complete) to be injected.
- * Checks every 200ms until available or timeoutMs (default 15000) is exceeded.
+ * Checks every 150ms until available or timeoutMs (default 15000) is exceeded.
  * @param {number} [timeoutMs=15000]
  * @returns {Promise<object>} The window.anna object
  */
@@ -38,45 +93,54 @@ export async function waitForAnna(timeoutMs = 15000) {
     throw error;
   }
 
+  // Attempt connecting immediately if not yet ready
+  if (!window.anna?.llm?.complete) {
+    try {
+      await initAnnaSDK();
+    } catch {
+      // Fall through to polling
+    }
+  }
+
   const checkAnna = () => {
-    // 4. Iframe Parent Check: fallback to window.parent.anna if window.anna is missing
-    if (!window.anna && typeof window.parent !== 'undefined' && window.parent) {
+    // 1. Direct window.anna
+    if (window.anna?.llm?.complete) {
+      return window.anna;
+    }
+
+    // 2. Iframe Parent Check: fallback to window.parent.anna if window.anna is missing
+    if (!window.anna && typeof window.parent !== 'undefined' && window.parent && window.parent !== window) {
       try {
-        if (window.parent.anna) {
+        if (window.parent.anna?.llm?.complete) {
           window.anna = window.parent.anna;
+          return window.anna;
         }
       } catch {
         // Cross-origin iframe parent access might throw security error, ignore safely
       }
     }
 
-    // 2. Deep Checking: window.anna, window.anna.llm, window.anna.llm.complete
     if (window.anna?.llm?.complete) {
-      return window.anna;
-    }
-    if (window.anna?.llm) {
-      return window.anna;
-    }
-    if (window.anna) {
       return window.anna;
     }
     return null;
   };
 
   // Immediate check
-  if (checkAnna()?.llm?.complete) {
-    return window.anna;
+  const immediate = checkAnna();
+  if (immediate) {
+    return immediate;
   }
 
   const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
   const effectiveTimeout = isTest ? Math.min(150, timeoutMs) : timeoutMs;
-  const pollInterval = isTest ? 25 : 200;
+  const pollInterval = isTest ? 25 : 150;
 
   const startTime = Date.now();
   while (Date.now() - startTime < effectiveTimeout) {
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
     const detected = checkAnna();
-    if (detected?.llm?.complete) {
+    if (detected) {
       return detected;
     }
   }
@@ -86,6 +150,9 @@ export async function waitForAnna(timeoutMs = 15000) {
   if (finalCheck) {
     return finalCheck;
   }
+
+  // eslint-disable-next-line no-console
+  console.info('[Anna Bridge] Anna AI Host API (window.anna.llm.complete) not present in current environment.');
 
   const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
   error.code = 'API_UNAVAILABLE';

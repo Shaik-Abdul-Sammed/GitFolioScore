@@ -1,8 +1,14 @@
 {
   "schema": 2,
   "required_executas": [],
-  "host_capabilities": [],
-  "permissions": [],
+  "host_capabilities": [
+    "llm.complete"
+  ],
+  "permissions": [
+    "llm.complete",
+    "storage.read",
+    "storage.write"
+  ],
   "tags": [
     "developer-tools",
     "portfolio",
@@ -42,6 +48,11 @@
       "storage": [
         "get",
         "set"
+      ],
+      "window": [
+        "hello",
+        "ready",
+        "set_title"
       ]
     }
   }

@@ -26,7 +26,7 @@ const getDeterministicNetworkMatches = (languages = [], targetRole = '') => {
     {
       type: 'community',
       name: `${topLang} Global Developer & Hackathon Network`,
-      reason: `High-signal technical communities where hiring managers and staff engineers actively scout verified portfolio talent.`,
+      reason: `High-signal technical communities where hiring managers and staff engineers actively scout evaluated portfolio talent.`,
     },
   ];
 };

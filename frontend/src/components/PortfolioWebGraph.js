@@ -41,7 +41,7 @@ function PortfolioWebGraph({ repos = [], languages = [] }) {
       type: 'repo',
       name: repo.name,
       language: repo.language,
-      stars: repo.stars ?? 0,
+      stars: repo.stars ?? repo.stargazers_count ?? 0,
       x: 380,
       y: 30 + idx * 48,
     }));

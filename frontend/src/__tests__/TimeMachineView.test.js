@@ -14,7 +14,7 @@ describe('TimeMachineView', () => {
 
     expect(screen.getByText(/The "Time Machine" Growth View/i)).toBeInTheDocument();
     expect(screen.getByText(/1 Year Ago Snapshot/i)).toBeInTheDocument();
-    expect(screen.getByText(/Today's Verified Score/i)).toBeInTheDocument();
+    expect(screen.getByText(/Today's Calculated Score/i)).toBeInTheDocument();
     expect(screen.getByText(/Annual Growth Velocity/i)).toBeInTheDocument();
   });
 

@@ -93,7 +93,7 @@ function RecruiterSwipeMode({ repos = [], username }) {
 
               <div className="flex items-center gap-2 text-xs text-amber-300 font-semibold bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
                 <Star className="w-3.5 h-3.5 fill-amber-300" />
-                <span>{currentRepo.stargazers_count || 0}</span>
+                <span>{currentRepo.stargazers_count ?? currentRepo.stars ?? 0}</span>
               </div>
             </div>
 
@@ -104,10 +104,10 @@ function RecruiterSwipeMode({ repos = [], username }) {
             <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-400 p-3 rounded-xl bg-white/5 border border-white/5 mb-6">
               <div className="flex items-center gap-1.5">
                 <GitFork className="w-3.5 h-3.5 text-gray-400" />
-                <span>{currentRepo.forks_count || 0} Forks</span>
+                <span>{currentRepo.forks_count ?? currentRepo.forks ?? 0} Forks</span>
               </div>
               <div className="text-right truncate">
-                <span>{currentRepo.license?.spdx_id || 'No license'}</span>
+                <span>{typeof currentRepo.license === 'object' ? (currentRepo.license?.spdx_id || currentRepo.license?.name) : (currentRepo.license || 'No license')}</span>
               </div>
             </div>
 
@@ -156,7 +156,7 @@ function RecruiterSwipeMode({ repos = [], username }) {
                   {featured.map((r) => (
                     <li key={r.name} className="flex items-center justify-between">
                       <span className="font-semibold text-emerald-400 truncate">@{r.name}</span>
-                      <span className="text-[10px] text-gray-400">{r.stargazers_count} ⭐</span>
+                      <span className="text-[10px] text-gray-400">{r.stargazers_count ?? r.stars ?? 0} ⭐</span>
                     </li>
                   ))}
                 </ul>

@@ -6,7 +6,7 @@ export default function Trophies({ data = {} }) {
   const reposCount = data?.profile?.public_repos ?? data?.topRepos?.length ?? 0;
   const languagesCount = data?.mostUsedLanguages?.length ?? 0;
   const redFlagsCount = data?.redFlags?.length ?? 0;
-  const totalStars = data?.topRepos?.reduce((acc, r) => acc + (r.stars || 0), 0) ?? 0;
+  const totalStars = data?.totalStars ?? (data?.topRepos?.reduce((acc, r) => acc + (r.stars ?? r.stargazers_count ?? 0), 0) ?? 0);
   const docsScore = data?.scoreBreakdown?.docs ?? 0;
 
   const trophies = [

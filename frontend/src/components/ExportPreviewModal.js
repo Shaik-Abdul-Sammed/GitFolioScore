@@ -89,9 +89,8 @@ function ExportPreviewModal({
         onDownload?.();
         handleClose();
         return;
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('jsPDF generation failed in modal, falling back to anchor download:', err);
+      } catch {
+        // Fall back to anchor download silently
       }
     }
 

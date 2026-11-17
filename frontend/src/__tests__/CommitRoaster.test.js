@@ -53,5 +53,25 @@ describe('CommitRoaster', () => {
 
     expect(screen.getByText('38')).toBeInTheDocument();
     expect(screen.getByText(/Writing fixed bug 40 times/i)).toBeInTheDocument();
+
+    delete window.anna;
+  });
+
+  it('falls back to deterministic roast when Anna AI is unavailable', async () => {
+    delete window.anna;
+
+    render(<CommitRoaster username="octocat" repos={[{ name: 'octo-app' }]} />);
+
+    const roastBtn = screen.getByText(/Roast My Commits/i);
+    fireEvent.click(roastBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/AI analysis is currently unavailable. Here is your deterministic match based on your stats:/i)
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Git Commit Disaster Zone/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your commits read like a stream of consciousness/i)).toBeInTheDocument();
   });
 });

@@ -14,8 +14,9 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
     return now - createdAt >= ONE_YEAR_MS;
   });
 
-  const oldStars = oldRepos.reduce((acc, r) => acc + Math.floor((r.stargazers_count || 0) * 0.4), 0);
-  const currentStars = repos.reduce((acc, r) => acc + (r.stargazers_count || 0), 0);
+  const getRepoStars = (r) => Number(r.stargazers_count ?? r.stars ?? 0);
+  const oldStars = oldRepos.reduce((acc, r) => acc + Math.floor(getRepoStars(r) * 0.4), 0);
+  const currentStars = repos.reduce((acc, r) => acc + getRepoStars(r), 0) || Number(profile?.totalStars || 0);
 
   const oldLangs = {};
   oldRepos.forEach((r) => {
@@ -137,7 +138,7 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
 
             <div className="p-4 rounded-xl bg-cyan-950/30 border border-cyan-500/30 space-y-1">
               <span className="text-xs text-cyan-300 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5" /> Today&apos;s Verified Score
+                <Sparkles className="w-3.5 h-3.5" /> Today&apos;s Calculated Score
               </span>
               <div className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-indigo-300">
                 {currentScore} <span className="text-xs font-normal text-gray-400">/ 100</span>
@@ -208,7 +209,7 @@ function TimeMachineView({ repos = [], profile = {}, weights, currentScore = 80 
             {repos.slice(0, 6).map((r) => (
               <div key={r.name} className="p-2.5 rounded-lg bg-black/40 border border-white/5">
                 <div className="font-semibold text-emerald-300">@{r.name}</div>
-                <div className="text-gray-400 text-[11px]">{r.language || 'Code'} • {r.stargazers_count} stars</div>
+                <div className="text-gray-400 text-[11px]">{r.language || 'Code'} • {getRepoStars(r)} stars</div>
               </div>
             ))}
           </div>

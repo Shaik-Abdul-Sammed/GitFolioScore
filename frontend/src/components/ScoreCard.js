@@ -7,6 +7,7 @@ import {
 import html2canvas from 'html2canvas';
 import { generateBio } from '../lib/llm';
 import { addToNetwork } from '../lib/leaderboard';
+import { calculatePercentile } from '../lib/score';
 import ExportPreviewModal from './ExportPreviewModal';
 
 const DEFAULT_AVATAR =
@@ -108,16 +109,8 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
     return '#ef4444';
   }, [score]);
 
-  // Phase 1, Feature 2: Top X% Percentile calculation
-  const percentile = useMemo(() => {
-    if (score >= 95) return 'Top 1%';
-    if (score >= 90) return 'Top 5%';
-    if (score >= 80) return 'Top 15%';
-    if (score >= 70) return 'Top 25%';
-    if (score >= 60) return 'Top 40%';
-    if (score >= 50) return 'Top 50%';
-    return 'Top 70%';
-  }, [score]);
+  // Unified deterministic percentile calculation
+  const percentile = calculatePercentile(score);
 
   const scoreMessage = useMemo(() => {
     if (score >= 80) return '🏆 Excellent Portfolio!';
@@ -264,9 +257,8 @@ const ScoreCard = ({ score, profile, previousScore, showDetails = true, onShare,
         fileType: 'image',
         fileName,
       });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Scorecard download failed:', err);
+    } catch {
+      // Scorecard download error handled gracefully
     } finally {
       setDownloading(false);
     }

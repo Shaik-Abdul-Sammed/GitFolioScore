@@ -1,56 +1,6 @@
 import React, { useState } from 'react';
 import { GitPullRequest, ExternalLink, Copy, Check, FileText } from 'lucide-react';
-
-function generateReadmeContent(repo, username) {
-  const repoName = repo?.name || 'project';
-  const desc = repo?.description || 'A modern full-stack web application with high performance and clean architecture.';
-  const lang = repo?.language || 'JavaScript';
-
-  return `# ${repoName}
-
-> ${desc}
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitFolioScore](https://img.shields.io/badge/GitFolioScore-Verified-6366f1.svg)](https://anna.partners/apps/gitfolioscore)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
-
-## ⚡ Overview
-${desc} Built with ${lang} focusing on developer ergonomics, test coverage, and modular code design.
-
-## ✨ Key Features
-- **Modern Architecture**: Clean separation of concerns with reusable modules.
-- **Fast Performance**: Optimized for rapid execution and low memory footprint.
-- **Type Safety & Reliability**: Built following strict industry coding guidelines.
-- **Production Ready**: Fully automated CI/CD pipeline and container support.
-
-## 🚀 Quick Start
-
-\`\`\`bash
-# 1. Clone the repository
-git clone https://github.com/${username}/${repoName}.git
-
-# 2. Enter project directory
-cd ${repoName}
-
-# 3. Install dependencies
-npm install
-
-# 4. Start local development server
-npm run dev
-\`\`\`
-
-## 🛠️ Tech Stack
-- **Primary Language**: ${lang}
-- **Tooling**: Git, GitHub Actions, ESLint
-- **Testing**: Jest / Playwright
-
-## 📄 License
-Distributed under the MIT License. See \`LICENSE\` for more information.
-
----
-*Generated via [GitFolioScore](https://anna.partners/apps/gitfolioscore) AI Portfolio Suite.*
-`;
-}
+import { generateReadmeMarkdown } from '../lib/projectStackHelper';
 
 function FakePRGenerator({ username, repos = [], onToast }) {
   const [selectedRepoName, setSelectedRepoName] = useState(repos[0]?.name || '');
@@ -59,7 +9,7 @@ function FakePRGenerator({ username, repos = [], onToast }) {
   if (!repos.length) return null;
 
   const selectedRepo = repos.find((r) => r.name === selectedRepoName) || repos[0];
-  const readmeContent = generateReadmeContent(selectedRepo, username);
+  const readmeContent = generateReadmeMarkdown(selectedRepo, username);
 
   // GitHub URL to create new README.md with pre-filled content
   const branch = selectedRepo?.default_branch || 'main';

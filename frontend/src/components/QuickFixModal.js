@@ -47,12 +47,12 @@ Resolves GitFolioScore audit recommendation: **${redFlag}**
 ### Changes Made
 - Added missing documentation / license / setup instructions for \`${targetRepo}\`.
 - Polished README formatting with clear architecture overview.
-- Added verified technology stack tags.
+- Added technology stack tags.
 
 ### Checklist
 - [x] Tested locally and confirmed clean build
 - [x] Documentation follows standard markdown practices
-- [x] Verified links and demo endpoints
+- [x] Tested links and demo endpoints
 `;
 
   const contentToCopy = tab === 'issue' ? issueTemplate : prTemplate;

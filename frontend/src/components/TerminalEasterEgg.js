@@ -119,7 +119,7 @@ function TerminalEasterEgg({ username, score, data, advice }) {
       setHistory((prev) => [
         ...prev,
         {
-          text: `User: @${username || 'not specified'}\nPublic Repos: ${data?.repos?.length || 0}\nStars: ${data?.totalStars || 0}\nTarget Role: Full-Stack Engineer`,
+          text: `User: @${username || 'not specified'}\nPublic Repos: ${data?.repos?.length || 0}\nStars: ${data?.totalStars ?? 0}\nTarget Role: ${data?.targetRole || 'Fullstack Engineer'}`,
           type: 'output',
         },
       ]);

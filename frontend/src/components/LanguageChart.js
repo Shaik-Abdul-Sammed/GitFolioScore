@@ -87,7 +87,8 @@ function LanguageChart({ languages, repos, showEmptyState = true }) {
     (!Array.isArray(languages) && Object.keys(languages).length === 0)
   ) {
     if (!showEmptyState) return null;
-    return <EmptyState message="No repositories found to analyze." />;
+    const hasRepos = repos && Array.isArray(repos) && repos.length > 0;
+    return <EmptyState message={hasRepos ? "No language breakdown detected for these repositories." : "No repositories found to analyze."} />;
   }
 
   // Normalize language data

@@ -28,8 +28,8 @@ export function PortfolioSiteGeneratorModal({ username, profile = {}, topRepos =
         <h3>${r.name}</h3>
         <p>${r.description || 'Modern software engineering repository.'}</p>
         <div class="meta">
-          <span>⭐ ${r.stars || 0} stars</span>
-          <span>🔀 ${r.forks || 0} forks</span>
+          <span>⭐ ${r.stars ?? r.stargazers_count ?? 0} stars</span>
+          <span>🔀 ${r.forks ?? r.forks_count ?? 0} forks</span>
           <span>💻 ${r.language || 'Code'}</span>
         </div>
         <a href="https://github.com/${username}/${r.name}" target="_blank">View on GitHub →</a>
@@ -188,7 +188,7 @@ export function CaseStudyGeneratorModal({ username, topRepos = [], onClose, onTo
         const prompt = `Write a comprehensive, deep 500-word software engineering case study blog post for repository "${repoObj.name}".
 Author: @${username}
 Language: ${repoObj.language || 'TypeScript'}
-Stars: ${repoObj.stars || 0}
+Stars: ${repoObj.stars ?? repoObj.stargazers_count ?? 0}
 Description: ${repoObj.description || 'Core technical implementation'}
 
 Structure:
@@ -238,7 +238,7 @@ To overcome this bottleneck, we migrated high-frequency data transforms to reusa
 ## 4. Production Hygiene & Testing
 Reliability was non-negotiable. The repository includes:
 - Automated unit test suites covering edge cases and malformed payload inputs.
-- Strict GitHub Actions CI verification enforcing formatting, typing, and zero lint warnings.
+- Strict GitHub Actions CI pipelines enforcing formatting, typing, and zero lint warnings.
 - Continuous dependency security audits with automated dependabot patches.
 
 ## 5. Summary & Key Learnings
@@ -276,7 +276,7 @@ Building ${selectedRepo} reinforced that clean software architecture is an itera
           >
             {topRepos.map((r) => (
               <option key={r.name} value={r.name} className="bg-slate-900 text-white">
-                {r.name} ({r.language || 'Code'}) · {r.stars || 0}★
+                {r.name} ({r.language || 'Code'}) · {r.stars ?? r.stargazers_count ?? 0}★
               </option>
             ))}
           </select>
@@ -329,7 +329,7 @@ export function ProfileReadmeModal({ username, profile = {}, score, topRepos = [
 
   const markdown = `# Hi there, I'm ${profile.name || username} 👋
 
-[![GitFolioScore Verified](https://img.shields.io/badge/GitFolioScore-${score}%2F100-6366f1?style=for-the-badge&logo=github)](https://anna.partners/apps/gitfolioscore)
+[![GitFolioScore](https://img.shields.io/badge/GitFolioScore-${score}%2F100-6366f1?style=for-the-badge&logo=github)](https://anna.partners/apps/gitfolioscore)
 [![Open to Work](https://img.shields.io/badge/Status-Open%20to%20Work-10b981?style=for-the-badge)](https://github.com/${username})
 
 ### 🔭 About Me
@@ -343,7 +343,7 @@ ${languages.map((l) => `• ${Array.isArray(l) ? l[0] : l.lang || l.name || l}`)
 \`\`\`
 
 ### 📦 Flagship Open Source Projects
-${topRepos.slice(0, 3).map((r) => `- [**${r.name}**](https://github.com/${username}/${r.name}) - ${r.description || 'Core open-source application'} (⭐ ${r.stars || 0})`).join('\n')}
+${topRepos.slice(0, 3).map((r) => `- [**${r.name}**](https://github.com/${username}/${r.name}) - ${r.description || 'Core open-source application'} (⭐ ${r.stars ?? r.stargazers_count ?? 0})`).join('\n')}
 
 ---
 *Generated via [GitFolioScore AI](https://anna.partners/apps/gitfolioscore)*`;

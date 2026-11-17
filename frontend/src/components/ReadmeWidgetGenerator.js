@@ -57,7 +57,7 @@ function ReadmeWidgetGenerator({ username, score = 88, tier = 'Senior Developer'
               </span>
             </h3>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Embed your verified GitFolioScore directly in your GitHub profile README.
+              Embed your calculated GitFolioScore directly in your GitHub profile README.
             </p>
           </div>
         </div>
@@ -97,7 +97,7 @@ function ReadmeWidgetGenerator({ username, score = 88, tier = 'Senior Developer'
           <div className="w-full max-w-sm p-4 rounded-xl bg-gradient-to-tr from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 shadow-2xl flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
-                <ShieldCheck className="w-3.5 h-3.5" /> GitFolioScore Verified
+                <ShieldCheck className="w-3.5 h-3.5" /> GitFolioScore Analyzed
               </div>
               <div className="text-sm font-bold text-white">@{username || 'developer'}</div>
               <div className="text-[11px] text-gray-400">{tier}</div>

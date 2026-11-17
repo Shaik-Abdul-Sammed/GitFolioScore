@@ -47,7 +47,7 @@ const categoryMeta = {
   },
 };
 
-function Breakdown({ breakdown, onExplainScore }) {
+function Breakdown({ breakdown, weights, onExplainScore }) {
   if (!breakdown) return null;
 
   return (
@@ -72,8 +72,9 @@ function Breakdown({ breakdown, onExplainScore }) {
 
       <div className="space-y-4 stagger-children">
         {Object.entries(breakdown).map(([key, value]) => {
-          const meta = categoryMeta[key] || { label: key, icon: '📊', color: '#6366f1', max: 25 };
-          const percentage = meta.max > 0 ? (value / meta.max) * 100 : 0;
+          const meta = categoryMeta[key] || { label: key, icon: '📊', color: '#6366f1', max: 20 };
+          const maxVal = weights?.[key] || meta.max || 20;
+          const percentage = maxVal > 0 ? (value / maxVal) * 100 : 0;
 
           return (
             <div key={key}>
@@ -88,7 +89,7 @@ function Breakdown({ breakdown, onExplainScore }) {
                   )}
                 </span>
                 <span className="text-sm font-bold" style={{ color: meta.color }}>
-                  {value}<span className="font-normal" style={{ color: 'var(--text-muted)' }}>/{meta.max}</span>
+                  {value}<span className="font-normal" style={{ color: 'var(--text-muted)' }}>/{maxVal}</span>
                 </span>
               </div>
               <div className="score-bar rpg-health-bar">

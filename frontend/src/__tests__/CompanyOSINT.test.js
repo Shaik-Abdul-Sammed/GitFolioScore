@@ -41,5 +41,24 @@ describe('CompanyOSINT', () => {
 
     expect(screen.getByText('78%')).toBeInTheDocument();
     expect(screen.getByText(/Missing unit test coverage in repo/i)).toBeInTheDocument();
+
+    delete window.anna;
+  });
+
+  it('falls back gracefully to deterministic match when Anna AI is unavailable', async () => {
+    delete window.anna;
+
+    render(<CompanyOSINT username="octocat" data={mockData} repos={mockRepos} />);
+
+    const runBtn = screen.getByText(/Run OSINT Audit/i);
+    fireEvent.click(runBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/AI analysis is currently unavailable. Here is your deterministic match based on your stats:/i)
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/engineering bar demands proof of production reliability/i)).toBeInTheDocument();
   });
 });

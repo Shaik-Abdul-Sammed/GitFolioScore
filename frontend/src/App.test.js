@@ -52,7 +52,7 @@ describe('App.js - UI & Integration Tests', () => {
       { action: 'Add test coverage badges', rationale: 'Demonstrates enterprise code quality' },
       { action: 'Expand topic tags', rationale: 'Improves discovery across GitHub search' },
     ],
-    shareText: 'Scored high on GitFolioScore with verified GitHub metrics!',
+    shareText: 'Scored high on GitFolioScore with calculated GitHub metrics!',
   };
 
   const originalFetch = global.fetch;
@@ -195,6 +195,31 @@ describe('App.js - UI & Integration Tests', () => {
       // Retry button is available
       const retryButton = screen.getByRole('button', { name: /Retry AI Analysis/i });
       expect(retryButton).toBeInTheDocument();
+    });
+  });
+
+  describe('Dynamic Role Benchmarking', () => {
+    it('updates report and score dynamically when switching target role', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      const searchInput = screen.getByPlaceholderText(/GitHub username/i);
+      const submitButton = screen.getByRole('button', { name: /Analyze & Coach/i });
+
+      await user.type(searchInput, 'octocat');
+      await user.click(submitButton);
+
+      expect(await screen.findByText('/100')).toBeInTheDocument();
+
+      const roleSelect = screen.getByRole('combobox', { name: /Target Role Benchmark/i });
+      expect(roleSelect).toHaveValue('Fullstack Engineer');
+
+      // Change role to DevOps & Cloud Engineer
+      await user.selectOptions(roleSelect, 'DevOps & Cloud Engineer');
+      expect(roleSelect).toHaveValue('DevOps & Cloud Engineer');
+
+      // Check toast notification confirming score update
+      expect(await screen.findByText(/Target role set to DevOps & Cloud Engineer/i)).toBeInTheDocument();
     });
   });
 });

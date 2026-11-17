@@ -15,9 +15,11 @@ import {
   FileText,
   CheckCircle2,
   Eye,
+  Users,
 } from 'lucide-react';
 import { generateReadme } from '../lib/llm';
 import { checkRepoDemoLinks } from '../lib/demoChecker';
+import { generateReadmeMarkdown } from '../lib/projectStackHelper';
 import IframePreviewModal from './IframePreviewModal';
 
 function TopRepos({ repos, username }) {
@@ -60,7 +62,7 @@ function TopRepos({ repos, username }) {
     if (!repos || repos.length === 0) return [];
     return [...repos]
       .map((r) => {
-        let pinScore = (r.stars || 0) * 3 + (r.forks || 0) * 2;
+        let pinScore = (r.stars ?? r.stargazers_count ?? 0) * 3 + (r.forks ?? r.forks_count ?? 0) * 2;
         if (r.description && r.description.trim().length > 15) pinScore += 20;
         if (r.language) pinScore += 10;
         if (r.hasReadme) pinScore += 15;
@@ -76,8 +78,12 @@ function TopRepos({ repos, username }) {
     if (search) list = list.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
     if (langFilter) list = list.filter((r) => r.language === langFilter);
     list.sort((a, b) => {
-      if (sortBy === 'stars') return (b.stars || 0) - (a.stars || 0);
-      if (sortBy === 'forks') return (b.forks || 0) - (a.forks || 0);
+      if (sortBy === 'stars') {
+        return (b.stars ?? b.stargazers_count ?? 0) - (a.stars ?? a.stargazers_count ?? 0);
+      }
+      if (sortBy === 'forks') {
+        return (b.forks ?? b.forks_count ?? 0) - (a.forks ?? a.forks_count ?? 0);
+      }
       return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
     });
     return list;
@@ -97,39 +103,7 @@ function TopRepos({ repos, username }) {
       const markdown = await generateReadme(repo);
       setGeneratedReadme(markdown);
     } catch {
-      const primaryLang = repo.language || 'Software Stack';
-      const template = `# ${repo.name}
-
-> ${repo.description || 'Modern software development project.'}
-
-## 🚀 Overview
-${repo.description || 'A comprehensive open-source project built with clean code and modern engineering standards.'}
-
-## 🛠️ Tech Stack
-- Primary Language: **${primaryLang}**
-
-## 📦 Getting Started
-
-### Installation
-\`\`\`bash
-git clone https://github.com/developer/${repo.name}.git
-cd ${repo.name}
-npm install
-\`\`\`
-
-### Running Locally
-\`\`\`bash
-npm run dev # or npm start
-\`\`\`
-
-## 🧪 Testing
-\`\`\`bash
-npm test
-\`\`\`
-
-## 📄 License
-Open source under standard permissive licensing.`;
-      setGeneratedReadme(template);
+      setGeneratedReadme(generateReadmeMarkdown(repo, username || 'developer'));
     } finally {
       setIsGeneratingReadme(false);
     }
@@ -193,7 +167,7 @@ Open source under standard permissive licensing.`;
                       #{idx + 1} Pin
                     </span>
                     <span className="flex items-center gap-1 text-[11px] text-amber-400 font-medium">
-                      <Star className="w-3 h-3 fill-amber-400" /> {repo.stars ?? 0}
+                      <Star className="w-3 h-3 fill-amber-400" /> {repo.stars ?? repo.stargazers_count ?? 0}
                     </span>
                   </div>
                   <h5 title={repo.name} className="font-semibold text-xs truncate" style={{ color: 'var(--text-primary)' }}>
@@ -401,7 +375,7 @@ function RepoCard({ repo, username, demoStatus, onGenerateReadme, onOpenPreview 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
           <a
-            href={username ? `https://github.com/${username}/${repo.name}` : '#'}
+            href={repo.html_url || (username ? `https://github.com/${username}/${repo.name}` : '#')}
             target="_blank"
             rel="noopener noreferrer"
             title={repo.name}
@@ -415,7 +389,7 @@ function RepoCard({ repo, username, demoStatus, onGenerateReadme, onOpenPreview 
           {/* Feature 11: GitHub Actions / CI-CD Check Badge */}
           {repo.hasCI && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
-              <CheckCircle2 className="w-2.5 h-2.5 text-cyan-400" /> CI/CD Verified
+              <CheckCircle2 className="w-2.5 h-2.5 text-cyan-400" /> CI/CD Detected
             </span>
           )}
 
@@ -462,11 +436,16 @@ function RepoCard({ repo, username, demoStatus, onGenerateReadme, onOpenPreview 
               {repo.language}
             </span>
           )}
-          <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5" /> {repo.stars ?? 0}</span>
-          <span className="flex items-center gap-1"><GitFork className="w-3.5 h-3.5" /> {repo.forks ?? 0}</span>
-          {repo.updatedAt && (
+          <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5" /> {repo.stars ?? repo.stargazers_count ?? 0}</span>
+          <span className="flex items-center gap-1"><GitFork className="w-3.5 h-3.5" /> {repo.forks ?? repo.forks_count ?? 0}</span>
+          {(repo.contributors_count > 0 || (repo.contributors && repo.contributors.length > 0)) && (
             <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" /> {new Date(repo.updatedAt).toLocaleDateString()}
+              <Users className="w-3.5 h-3.5" /> {repo.contributors_count || repo.contributors.length}
+            </span>
+          )}
+          {(repo.updatedAt || repo.updated_at) && (
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" /> {new Date(repo.updatedAt || repo.updated_at).toLocaleDateString()}
             </span>
           )}
         </div>

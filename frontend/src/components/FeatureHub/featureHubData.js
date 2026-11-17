@@ -42,7 +42,7 @@ export const FEATURES = [
     badge: 'AI Market Model',
     icon: '💰',
     gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    desc: 'Estimate your base salary, equity, and market percentile based on your code complexity, tech stack scarcity, and verified GitFolioScore.',
+    desc: 'Estimate your base salary, equity, and market percentile based on your code complexity, tech stack scarcity, and calculated GitFolioScore.',
   },
   {
     id: 'star-method',

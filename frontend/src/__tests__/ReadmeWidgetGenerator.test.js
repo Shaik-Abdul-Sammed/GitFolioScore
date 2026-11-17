@@ -13,7 +13,7 @@ describe('ReadmeWidgetGenerator', () => {
     render(<ReadmeWidgetGenerator username="octocat" score={92} tier="Senior Builder" />);
 
     expect(screen.getByText(/"Hype" README Widget Generator/i)).toBeInTheDocument();
-    expect(screen.getByText(/GitFolioScore Verified/i)).toBeInTheDocument();
+    expect(screen.getByText(/GitFolioScore Analyzed/i)).toBeInTheDocument();
     expect(screen.getByText('92')).toBeInTheDocument();
   });
 

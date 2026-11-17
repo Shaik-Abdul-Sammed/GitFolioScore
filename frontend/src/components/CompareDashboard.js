@@ -63,8 +63,8 @@ function CompareDashboard({ user1, user2, onClose }) {
   const u1Name = user1.username;
   const u2Name = user2.username;
 
-  const u1Stars = r1.topRepos?.reduce((acc, curr) => acc + (curr.stars || 0), 0) || 0;
-  const u2Stars = r2.topRepos?.reduce((acc, curr) => acc + (curr.stars || 0), 0) || 0;
+  const u1Stars = r1.totalStars ?? (r1.topRepos?.reduce((acc, curr) => acc + (curr.stars ?? curr.stargazers_count ?? 0), 0) ?? 0);
+  const u2Stars = r2.totalStars ?? (r2.topRepos?.reduce((acc, curr) => acc + (curr.stars ?? curr.stargazers_count ?? 0), 0) ?? 0);
 
   const u1Followers = r1.profile?.followers || 0;
   const u2Followers = r2.profile?.followers || 0;
@@ -131,9 +131,8 @@ function CompareDashboard({ user1, user2, onClose }) {
     try {
       const res = await peerCodeReview(user1, user2);
       setPeerReview(res);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Peer review failed:', err);
+    } catch {
+      // Peer review error handled gracefully
     } finally {
       setPeerLoading(false);
     }
@@ -147,9 +146,8 @@ function CompareDashboard({ user1, user2, onClose }) {
     try {
       const template = await stealReadmeStructure(targetRepo);
       setReadmeTemplate(template);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Steal README failed:', err);
+    } catch {
+      // Steal README error handled gracefully
     } finally {
       setStealingReadme(false);
     }
@@ -169,9 +167,8 @@ function CompareDashboard({ user1, user2, onClose }) {
       link.download = `gitfolioscore-vs-${u1Name}-vs-${u2Name}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Export VS card failed:', err);
+    } catch {
+      // Export VS card error handled gracefully
     } finally {
       setExportingCard(false);
     }

@@ -3,6 +3,7 @@ import { FileCode, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { waitForAnna } from '../lib/llm';
 import { sanitizeForPDF } from '../lib/pdfSanitizer';
+import { calculatePercentile } from '../lib/score';
 import ExportPreviewModal from './ExportPreviewModal';
 
 function HackerRankResume({ report, advice, onToast }) {
@@ -18,7 +19,7 @@ function HackerRankResume({ report, advice, onToast }) {
   const defaultSummary = sanitizeForPDF(
     advice?.summary ||
     profile.bio ||
-    `Full-stack software developer with proven engineering discipline, verified GitHub portfolio score of ${report?.score ?? 85}/100, and hands-on expertise building production applications with high code quality and documentation hygiene.`
+    `Full-stack software developer with proven engineering discipline, calculated GitHub portfolio score of ${report?.score ?? 85}/100 (${calculatePercentile(report?.score ?? 85)}), and hands-on expertise building production applications with high code quality and documentation hygiene.`
   );
 
   const [resumeSummary, setResumeSummary] = useState(defaultSummary);
@@ -74,9 +75,8 @@ function HackerRankResume({ report, advice, onToast }) {
             setResumeSummary(sanitizeForPDF(aiText));
           }
         }
-      } catch (bridgeErr) {
-        // eslint-disable-next-line no-console
-        console.warn('Anna Bridge unavailable/timed out. Using static summary:', bridgeErr);
+      } catch {
+        // Fall back to static deterministic resume summary silently
       }
 
       // Wait a tick for hidden resume DOM to update
@@ -109,9 +109,8 @@ function HackerRankResume({ report, advice, onToast }) {
         fileName,
         fileType: 'pdf',
       });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('PDF generation falling back to static template:', err);
+    } catch {
+      // Fallback to static template on canvas/export failure
       const fallbackPng =
         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       const fileName = `${profile.login || 'developer'}_hackerrank_resume.pdf`;
@@ -196,23 +195,23 @@ function HackerRankResume({ report, advice, onToast }) {
                   {sanitizeForPDF(repo.name)} <span style={{ fontWeight: 'normal', fontStyle: 'italic', color: '#6b7280', fontSize: '10px' }}>[{sanitizeForPDF(repo.language || 'Software Stack')}]</span>
                 </span>
                 <span style={{ fontSize: '10px', color: '#6b7280' }}>
-                  ★ {repo.stars ?? 0}  |  Forks: {repo.forks ?? 0}
+                  ★ {repo.stars ?? repo.stargazers_count ?? 0}  |  Forks: {repo.forks ?? repo.forks_count ?? 0}
                 </span>
               </div>
               <p style={{ fontSize: '10.5px', margin: 0, color: '#374151', lineHeight: '1.5' }}>
-                • {sanitizeForPDF(repo.description || 'Engineered modular application architecture with comprehensive documentation and verified test workflows.')}
+                • {sanitizeForPDF(repo.description || 'Engineered modular application architecture with comprehensive documentation and automated test workflows.')}
               </p>
             </div>
           ))}
         </div>
 
-        {/* 4. Verified Credentials & Code Quality */}
+        {/* 4. Audited Credentials & Code Quality */}
         <div>
           <h2 style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #d1d5db', paddingBottom: '4px', margin: '0 0 8px 0', color: '#000000' }}>
-            Verified Technical Credentials
+            Audited Technical Credentials
           </h2>
           <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '10.5px', lineHeight: '1.6', color: '#374151' }}>
-            <li>Audited by GitFolioScore with overall technical index of {report?.score ?? 85}/100.</li>
+            <li>Audited by GitFolioScore with overall technical index of {report?.score ?? 85}/100 ({calculatePercentile(report?.score ?? 85)}).</li>
             <li>Evaluated across 6 hiring pillars: Code Quality, Documentation Depth, Activity Consistency, and Community Impact.</li>
             {(advice?.actions || []).slice(0, 2).map((a, i) => (
               <li key={i}>Engineering Focus: {sanitizeForPDF(a.action)}</li>

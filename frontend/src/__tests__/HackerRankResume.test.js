@@ -71,4 +71,27 @@ describe('HackerRankResume Component', () => {
       expect(onToast).toHaveBeenCalledWith('HackerRank Resume PDF downloaded successfully!');
     });
   });
+
+  test('generates dynamic AI summary when window.anna.llm.complete is active', async () => {
+    window.anna = {
+      llm: {
+        complete: jest.fn().mockResolvedValue({
+          text: 'AI-crafted executive ATS summary demonstrating top-tier software engineering discipline.',
+        }),
+      },
+    };
+
+    const onToast = jest.fn();
+    render(<HackerRankResume report={mockReport} advice={{ summary: 'Strong skills' }} onToast={onToast} />);
+
+    const downloadBtn = screen.getByRole('button', { name: /Download HackerRank Resume \(PDF\)/i });
+    fireEvent.click(downloadBtn);
+
+    await waitFor(() => {
+      expect(window.anna.llm.complete).toHaveBeenCalled();
+      expect(screen.getByText(/Preview Before Download/i)).toBeInTheDocument();
+    });
+
+    delete window.anna;
+  });
 });

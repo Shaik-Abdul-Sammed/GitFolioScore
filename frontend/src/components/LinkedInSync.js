@@ -56,7 +56,7 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
         recommendations: [
           `Feature your top repository (${topRepos[0]?.name || 'primary repo'}) in your LinkedIn Featured section with star count metrics.`,
           `Quantify your ${topLang} engineering impact and architecture decisions in your About section.`,
-          `Align your LinkedIn headline to explicitly bridge your current role with your verified stack (${topLang}).`,
+          `Align your LinkedIn headline to explicitly bridge your current role with your analyzed stack (${topLang}).`,
         ],
       };
       setAuditResult(fallbackResult);
@@ -82,7 +82,7 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
       setHeadlines([
         `Staff ${topLang} Engineer · Building Scalable Systems · Open Source Contributor`,
         `Full-Stack ${topLang} Developer | ${report.score || 85}/100 GitHub Code Quality | Passionate Builder`,
-        `Software Engineer specializing in ${topLang} & Distributed Systems | Verified GitHub Portfolio`,
+        `Software Engineer specializing in ${topLang} & Distributed Systems | Audited GitHub Portfolio`,
       ]);
     } finally {
       setGeneratingHeadlines(false);

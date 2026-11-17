@@ -31,4 +31,13 @@ describe('FakePRGenerator', () => {
     );
     expect(onToast).toHaveBeenCalled();
   });
+
+  it('generates appropriate toolchain and license for linux kernel project', () => {
+    const linuxRepos = [
+      { name: 'linux', description: 'Linux kernel source tree', language: 'C' },
+    ];
+    render(<FakePRGenerator username="torvalds" repos={linuxRepos} />);
+    expect(screen.getByText(/GPL-2.0/i)).toBeInTheDocument();
+    expect(screen.queryByText(/npm install/i)).not.toBeInTheDocument();
+  });
 });

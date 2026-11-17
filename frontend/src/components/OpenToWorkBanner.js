@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, Briefcase } from 'lucide-react';
+import { calculatePercentile } from '../lib/score';
 
 function OpenToWorkBanner({ username = 'developer', score = 88, profile = {}, repos = [], onToast }) {
   const [downloading, setDownloading] = useState(false);
@@ -87,7 +88,7 @@ function OpenToWorkBanner({ username = 'developer', score = 88, profile = {}, re
       ctx.font = 'bold 18px monospace, system-ui';
       ctx.fillText(languagesText, 80, 255);
 
-      // 8. Verified URL footer
+      // 8. Profile URL footer
       ctx.fillStyle = '#64748b';
       ctx.font = '16px monospace';
       ctx.fillText(`github.com/${username}  •  anna.partners/apps/gitfolioscore`, 80, 330);
@@ -104,7 +105,7 @@ function OpenToWorkBanner({ username = 'developer', score = 88, profile = {}, re
       // GitFolioScore Header
       ctx.fillStyle = '#818cf8';
       ctx.font = 'bold 14px system-ui';
-      ctx.fillText('⚡ GITFOLIOSCORE VERIFIED', 1215, 110);
+      ctx.fillText('⚡ GITFOLIOSCORE AUDIT', 1215, 110);
 
       // Large Score
       ctx.fillStyle = '#ffffff';
@@ -123,7 +124,8 @@ function OpenToWorkBanner({ username = 'developer', score = 88, profile = {}, re
 
       ctx.fillStyle = '#10b981';
       ctx.font = 'bold 14px system-ui';
-      ctx.fillText('Top 15% Verified Portfolio', 1215, 275);
+      const percentileText = calculatePercentile(score);
+      ctx.fillText(`${percentileText} Portfolio`, 1215, 275);
 
       // Download triggered
       const dataUrl = canvas.toDataURL('image/png');
@@ -159,7 +161,7 @@ function OpenToWorkBanner({ username = 'developer', score = 88, profile = {}, re
               </span>
             </h3>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Generate a high-resolution, custom-designed LinkedIn background banner verified with your score.
+              Generate a high-resolution, custom-designed LinkedIn background banner based on your calculated score.
             </p>
           </div>
         </div>
@@ -209,13 +211,13 @@ function OpenToWorkBanner({ username = 'developer', score = 88, profile = {}, re
 
           <div className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex flex-col justify-center min-w-[200px] text-center md:text-right">
             <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
-              ⚡ GitFolioScore Verified
+              ⚡ GitFolioScore Audit
             </div>
             <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 mt-1">
               {score}<span className="text-sm font-normal text-gray-400"> / 100 max</span>
             </div>
             <div className="text-xs font-bold text-emerald-400 mt-1">
-              Top 15% Verified Engineer
+              {calculatePercentile(score)} Developer
             </div>
           </div>
         </div>

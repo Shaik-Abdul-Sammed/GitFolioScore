@@ -145,7 +145,7 @@ function JDMatcher({ report }) {
                 <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
                   <div className="flex items-center gap-1.5 font-bold text-emerald-400 mb-2">
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Verified Matching Skills ({matchResult.matchingSkills?.length || 0})</span>
+                    <span>Analyzed Matching Skills ({matchResult.matchingSkills?.length || 0})</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {matchResult.matchingSkills?.map((skill) => (

@@ -29,14 +29,16 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 function CommitActivityGraph({ commitActivity, repos, showEmptyState = true }) {
+  const hasRepos = repos && Array.isArray(repos) && repos.length > 0;
+
   if (
-    (repos !== undefined && (!repos || repos.length === 0)) ||
+    (!hasRepos && repos !== undefined) ||
     !commitActivity ||
     typeof commitActivity !== 'object' ||
     Object.keys(commitActivity).length === 0
   ) {
     if (!showEmptyState) return null;
-    return <EmptyState message="No repositories found to analyze." />;
+    return <EmptyState message={hasRepos ? "Recent commit activity is currently being indexed for these repositories." : "No repositories found to analyze."} />;
   }
 
   // Transform data - each repo has weekly commit data
@@ -44,7 +46,7 @@ function CommitActivityGraph({ commitActivity, repos, showEmptyState = true }) {
   const maxWeeks = Math.max(...repoNames.map((r) => (commitActivity[r] || []).length), 0);
   if (maxWeeks === 0) {
     if (!showEmptyState) return null;
-    return <EmptyState message="No repositories found to analyze." />;
+    return <EmptyState message={hasRepos ? "Recent commit activity is currently being indexed for these repositories." : "No repositories found to analyze."} />;
   }
 
   const data = [];

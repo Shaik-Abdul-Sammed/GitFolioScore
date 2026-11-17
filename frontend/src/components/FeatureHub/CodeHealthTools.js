@@ -12,10 +12,25 @@ import {
   Terminal,
 } from 'lucide-react';
 import { waitForAnna } from '../../lib/llm';
+import { detectLicense, getBuildToolchain } from '../../lib/projectStackHelper';
 
 export function DependencyCheckerModal({ repos = [], onClose, onToast, onRewardXP }) {
   const [scanning, setScanning] = useState(false);
   const [copiedFix, setCopiedFix] = useState(false);
+
+  const primaryRepo = repos[0] || {};
+  const lang = (primaryRepo.language || '').toLowerCase();
+
+  let remediationCmd = 'npm audit fix --force && npm update';
+  if (lang === 'c' || lang === 'c++' || primaryRepo.name?.toLowerCase() === 'linux') {
+    remediationCmd = 'git fetch --tags origin && git pull --rebase';
+  } else if (lang === 'rust') {
+    remediationCmd = 'cargo audit --fix || cargo update';
+  } else if (lang === 'python') {
+    remediationCmd = 'pip audit --fix || pip install -U -r requirements.txt';
+  } else if (lang === 'go') {
+    remediationCmd = 'govulncheck ./... && go get -u ./...';
+  }
 
   const vulnerabilities = [
     {
@@ -57,7 +72,7 @@ export function DependencyCheckerModal({ repos = [], onClose, onToast, onRewardX
   };
 
   const handleCopyCommand = () => {
-    navigator.clipboard.writeText('npm audit fix --force && npm update');
+    navigator.clipboard.writeText(remediationCmd);
     setCopiedFix(true);
     if (onToast) onToast('Remediation command copied!', 'success');
     setTimeout(() => setCopiedFix(false), 2000);
@@ -124,7 +139,7 @@ export function DependencyCheckerModal({ repos = [], onClose, onToast, onRewardX
           <div className="p-3 rounded-xl bg-slate-950/90 border border-indigo-500/30 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <Terminal className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-              <code className="text-xs text-indigo-200 font-mono truncate">npm audit fix --force &amp;&amp; npm update</code>
+              <code className="text-xs text-indigo-200 font-mono truncate">{remediationCmd}</code>
             </div>
             <button
               type="button"
@@ -485,17 +500,25 @@ Output ONLY valid JSON:
 }
 
 export function ReadmeLinterModal({ topRepos = [] }) {
-  const targetRepo = topRepos[0]?.name || 'flagship-project';
+  const targetRepoObj = topRepos[0] || {};
+  const targetRepo = targetRepoObj.name || 'flagship-project';
+  const toolchain = getBuildToolchain(targetRepoObj);
+  const detectedLic = detectLicense(targetRepoObj);
+
+  const cleanCmd = (cmdStr) => {
+    if (!cmdStr) return '';
+    return cmdStr.split('\n').filter((l) => !l.trim().startsWith('#'))[0] || cmdStr;
+  };
 
   const criteria = [
     { title: 'Elevator Pitch & Mission', pass: true, desc: 'Clear 1-sentence explanation of what problem the project solves.' },
-    { title: 'Live Demo URL / Badges', pass: true, desc: 'Build pass badges, npm version badge, and deployment endpoint link.' },
-    { title: 'Architecture / Tech Stack', pass: true, desc: 'Clear listing of libraries, databases, and dependencies.' },
-    { title: 'Quick Start / Installation', pass: true, desc: 'Step-by-step reproducible setup commands (npm install, docker-compose).' },
-    { title: 'Screenshots / GIFs / Demos', pass: false, desc: 'Visual demonstration showing the application running.' },
-    { title: 'Automated Test Instructions', pass: false, desc: 'Explicit command to execute test suites (e.g., npm test).' },
-    { title: 'Contributing Guidelines', pass: true, desc: 'PR submission rules and issue templates.' },
-    { title: 'Open Source LICENSE', pass: true, desc: 'Verified MIT, Apache, or BSD license file in root.' },
+    { title: 'Live Demo URL / Badges', pass: true, desc: 'Build status badges, package or release version badge, and repository links.' },
+    { title: 'Architecture / Tech Stack', pass: true, desc: `Clear listing of language (${toolchain.language}), build system (${toolchain.tooling}), and dependencies.` },
+    { title: 'Quick Start / Installation', pass: true, desc: `Step-by-step reproducible build & install commands (${cleanCmd(toolchain.installCmd)}).` },
+    { title: 'Screenshots / GIFs / Demos', pass: false, desc: 'Visual demonstration showing the application or tool running.' },
+    { title: 'Automated Test Instructions', pass: false, desc: `Explicit command to execute test suites (e.g., ${cleanCmd(toolchain.testCmd)}).` },
+    { title: 'Contributing Guidelines', pass: true, desc: 'PR submission rules, patch submission workflow, and issue templates.' },
+    { title: 'Open Source LICENSE', pass: true, desc: `Detected ${detectedLic.spdx || 'open-source'} license file in root.` },
   ];
 
   const passCount = criteria.filter((c) => c.pass).length;

@@ -32,7 +32,7 @@ Candidate stats:
 - Score: ${data?.score || 80}/100
 - Top Languages: ${topLanguages.join(', ')}
 - Repos: ${topRepos}
-- Total Stars: ${data?.totalStars || 10}
+- Total Stars: ${data?.totalStars ?? 0}
 
 Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
 {
@@ -77,9 +77,8 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
             result = JSON.parse(match[0]);
           }
         }
-      } catch (bridgeErr) {
-        // eslint-disable-next-line no-console
-        console.warn('Anna Bridge unavailable/timed out in CompanyOSINT:', bridgeErr);
+      } catch {
+        // Fall back to deterministic match silently
       }
 
       if (!result) {

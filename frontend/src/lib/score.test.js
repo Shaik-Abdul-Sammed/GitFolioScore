@@ -1,4 +1,4 @@
-import { calculateReport } from './score';
+import { calculateReport, calculatePercentile, calculatePercentileNumber } from './score';
 
 describe('score.js - Pure Scoring Logic', () => {
   describe('Newbie User', () => {
@@ -210,6 +210,30 @@ describe('score.js - Pure Scoring Logic', () => {
       expect(devOpsReport.roleFitLabel).not.toBe('Target Role Specialist');
       expect(frontendReport.targetRole).toBe('Frontend Engineer');
       expect(devOpsReport.targetRole).toBe('DevOps & Cloud Engineer');
+    });
+  });
+
+  describe('calculatePercentile & calculatePercentileNumber', () => {
+    it('returns consistent deterministic percentiles across all tiers', () => {
+      expect(calculatePercentile(98)).toBe('Top 1%');
+      expect(calculatePercentile(95)).toBe('Top 1%');
+      expect(calculatePercentile(94)).toBe('Top 5%');
+      expect(calculatePercentile(90)).toBe('Top 5%');
+      expect(calculatePercentile(85)).toBe('Top 15%');
+      expect(calculatePercentile(80)).toBe('Top 15%');
+      expect(calculatePercentile(75)).toBe('Top 25%');
+      expect(calculatePercentile(65)).toBe('Top 40%');
+      expect(calculatePercentile(55)).toBe('Top 50%');
+      expect(calculatePercentile(30)).toBe('Top 70%');
+      expect(calculatePercentile(0)).toBe('Top 70%');
+
+      expect(calculatePercentileNumber(95)).toBe(1);
+      expect(calculatePercentileNumber(90)).toBe(5);
+      expect(calculatePercentileNumber(80)).toBe(15);
+      expect(calculatePercentileNumber(70)).toBe(25);
+      expect(calculatePercentileNumber(60)).toBe(40);
+      expect(calculatePercentileNumber(50)).toBe(50);
+      expect(calculatePercentileNumber(20)).toBe(70);
     });
   });
 });

@@ -109,9 +109,8 @@ Produce a humorous and insightful JSON response in this exact format:
             roastData = JSON.parse(match[0]);
           }
         }
-      } catch (bridgeErr) {
-        // eslint-disable-next-line no-console
-        console.warn('Anna Bridge unavailable/timed out in CommitRoaster:', bridgeErr);
+      } catch {
+        // Fall back to deterministic roast silently
       }
 
       if (!roastData) {

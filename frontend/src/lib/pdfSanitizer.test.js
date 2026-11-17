@@ -28,7 +28,7 @@ describe('pdfSanitizer utility', () => {
   });
 
   test('converts arrows and checkmarks', () => {
-    const input = '✓ Verified → Production ready';
-    expect(sanitizeForPDF(input)).toBe('[x] Verified -> Production ready');
+    const input = '✓ Passed → Production ready';
+    expect(sanitizeForPDF(input)).toBe('[x] Passed -> Production ready');
   });
 });

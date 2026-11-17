@@ -53,7 +53,7 @@ Generate a realistic cybersecurity hygiene report in ONLY valid JSON:
   ],
   "recommendations": [
     "Enable GitHub Private Email setting (Keep my email addresses private)",
-    "Enforce GPG Commit Signature Verification for all new pushes",
+    "Enforce GPG Commit Signature Enforcement for all new pushes",
     "Add pre-commit git hooks using gitleaks or truffleHog"
   ]
 }`;

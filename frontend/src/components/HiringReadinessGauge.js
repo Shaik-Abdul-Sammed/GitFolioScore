@@ -4,11 +4,17 @@ import Tooltip from './Tooltip';
 
 function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
   const safeGithubScore = Math.min(100, Math.max(0, Math.round(Number(githubScore) || 0)));
-  // If LinkedIn not synced yet, default baseline linkedInScore to githubScore * 0.88
-  const effectiveLinkedInScore = linkedInScore !== null 
+  const isLinkedInCalibrated = linkedInScore !== null && linkedInScore !== undefined;
+  
+  // When LinkedIn is not provided, evaluate readiness based 100% on analyzed GitHub audit
+  // and do NOT fabricate an uncalibrated consistency score.
+  const effectiveLinkedInScore = isLinkedInCalibrated
     ? Math.min(100, Math.max(0, Math.round(Number(linkedInScore) || 0)))
-    : Math.min(100, Math.max(0, Math.round(safeGithubScore * 0.88)));
-  const readiness = Math.min(100, Math.max(0, Math.round(safeGithubScore * 0.7 + effectiveLinkedInScore * 0.3)));
+    : null;
+    
+  const readiness = isLinkedInCalibrated
+    ? Math.min(100, Math.max(0, Math.round(safeGithubScore * 0.7 + effectiveLinkedInScore * 0.3)))
+    : safeGithubScore;
 
   const status = useMemo(() => {
     if (readiness >= 85) return { label: '🔥 Ready to Apply', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.35)' };
@@ -32,7 +38,7 @@ function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
           <div>
             <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               Hiring Readiness Index
-              <Tooltip content="Weighted career readiness index combining verified GitHub codebase quality (70%) and declared LinkedIn career alignment (30%).">
+              <Tooltip content="Weighted career readiness index combining analyzed GitHub codebase quality (70%) and declared LinkedIn career alignment (30%).">
                 <HelpCircle className="w-3.5 h-3.5 text-gray-400 hover:text-indigo-400 cursor-pointer" />
               </Tooltip>
               <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold border" style={{ background: status.bg, borderColor: status.border, color: status.color }}>
@@ -40,7 +46,7 @@ function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
               </span>
             </h3>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Weighted career readiness combining verified GitHub codebase audit (70%) and LinkedIn alignment (30%).
+              Weighted career readiness combining analyzed GitHub codebase audit (70%) and LinkedIn alignment (30%).
             </p>
           </div>
         </div>
@@ -79,7 +85,7 @@ function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
         <div className="flex-1 space-y-3 text-xs w-full">
           <div>
             <div className="flex justify-between font-semibold mb-1">
-              <span className="text-gray-300">GitHub Code & Repo Quality (70% weight)</span>
+              <span className="text-gray-300">GitHub Code & Repo Quality ({isLinkedInCalibrated ? '70% weight' : '100% current weight'})</span>
               <span className="text-indigo-300 font-bold">{safeGithubScore}/100</span>
             </div>
             <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
@@ -90,18 +96,28 @@ function HiringReadinessGauge({ githubScore = 80, linkedInScore = null }) {
           <div>
             <div className="flex justify-between font-semibold mb-1">
               <span className="text-gray-300">LinkedIn Consistency Alignment (30% weight)</span>
-              <span className="text-blue-300 font-bold">{effectiveLinkedInScore}/100</span>
+              <span className={`font-bold ${isLinkedInCalibrated ? 'text-blue-300' : 'text-gray-400 font-mono text-[11px]'}`}>
+                {isLinkedInCalibrated ? `${effectiveLinkedInScore}/100` : 'Not Provided / Pending Sync'}
+              </span>
             </div>
             <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${effectiveLinkedInScore}%` }} />
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${isLinkedInCalibrated ? 'bg-blue-500' : 'bg-gray-600/30'}`}
+                style={{ width: isLinkedInCalibrated ? `${effectiveLinkedInScore}%` : '0%' }}
+              />
             </div>
           </div>
 
           <p className="text-[11px] text-gray-400 pt-1 leading-relaxed">
-            {linkedInScore === null
-              ? '💡 Tip: Paste your LinkedIn About section in LinkedIn Sync below to calibrate this metric with 100% precision.'
-              : '✅ Verified across your code repository audit and declared career credentials.'}
+            {isLinkedInCalibrated
+              ? `Calculated from your code repository audit and declared career credentials (${effectiveLinkedInScore}/100 consistency match).`
+              : 'Supporting Data Notice: No LinkedIn profile provided yet. Consistency score is uncalibrated. Paste your profile into LinkedIn Sync below to factor in career brand consistency.'}
           </p>
+
+          <div className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 text-[10.5px] font-mono text-gray-300 space-y-0.5">
+            <span className="font-bold text-indigo-300 block">Baseline Readiness Math &amp; Weighting:</span>
+            <span>Formula: {isLinkedInCalibrated ? `(GitHub Score ${safeGithubScore} × 70%) + (LinkedIn Match ${effectiveLinkedInScore} × 30%) = ${readiness}% Readiness` : `(GitHub Score ${safeGithubScore} × 100%) = ${readiness}% Readiness (Uncalibrated LinkedIn)`}</span>
+          </div>
         </div>
       </div>
     </div>

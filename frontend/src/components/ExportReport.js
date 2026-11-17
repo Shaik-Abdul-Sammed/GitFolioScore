@@ -3,6 +3,7 @@ import { Image, FileText, Check, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { sanitizeForPDF } from '../lib/pdfSanitizer';
+import { calculatePercentile } from '../lib/score';
 import ExportPreviewModal from './ExportPreviewModal';
 
 function ExportReport({ targetRef, data, username, targetRole, advice, onToast, onExport }) {
@@ -74,9 +75,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
         fileType: 'image',
         fileName,
       });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Export failed:', err);
+    } catch {
       onToast?.('Could not export PNG image. Please try again.');
     } finally {
       setExporting(false);
@@ -122,14 +121,17 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
 
       // Score Badge Box on Header
       const scoreVal = data?.score ?? 85;
+      const percentileText = calculatePercentile(scoreVal);
       doc.setFillColor(99, 102, 241);
-      doc.roundedRect(pageWidth - margin - 75, 30, 75, 60, 6, 6, 'F');
+      doc.roundedRect(pageWidth - margin - 85, 25, 85, 70, 6, 6, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(24);
+      doc.setFontSize(22);
       doc.setTextColor(255, 255, 255);
-      doc.text(`${scoreVal}`, pageWidth - margin - 38, 65, { align: 'center' });
-      doc.setFontSize(9);
-      doc.text('OVERALL', pageWidth - margin - 38, 79, { align: 'center' });
+      doc.text(`${scoreVal}`, pageWidth - margin - 42, 54, { align: 'center' });
+      doc.setFontSize(8.5);
+      doc.text(percentileText, pageWidth - margin - 42, 69, { align: 'center' });
+      doc.setFontSize(7.5);
+      doc.text('SCORE / RANK', pageWidth - margin - 42, 82, { align: 'center' });
 
       y = 135;
 
@@ -146,7 +148,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
 
       const bioText = data?.profile?.bio
         ? sanitizeForPDF(`Bio: ${data.profile.bio}`)
-        : 'Active open-source developer with verified public repositories.';
+        : 'Active open-source developer with analyzed public repositories.';
       const bioLines = doc.splitTextToSize(bioText, pageWidth - margin * 2);
       doc.text(bioLines, margin, y);
       y += bioLines.length * 13 + 8;
@@ -236,7 +238,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
           doc.setFontSize(8.5);
           doc.setTextColor(100, 116, 139);
           doc.text(
-            sanitizeForPDF(`Language: ${r.language || 'Multi'}  .  Stars: ${r.stars ?? 0}  .  Forks: ${r.forks ?? 0}`),
+            sanitizeForPDF(`Language: ${r.language || 'Multi'}  .  Stars: ${r.stars ?? r.stargazers_count ?? 0}  .  Forks: ${r.forks ?? r.forks_count ?? 0}`),
             margin + 180,
             y
           );
@@ -284,7 +286,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
       doc.text(
-        'Verified GitFolioScore Technical Resume Summary - Certified client-side audit on Anna AI OS',
+        'Calculated GitFolioScore Technical Portfolio Audit - Evaluated client-side on Anna AI OS',
         pageWidth / 2,
         doc.internal.pageSize.getHeight() - 25,
         { align: 'center' }
@@ -316,9 +318,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
         fileType: 'pdf',
         fileName: `GitFolioScore-${username || 'Developer'}-Resume-Audit.pdf`,
       });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('PDF export failed, falling back to canvas:', err);
+    } catch {
       // Fallback to html2canvas if needed
       try {
         if (targetRef?.current) {
@@ -351,9 +351,7 @@ function ExportReport({ targetRef, data, username, targetRole, advice, onToast, 
         } else {
           onToast?.('Could not generate PDF. Please try again.');
         }
-      } catch (canvasErr) {
-        // eslint-disable-next-line no-console
-        console.error('Fallback canvas PDF failed:', canvasErr);
+      } catch {
         onToast?.('Could not generate PDF report.');
       }
     } finally {

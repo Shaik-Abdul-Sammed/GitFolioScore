@@ -28,6 +28,7 @@ describe('llm.js - AI Career Coach & Error Handling', () => {
     ],
     shareText: 'Scored 85/100 on GitFolioScore with high documentation and language diversity!',
     timeToHireWeeks: 6,
+    timeToHireBasis: 'Based on standard engineering recruitment pipelines (median 6 weeks), calibrated against calculated portfolio score and repository tech stack match.',
     atsMissingKeywords: ['Docker', 'CI/CD Pipelines', 'Automated Testing', 'Cloud Deployment'],
   };
 

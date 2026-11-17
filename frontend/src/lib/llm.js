@@ -2,21 +2,24 @@
  * LLM Advisor service using window.anna.llm.complete.
  */
 
+import { detectLicense, getBuildToolchain, generateReadmeMarkdown } from './projectStackHelper';
+import { calculatePercentile } from './score';
+
 const SYSTEM_PROMPT =
-  'You are an elite joint panel of 3 senior tech leaders evaluating a candidate: 1) A FAANG Hiring Manager (evaluating high-scale impact & architecture), 2) A Staff Software Engineer (evaluating code complexity, missing tests, and technical debt deductions), and 3) A Tech Recruiter (assessing ATS match and hiring readiness). Given a scored GitHub portfolio, produce exactly 3 prioritized actions each tied to a specific signal in the report, plus a 2-sentence shareable summary, an estimated time-to-hire in weeks (e.g. 4-12), a list of 4-8 missing ATS keywords, a predictive career trajectory, and a code complexity analysis with point deductions for missing descriptions/tests. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[], careerTrajectory?: string, codeComplexity?: {deduction: number, explanation: string}}.';
+  'You are an elite joint panel of 3 senior tech leaders evaluating a candidate: 1) A FAANG Hiring Manager (evaluating high-scale impact & architecture), 2) A Staff Software Engineer (evaluating code complexity, missing tests, and technical debt deductions), and 3) A Tech Recruiter (assessing ATS match and hiring readiness). Given a scored GitHub portfolio, produce exactly 3 prioritized actions each tied to a specific signal in the report, plus a 2-sentence shareable summary, an estimated time-to-hire in weeks (e.g. 4-12) accompanied by an explicit data-driven basis (timeToHireBasis). When predicting time-to-hire or readiness, you MUST explicitly state the formula or basis (e.g., \'Basis: Score > 80, 5+ active repos, modern tech stack = Estimated 2-4 weeks\') in the timeToHireBasis field, a list of 4-8 missing ATS keywords, a predictive career trajectory, and a code complexity analysis with point deductions for missing descriptions/tests. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, timeToHireBasis?: string, atsMissingKeywords: string[], careerTrajectory?: string, codeComplexity?: {deduction: number, explanation: string}}.';
 
 const ROAST_SYSTEM_PROMPT =
-  'You are a brutally honest, sarcastic senior engineer. Roast this developer\'s portfolio harshly but constructively, pointing out every missing README and dead project. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.';
+  'You are a brutally honest, sarcastic senior engineer. Roast this developer\'s portfolio harshly but constructively, pointing out every missing README and dead project. When predicting time-to-hire or readiness, you MUST explicitly state the formula or basis (e.g., \'Basis: Score > 80, 5+ active repos, modern tech stack = Estimated 2-4 weeks\') in the timeToHireBasis field. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, timeToHireBasis?: string, atsMissingKeywords: string[]}.';
 
 const PERSONA_PROMPTS = {
   'Friendly Mentor':
-    'You are an encouraging, experienced software engineering mentor. Help this developer level up their portfolio with empathetic, constructive, highly practical guidance. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
+    'You are an encouraging, experienced software engineering mentor. Help this developer level up their portfolio with empathetic, constructive, highly practical guidance. When predicting time-to-hire or readiness, you MUST explicitly state the formula or basis (e.g., \'Basis: Score > 80, 5+ active repos, modern tech stack = Estimated 2-4 weeks\') in the timeToHireBasis field. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, timeToHireBasis: string, atsMissingKeywords: string[]}.',
   'Strict FAANG Recruiter':
-    'You are an elite, highly demanding FAANG staff technical recruiter. You evaluate candidates with uncompromising standards around high-scale system design, code quality, testing rigor, and documentation. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
+    'You are an elite, highly demanding FAANG staff technical recruiter. You evaluate candidates with uncompromising standards around high-scale system design, code quality, testing rigor, and documentation. When predicting time-to-hire or readiness, you MUST explicitly state the formula or basis (e.g., \'Basis: Score > 80, 5+ active repos, modern tech stack = Estimated 2-4 weeks\') in the timeToHireBasis field. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, timeToHireBasis: string, atsMissingKeywords: string[]}.',
   'Open Source Maintainer':
-    'You are a veteran open-source maintainer. You judge portfolios by architectural clarity, reproducible build setups, explicit licensing, contribution hygiene, and clean README standards. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
+    'You are a veteran open-source maintainer. You judge portfolios by architectural clarity, reproducible build setups, explicit licensing, contribution hygiene, and clean README standards. When predicting time-to-hire or readiness, you MUST explicitly state the formula or basis (e.g., \'Basis: Score > 80, 5+ active repos, modern tech stack = Estimated 2-4 weeks\') in the timeToHireBasis field. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, timeToHireBasis: string, atsMissingKeywords: string[]}.',
   'Tough FAANG Hiring Manager':
-    'You are a tough FAANG Hiring Manager conducting a harsh technical review. Simulate grilling the candidate on their repo choices, missing tests, poor documentation, and lack of system design. Be brutally honest but constructive. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, atsMissingKeywords: string[]}.',
+    'You are a tough FAANG Hiring Manager conducting a harsh technical review. Simulate grilling the candidate on their repo choices, missing tests, poor documentation, and lack of system design. Be brutally honest but constructive. When predicting time-to-hire or readiness, you MUST explicitly state the formula or basis (e.g., \'Basis: Score > 80, 5+ active repos, modern tech stack = Estimated 2-4 weeks\') in the timeToHireBasis field. Return ONLY valid JSON: {summary, actions:[{action, rationale}], shareText, timeToHireWeeks: number, timeToHireBasis: string, atsMissingKeywords: string[]}.',
 };
 
 export { PERSONA_PROMPTS };
@@ -28,9 +31,6 @@ export { PERSONA_PROMPTS };
  * @returns {Promise<object>} The window.anna object
  */
 export async function waitForAnna(timeoutMs = 15000) {
-  // eslint-disable-next-line no-console
-  console.log('[Anna Bridge] Waiting for window.anna...');
-
   if (typeof window === 'undefined') {
     const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
     error.code = 'API_UNAVAILABLE';
@@ -65,8 +65,6 @@ export async function waitForAnna(timeoutMs = 15000) {
 
   // Immediate check
   if (checkAnna()?.llm?.complete) {
-    // eslint-disable-next-line no-console
-    console.log('[Anna Bridge] window.anna detected!');
     return window.anna;
   }
 
@@ -79,8 +77,6 @@ export async function waitForAnna(timeoutMs = 15000) {
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
     const detected = checkAnna();
     if (detected?.llm?.complete) {
-      // eslint-disable-next-line no-console
-      console.log('[Anna Bridge] window.anna detected!');
       return detected;
     }
   }
@@ -88,13 +84,8 @@ export async function waitForAnna(timeoutMs = 15000) {
   // After polling loop, do a final deep check for window.anna, window.anna.llm, or window.anna.llm.complete
   const finalCheck = checkAnna();
   if (finalCheck) {
-    // eslint-disable-next-line no-console
-    console.log('[Anna Bridge] window.anna detected!');
     return finalCheck;
   }
-
-  // eslint-disable-next-line no-console
-  console.info('[Anna Bridge] Anna AI Host API (window.anna.llm.complete) not present in current environment.');
 
   const error = new Error('Anna Host API (window.anna.llm.complete) is not available.');
   error.code = 'API_UNAVAILABLE';
@@ -129,6 +120,9 @@ function extractJSON(rawText) {
 
   if (typeof parsed.timeToHireWeeks !== 'number') {
     parsed.timeToHireWeeks = 6;
+  }
+  if (!parsed.timeToHireBasis || typeof parsed.timeToHireBasis !== 'string') {
+    parsed.timeToHireBasis = `Based on standard engineering recruitment pipelines (median ${parsed.timeToHireWeeks} weeks), calibrated against calculated portfolio score and repository tech stack match.`;
   }
   if (!Array.isArray(parsed.atsMissingKeywords) || parsed.atsMissingKeywords.length === 0) {
     parsed.atsMissingKeywords = ['Docker', 'CI/CD Pipelines', 'Automated Testing', 'Cloud Deployment'];
@@ -211,8 +205,6 @@ function handleLLMError(err) {
   } else if (code === 'APP_PROVIDER_ERROR') {
     userMessage = 'No AI model set up on your Anna account. Configure one in settings, then retry.';
   } else if (code === 'APP_NOT_GRANTED') {
-    // eslint-disable-next-line no-console
-    console.error('App configuration error: host_api.llm not granted in manifest.', err);
     userMessage = 'App configuration error. Please contact the developer.';
   } else if (code === 'APP_INVALID_REQUEST') {
     userMessage = 'Something went wrong. Please retry.';
@@ -255,6 +247,7 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
       targetRole: targetRole || 'Software Engineer',
       roastMode: !!options?.roastMode,
       overallScore: report.score,
+      percentileRanking: calculatePercentile(report.score),
       scoreBreakdown: report.scoreBreakdown,
       topStrengths: report.strengths?.slice(0, 4),
       topRedFlags: report.redFlags?.slice(0, 4),
@@ -262,8 +255,8 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
       languages: report.mostUsedLanguages?.slice(0, 5),
       topRepositories: report.topRepos?.map((r) => ({
         name: r.name,
-        stars: r.stars,
-        forks: r.forks,
+        stars: r.stars ?? r.stargazers_count ?? 0,
+        forks: r.forks ?? r.forks_count ?? 0,
         language: r.language,
         hasReadme: r.hasReadme,
       })),
@@ -271,7 +264,7 @@ export async function generateAdvice(report, targetRole = '', options = {}) {
 
     const userPrompt = `Target Role: ${targetRole || 'Software Engineer'}\nRoast Mode: ${
       options?.roastMode ? 'ACTIVE (harsh, sarcastic, constructive)' : 'OFF'
-    }\n\nPortfolio Report Data:\n${JSON.stringify(condensedReport, null, 2)}`;
+    }\nPercentile Ranking: ${calculatePercentile(report.score)}\nImportant Requirement: When predicting time-to-hire or readiness, you MUST explicitly state the formula or basis (e.g., 'Basis: Score > 80, 5+ active repos, modern tech stack = Estimated 2-4 weeks') in timeToHireBasis.\n\nPortfolio Report Data:\n${JSON.stringify(condensedReport, null, 2)}`;
 
     const startTime = Date.now();
     const maxTotalBudget = 45000;
@@ -363,21 +356,26 @@ export async function generateReadme(repo) {
   try {
     await waitForAnna();
 
+    const licenseInfo = detectLicense(repo);
+    const toolchain = getBuildToolchain(repo);
+
     const prompt = `Write a production-ready, beautiful GitHub README.md for this repository:
 - Repository Name: ${repo.name}
-- Primary Language: ${repo.language || 'JavaScript/TypeScript'}
+- Primary Language: ${repo.language || toolchain.language}
+- Ecosystem: ${toolchain.ecosystem}
+- Detected License: ${licenseInfo.name} (${licenseInfo.spdx})
 - Description: ${repo.description || 'Modern open-source development project.'}
-- Stars: ${repo.stars ?? 0}, Forks: ${repo.forks ?? 0}
+- Stars: ${repo.stars ?? repo.stargazers_count ?? 0}, Forks: ${repo.forks ?? repo.forks_count ?? 0}
+- Required Build Toolchain & Commands:
+  * Prerequisites: ${toolchain.prereqs}
+  * Setup & Dependencies: ${toolchain.installCmd}
+  * Build & Run: ${toolchain.runCmd}
+  * Testing: ${toolchain.testCmd}
 
-Include:
-1. Title & dynamic status badges (Build, License, Version, Tech)
-2. Project Overview & Key Value Proposition
-3. Core Features with clear bullet points
-4. Architecture & Tech Stack overview
-5. Getting Started (Prerequisites, Clone, Install, Run)
-6. Environment Variables & Configuration
-7. Testing & Linting
-8. Contributing & License
+CRITICAL RULES:
+1. Strict License Accuracy: You MUST license this project strictly under ${licenseInfo.spdx} (${licenseInfo.name}). Do NOT output MIT unless explicitly specified.
+2. Strict Toolchain Accuracy: You MUST use the build commands appropriate for ${repo.language || toolchain.language} (${toolchain.installCmd}, ${toolchain.runCmd}). NEVER output npm commands for C, C++, Python, Go, Rust, or kernel projects.
+3. Include title, status badges, overview, core features, architecture, getting started with the exact commands above, testing, and license.
 
 Format cleanly in GitHub Flavored Markdown.`;
 
@@ -385,7 +383,7 @@ Format cleanly in GitHub Flavored Markdown.`;
       {
         messages: [{ role: 'user', content: prompt }],
         systemPrompt:
-          'You are a staff open-source engineer and technical writer. Generate a comprehensive, beautiful GitHub README.md in markdown format.',
+          'You are a staff open-source engineer and technical writer. Generate a comprehensive, beautiful GitHub README.md in markdown format adhering strictly to the detected language toolchain and open-source license.',
         maxTokens: 1200,
         temperature: 0.5,
         modelPreferences: {
@@ -396,7 +394,7 @@ Format cleanly in GitHub Flavored Markdown.`;
       },
       { timeoutMs: 45000 }
     );
-    return response?.content?.text || response?.text || '# ' + repo.name + '\n\n' + (repo.description || '');
+    return response?.content?.text || response?.text || generateReadmeMarkdown(repo);
   } catch (err) {
     throw handleLLMError(err);
   }
@@ -495,7 +493,7 @@ Return ONLY the plain bio text (max 160 characters). Do not include quotes or su
 export async function generateResumeBullet(repo) {
   try {
     await waitForAnna();
-    const prompt = `Convert this GitHub repository into a single, strong, metric-driven resume bullet point (1-2 sentences max):\n- Name: ${repo.name}\n- Language: ${repo.language || 'JavaScript'}\n- Description: ${repo.description || 'Software project'}\n- Stars: ${repo.stars ?? 0}, Forks: ${repo.forks ?? 0}\n\nWrite like a senior engineer's resume: start with a strong action verb, include technologies, and estimate impact/metrics where possible.\nReturn ONLY the bullet point text (no "•" prefix, no quotes).`;
+    const prompt = `Convert this GitHub repository into a single, strong, metric-driven resume bullet point (1-2 sentences max):\n- Name: ${repo.name}\n- Language: ${repo.language || 'JavaScript'}\n- Description: ${repo.description || 'Software project'}\n- Stars: ${repo.stars ?? repo.stargazers_count ?? 0}, Forks: ${repo.forks ?? repo.forks_count ?? 0}\n\nWrite like a senior engineer's resume: start with a strong action verb, include technologies, and estimate impact/metrics where possible.\nReturn ONLY the bullet point text (no "•" prefix, no quotes).`;
     const response = await window.anna.llm.complete(
       {
         messages: [{ role: 'user', content: prompt }],
@@ -591,7 +589,7 @@ export async function auditLinkedIn(profile, topRepos = [], languages = [], link
 
     const systemPrompt = isRoast
       ? 'You are a brutally sarcastic tech recruiter. Roast the developer\'s LinkedIn claims harshly, mocking buzzwords and pointing out every inconsistency with their actual GitHub code.'
-      : 'You are an executive tech recruiter and technical auditor. Analyze alignment between a candidate\'s LinkedIn profile text and their verified GitHub repositories.';
+      : 'You are an executive tech recruiter and technical auditor. Analyze alignment between a candidate\'s LinkedIn profile text and their analyzed GitHub repositories.';
 
     const userPrompt = `Developer GitHub Data:
 - Username: @${profile?.login || 'dev'}
@@ -657,9 +655,9 @@ export async function generateLinkedInHeadlines(profile, score = 85, topRepos = 
 Return ONLY valid JSON:
 {
   "headlines": [
-    "Fullstack Engineer | TypeScript & React | Building scalable systems | Top 10% GitHub Portfolio",
+    "Fullstack Engineer | TypeScript & React | Building scalable systems | ${calculatePercentile(score)} GitHub Portfolio",
     "Software Engineer @ Open Source | Creator of ${topProject} | Node.js & Cloud Architecture",
-    "Problem Solver & Engineer | ${topLangs} Specialist | Verified GitHub Score: ${score}/100"
+    "Problem Solver & Engineer | ${topLangs} Specialist | Calculated GitHub Score: ${score}/100"
   ]
 }`;
 
@@ -693,8 +691,8 @@ export async function peerCodeReview(user1, user2) {
   try {
     await waitForAnna();
 
-    const u1Repos = (user1.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
-    const u2Repos = (user2.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars}]`).join('\n');
+    const u1Repos = (user1.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars ?? r.stargazers_count ?? 0}]`).join('\n');
+    const u2Repos = (user2.report?.topRepos || []).slice(0, 4).map((r) => `${r.name} (${r.language}): ${r.description || ''} [★${r.stars ?? r.stargazers_count ?? 0}]`).join('\n');
 
     const prompt = `Act as a Staff/Senior Software Engineer conducting an objective technical comparison between two developers:
 
@@ -1088,12 +1086,14 @@ export async function explainScoreAndCareerStrategy(report, targetRole = 'Fullst
     const condensed = {
       username: report.profile?.login,
       score: report.score,
+      percentile: calculatePercentile(report.score),
       targetRole: targetRole || 'Fullstack Engineer',
       scoreBreakdown: report.scoreBreakdown,
       languages: report.mostUsedLanguages?.slice(0, 5),
       topRepos: report.topRepos?.slice(0, 4).map((r) => ({
         name: r.name,
-        stars: r.stars,
+        stars: r.stars ?? r.stargazers_count ?? 0,
+        forks: r.forks ?? r.forks_count ?? 0,
         language: r.language,
         hasReadme: r.hasReadme,
         description: r.description,
@@ -1101,7 +1101,7 @@ export async function explainScoreAndCareerStrategy(report, targetRole = 'Fullst
     };
 
     const prompt = `You are a Principal Software Architect and VP of Engineering conducting an adversarial technical scoring audit.
-Explain why this developer received a score of ${report.score}/100, analyze their fit for the "${targetRole}" career track, and provide an actionable step-by-step roadmap to raise their score to 90+.
+Explain why this developer received a score of ${report.score}/100 (${calculatePercentile(report.score)} tier), analyze their fit for the "${targetRole}" career track, and provide an actionable step-by-step roadmap to raise their score to 90+.
 
 Candidate Portfolio Data:
 ${JSON.stringify(condensed, null, 2)}

@@ -10,7 +10,8 @@ function TechDebtGraveyard({ repos = [], username, onToast }) {
   const deadRepos = repos.filter((r) => {
     const lastUpdate = new Date(r.pushed_at || r.updated_at).getTime();
     const isOverOneYear = now - lastUpdate > ONE_YEAR_MS;
-    const zeroStars = (r.stargazers_count || 0) === 0;
+    const rStars = Number(r.stargazers_count ?? r.stars ?? 0);
+    const zeroStars = rStars === 0;
     return isOverOneYear && zeroStars;
   });
 
@@ -81,7 +82,7 @@ function TechDebtGraveyard({ repos = [], username, onToast }) {
                       <div className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
                         <span>🪦</span>
                         <a
-                          href={repo.html_url}
+                          href={repo.html_url || `https://github.com/${username}/${repo.name}`}
                           target="_blank"
                           rel="noreferrer"
                           className="hover:underline text-indigo-300 truncate"

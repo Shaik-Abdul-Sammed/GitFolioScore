@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, GitPullRequest, Users, ExternalLink, FileText, Copy, Check, RefreshCw } from 'lucide-react';
+import { AlertCircle, GitPullRequest, Users, Star, GitFork, ExternalLink, FileText, Copy, Check, RefreshCw } from 'lucide-react';
 import { generateResumeBullet } from '../lib/llm';
 
 function RepoInsights({ repo, insights }) {
@@ -18,7 +18,8 @@ function RepoInsights({ repo, insights }) {
       const result = await generateResumeBullet(repo);
       setBullet(result);
     } catch {
-      setBullet(`Architected and optimized ${repo.name} using ${repo.language || 'modern software patterns'}, demonstrating clean modular architecture with ${repo.stars || 0} GitHub stars.`);
+      const starsCount = repo.stars ?? repo.stargazers_count ?? 0;
+      setBullet(`Architected and optimized ${repo.name} using ${repo.language || 'modern software patterns'}, demonstrating clean modular architecture with ${starsCount.toLocaleString()} GitHub stars.`);
     } finally {
       setBulletLoading(false);
     }
@@ -29,6 +30,71 @@ function RepoInsights({ repo, insights }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Build authentic telemetry cards (never display false zeroes)
+  const cards = [];
+
+  const openIssuesCount = insights.issues?.length || repo.open_issues_count || 0;
+  if (openIssuesCount > 0) {
+    cards.push({
+      key: 'issues',
+      icon: <AlertCircle className="w-4 h-4" />,
+      label: 'Open Issues',
+      value: openIssuesCount.toLocaleString(),
+      color: '#f59e0b',
+    });
+  }
+
+  const prsCount = insights.prs?.length || 0;
+  if (prsCount > 0) {
+    cards.push({
+      key: 'prs',
+      icon: <GitPullRequest className="w-4 h-4" />,
+      label: 'Open PRs',
+      value: prsCount.toLocaleString(),
+      color: '#8b5cf6',
+    });
+  }
+
+  const contributorsCount = insights.contributors?.length || repo.contributors_count || 0;
+  if (contributorsCount > 0) {
+    cards.push({
+      key: 'contributors',
+      icon: <Users className="w-4 h-4" />,
+      label: 'Contributors',
+      value: contributorsCount.toLocaleString(),
+      color: '#10b981',
+    });
+  }
+
+  // Supplement with genuine Stars and Forks if cards are sparse
+  const starsCount = repo.stars ?? repo.stargazers_count ?? 0;
+  const forksCount = repo.forks ?? repo.forks_count ?? 0;
+
+  if (cards.length === 0) {
+    cards.push({
+      key: 'stars',
+      icon: <Star className="w-4 h-4" />,
+      label: 'Stars',
+      value: starsCount.toLocaleString(),
+      color: '#eab308',
+    });
+    cards.push({
+      key: 'forks',
+      icon: <GitFork className="w-4 h-4" />,
+      label: 'Forks',
+      value: forksCount.toLocaleString(),
+      color: '#8b5cf6',
+    });
+  } else if (cards.length === 1 && forksCount > 0) {
+    cards.unshift({
+      key: 'stars',
+      icon: <Star className="w-4 h-4" />,
+      label: 'Stars',
+      value: starsCount.toLocaleString(),
+      color: '#eab308',
+    });
+  }
 
   return (
     <div className="glass-card p-5 animate-fade-in-up">
@@ -46,25 +112,16 @@ function RepoInsights({ repo, insights }) {
         </a>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <MetricCard
-          icon={<AlertCircle className="w-4 h-4" />}
-          label="Open Issues"
-          value={insights.issues?.length ?? 0}
-          color="#f59e0b"
-        />
-        <MetricCard
-          icon={<GitPullRequest className="w-4 h-4" />}
-          label="Open PRs"
-          value={insights.prs?.length ?? 0}
-          color="#8b5cf6"
-        />
-        <MetricCard
-          icon={<Users className="w-4 h-4" />}
-          label="Contributors"
-          value={insights.contributors?.length ?? 0}
-          color="#10b981"
-        />
+      <div className={`grid ${cards.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
+        {cards.map((c) => (
+          <MetricCard
+            key={c.key}
+            icon={c.icon}
+            label={c.label}
+            value={c.value}
+            color={c.color}
+          />
+        ))}
       </div>
 
       {insights.contributors?.length > 0 && (

@@ -28,14 +28,14 @@ function OnboardingModal({ isOpen, onClose, onQuickTry }) {
     {
       num: '2',
       icon: <Trophy className="w-5 h-5 text-amber-400" />,
-      title: 'Get Your Verified AI Score',
+      title: 'Get Your Calculated AI Score',
       desc: 'Benchmark your portfolio against FAANG hiring rubrics, code quality, and ATS keyword visibility.',
     },
     {
       num: '3',
       icon: <FileText className="w-5 h-5 text-emerald-400" />,
       title: 'Generate Resumes & Fix Red Flags',
-      desc: 'Export HackerRank-format PDFs, generate missing README PRs with 1 click, and share verified badges.',
+      desc: 'Export HackerRank-format PDFs, generate missing README PRs with 1 click, and share portfolio badges.',
     },
   ];
 

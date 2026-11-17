@@ -14,7 +14,21 @@ describe('RepoInsights', () => {
     expect(screen.getByText(/Open Issues/)).toBeInTheDocument();
     expect(screen.getAllByText(/1/).length).toBeGreaterThan(0); // Issues, PRs, Contributors all have length 1
     expect(screen.getByText(/Open PRs/)).toBeInTheDocument();
-    expect(screen.getByText(/2/)).toBeInTheDocument(); // PR count is 2 in mock data? Wait, mock says 2?
+    expect(screen.getByText(/2/)).toBeInTheDocument();
     expect(screen.getByTitle('octocat')).toBeInTheDocument();
+  });
+
+  it('hides zero metrics and displays Stars and Forks when issues/prs/contributors are empty', () => {
+    const emptyInsights = { issues: [], prs: [], contributors: [] };
+    const repo = { name: 'linux', stargazers_count: 175000, forks_count: 53000 };
+    render(<RepoInsights repo={repo} insights={emptyInsights} />);
+
+    expect(screen.queryByText(/0 Open Issues/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0 Open PRs/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0 Contributors/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/75.*000/)).toBeInTheDocument();
+    expect(screen.getByText(/53.*000/)).toBeInTheDocument();
+    expect(screen.getByText(/Stars/i)).toBeInTheDocument();
+    expect(screen.getByText(/Forks/i)).toBeInTheDocument();
   });
 });

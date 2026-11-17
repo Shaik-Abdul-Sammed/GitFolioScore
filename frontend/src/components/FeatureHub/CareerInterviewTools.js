@@ -248,7 +248,7 @@ export function CoverLetterModal({ username, score, topRepos = [], onClose, onTo
   const handleGenerate = async () => {
     setLoading(true);
     setIsFallback(false);
-    const repoContext = topRepos.slice(0, 3).map((r) => `${r.name} (${r.language || 'Code'}, ${r.stars || 0} stars): ${r.description || 'Core application'}`).join('; ');
+    const repoContext = topRepos.slice(0, 3).map((r) => `${r.name} (${r.language || 'Code'}, ${r.stars ?? r.stargazers_count ?? 0} stars): ${r.description || 'Core application'}`).join('; ');
 
     try {
       await waitForAnna(2500);
@@ -256,7 +256,7 @@ export function CoverLetterModal({ username, score, topRepos = [], onClose, onTo
         const prompt = `Write a compelling, professional 1-page software engineer cover letter for candidate @${username}.
 Target Company: ${company}
 Target Role: ${role}
-Candidate GitHub Portfolio Score: ${score}/100 (Verified by GitFolioScore AI)
+Candidate GitHub Portfolio Score: ${score}/100 (Evaluated by GitFolioScore AI)
 Flagship Repositories: ${repoContext}
 Target Job Requirements: ${jobDescription || 'Fullstack software development, distributed systems, clean code, code review leadership'}
 
@@ -316,7 +316,7 @@ GitHub: https://github.com/${username}`;
         </div>
         <div>
           <h4 className="font-bold text-white text-sm">Tailored Engineering Cover Letter Generator</h4>
-          <p className="text-[11px] text-gray-400">Grounded in your real repositories and verified score</p>
+          <p className="text-[11px] text-gray-400">Grounded in your real repositories and calculated score</p>
         </div>
       </div>
 
@@ -462,7 +462,7 @@ Cheers,
         </div>
         <div>
           <h4 className="font-bold text-white text-sm">3 High-Conversion Cold Outreach Templates</h4>
-          <p className="text-[11px] text-gray-400">Optimized for 40%+ open rates with verified portfolio proof</p>
+          <p className="text-[11px] text-gray-400">Optimized for 40%+ open rates with analyzed portfolio proof</p>
         </div>
       </div>
 
@@ -583,7 +583,7 @@ export function StarMethodModal({ topRepos = [], onClose, onToast }) {
     situation: `Identified a major performance and developer experience bottleneck in ${repo.language || 'modern software'} workflows requiring a reliable, open-source solution.`,
     task: `Served as lead author and architect for "${repo.name}", responsible for core API design, CI/CD telemetry, and modular package architecture.`,
     action: `Engineered scalable algorithms using ${repo.language || 'modern best practices'}, implemented strict automated test suites, and authored comprehensive README architecture diagrams.`,
-    result: `Successfully achieved ${repo.stars || 1} stars and public community adoption, maintaining zero regressions and verifiable sub-50ms execution performance.`,
+    result: `Successfully achieved ${repo.stars ?? repo.stargazers_count ?? 1} stars and public community adoption, maintaining zero regressions and verifiable sub-50ms execution performance.`,
   }));
 
   const handleCopy = (story, idx) => {

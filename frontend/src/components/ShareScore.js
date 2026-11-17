@@ -1,15 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Share2, RefreshCw } from 'lucide-react';
-
-function getPercentile(score) {
-  if (score >= 95) return 1;
-  if (score >= 90) return 5;
-  if (score >= 80) return 15;
-  if (score >= 70) return 25;
-  if (score >= 60) return 40;
-  if (score >= 50) return 50;
-  return 70;
-}
+import { calculatePercentile } from '../lib/score';
 
 function ShareScore({ score, username, onToast }) {
   const [sharing, setSharing] = useState(false);
@@ -29,9 +20,9 @@ function ShareScore({ score, username, onToast }) {
     return t;
   };
 
-  const percentile = getPercentile(score);
+  const percentileText = calculatePercentile(score);
   const link = 'https://anna.partners/apps/gitfolioscore';
-  const text = `I just scored ${score}/100 on GitFolioScore! I'm in the top ${percentile}% of developers. Analyze your GitHub at ${link}`;
+  const text = `I just scored ${score}/100 on GitFolioScore! I'm in the ${percentileText} of developers. Analyze your GitHub at ${link}`;
 
   const safeWriteClipboard = async (str) => {
     try {

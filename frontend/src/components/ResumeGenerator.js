@@ -3,6 +3,7 @@ import { FileText, Download, RefreshCw, AlertCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { waitForAnna } from '../lib/llm';
 import { sanitizeForPDF } from '../lib/pdfSanitizer';
+import { calculatePercentile } from '../lib/score';
 import ExportPreviewModal from './ExportPreviewModal';
 
 /**
@@ -50,13 +51,13 @@ function ResumeGenerator({ report, advice, onToast }) {
       .filter(Boolean)
       .join(', ');
     const repoLines = topRepos.slice(0, 4).map(
-      (r) => sanitizeForPDF(`- ${r.name}${r.language ? ` (${r.language})` : ''} -- ${r.description || 'Open-source project.'} * ${r.stars ?? 0} stars`)
+      (r) => sanitizeForPDF(`- ${r.name}${r.language ? ` (${r.language})` : ''} -- ${r.description || 'Open-source project.'} * ${r.stars ?? r.stargazers_count ?? 0} stars`)
     );
     const actionLines = (advice?.actions || []).slice(0, 3).map((a) => sanitizeForPDF(`- ${a.action}`));
 
     return [
       `RESUME -- ${name.toUpperCase()}`,
-      `GitHub: https://github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '?'}/100`,
+      `GitHub: https://github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '?'}/100 (${calculatePercentile(report?.score)})`,
       bio ? `Bio: ${bio}` : '',
       '',
       '-- SKILLS ------------------------------',
@@ -79,7 +80,7 @@ function ResumeGenerator({ report, advice, onToast }) {
         await waitForAnna(2500);
         if (window.anna?.llm?.complete) {
           const repoSummaries = topRepos.slice(0, 4).map(
-            (r) => `${r.name} (${r.language || 'N/A'}): ${r.description || 'No description.'} [${r.stars ?? 0} ★]`
+            (r) => `${r.name} (${r.language || 'N/A'}): ${r.description || 'No description.'} [${r.stars ?? r.stargazers_count ?? 0} ★]`
           ).join('\n');
 
           const response = await window.anna.llm.complete(
@@ -101,9 +102,8 @@ function ResumeGenerator({ report, advice, onToast }) {
           );
           resumeText = (response?.content?.text || response?.text || '').trim();
         }
-      } catch (bridgeErr) {
-        // eslint-disable-next-line no-console
-        console.warn('Anna Bridge unavailable/timed out. Generating static resume:', bridgeErr);
+      } catch {
+        // Fall back to static deterministic resume silently
       }
 
       if (!resumeText) {
@@ -142,9 +142,8 @@ function ResumeGenerator({ report, advice, onToast }) {
         fileName,
         fileType: 'pdf',
       });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('Resume generation falling back to static template:', err);
+    } catch {
+      // Fall back to static template silently on canvas/export error
       const fallbackPng =
         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       setPreview(buildResumeText());
@@ -159,7 +158,7 @@ function ResumeGenerator({ report, advice, onToast }) {
   };
 
   const safeName = sanitizeForPDF(profile.name || profile.login || 'Developer Resume');
-  const safeContact = sanitizeForPDF(`github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '?'}/100 | https://anna.partners/apps/gitfolioscore`);
+  const safeContact = sanitizeForPDF(`github.com/${profile.login || ''} | GitFolioScore: ${report?.score ?? '?'}/100 (${calculatePercentile(report?.score)}) | https://anna.partners/apps/gitfolioscore`);
   const currentResumeText = preview || buildResumeText();
 
   return (

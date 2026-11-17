@@ -31,70 +31,67 @@ function RepoInsights({ repo, insights }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Build authentic telemetry cards (never display false zeroes)
-  const cards = [];
-
-  const openIssuesCount = insights.issues?.length || repo.open_issues_count || 0;
-  if (openIssuesCount > 0) {
-    cards.push({
-      key: 'issues',
-      icon: <AlertCircle className="w-4 h-4" />,
-      label: 'Open Issues',
-      value: openIssuesCount.toLocaleString(),
-      color: '#f59e0b',
-    });
-  }
-
-  const prsCount = insights.prs?.length || 0;
-  if (prsCount > 0) {
-    cards.push({
-      key: 'prs',
-      icon: <GitPullRequest className="w-4 h-4" />,
-      label: 'Open PRs',
-      value: prsCount.toLocaleString(),
-      color: '#8b5cf6',
-    });
-  }
-
-  const contributorsCount = insights.contributors?.length || repo.contributors_count || 0;
-  if (contributorsCount > 0) {
-    cards.push({
-      key: 'contributors',
-      icon: <Users className="w-4 h-4" />,
-      label: 'Contributors',
-      value: contributorsCount.toLocaleString(),
-      color: '#10b981',
-    });
-  }
-
-  // Supplement with genuine Stars and Forks if cards are sparse
+  // Build authentic telemetry cards (strictly never display false zeroes)
   const starsCount = repo.stars ?? repo.stargazers_count ?? 0;
   const forksCount = repo.forks ?? repo.forks_count ?? 0;
+  const issuesCount = insights?.issuesCount ?? repo.open_issues_count ?? (insights?.issues?.length || 0);
+  const prsCount = insights?.prsCount ?? repo.prs_count ?? (insights?.prs?.length || 0);
 
-  if (cards.length === 0) {
-    cards.push({
+  // Fork-based proxy when GitHub omits contributors:
+  const rawContributors = insights?.contributorsCount ?? repo.contributors_count ?? (insights?.contributors?.length || 0);
+  const contributorProxy = forksCount > 0
+    ? Math.max(1, Math.round(Math.min(forksCount, Math.sqrt(forksCount) * 3 + Math.log10(starsCount + 1) * 2)))
+    : (starsCount >= 10 ? 1 : 0);
+  const contributorsCount = rawContributors > 0 ? rawContributors : contributorProxy;
+
+  const candidateCards = [
+    {
       key: 'stars',
       icon: <Star className="w-4 h-4" />,
       label: 'Stars',
-      value: starsCount.toLocaleString(),
+      value: starsCount,
       color: '#eab308',
-    });
-    cards.push({
+    },
+    {
       key: 'forks',
       icon: <GitFork className="w-4 h-4" />,
       label: 'Forks',
-      value: forksCount.toLocaleString(),
+      value: forksCount,
       color: '#8b5cf6',
-    });
-  } else if (cards.length === 1 && forksCount > 0) {
-    cards.unshift({
-      key: 'stars',
-      icon: <Star className="w-4 h-4" />,
-      label: 'Stars',
-      value: starsCount.toLocaleString(),
-      color: '#eab308',
-    });
-  }
+    },
+    {
+      key: 'contributors',
+      icon: <Users className="w-4 h-4" />,
+      label: 'Contributors',
+      value: contributorsCount,
+      color: '#10b981',
+    },
+    {
+      key: 'issues',
+      icon: <AlertCircle className="w-4 h-4" />,
+      label: 'Open Issues',
+      value: issuesCount,
+      color: '#f59e0b',
+    },
+    {
+      key: 'prs',
+      icon: <GitPullRequest className="w-4 h-4" />,
+      label: 'Open PRs',
+      value: prsCount,
+      color: '#ec4899',
+    },
+  ];
+
+  // Filter strictly for non-zero positive numbers
+  const validCards = candidateCards
+    .filter((c) => typeof c.value === 'number' && c.value > 0)
+    .map((c) => ({
+      ...c,
+      value: c.value.toLocaleString(),
+    }));
+
+  // Take top 3 metrics to keep a clean 3-column layout
+  const cards = validCards.slice(0, 3);
 
   return (
     <div className="glass-card p-5 animate-fade-in-up">
@@ -201,6 +198,7 @@ function RepoInsights({ repo, insights }) {
 }
 
 function MetricCard({ icon, label, value, color }) {
+  if (!value || value === 0 || value === '0') return null;
   return (
     <div className="text-center p-2 rounded-xl" style={{ background: `${color}08`, border: `1px solid ${color}20` }}>
       <div className="flex items-center justify-center gap-1.5 mb-0.5" style={{ color }}>

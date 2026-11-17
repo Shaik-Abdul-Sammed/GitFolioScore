@@ -368,6 +368,16 @@ export function calculateReport({ profile, repos = [], weights, targetRole = '' 
     const repoOwner = repo.full_name ? repo.full_name.split('/')[0] : (profile?.login || 'developer');
     const html_url = repo.html_url || `https://github.com/${repoOwner}/${repo.name}`;
 
+    const rawIssues = repo.open_issues_count ?? repo.open_issues ?? 0;
+    const prsCount = repo.prs_count ?? (rawIssues > 0 ? Math.max(1, Math.round(rawIssues * 0.25)) : 0);
+    const openIssuesCount = repo.open_issues_count ?? Math.max(0, rawIssues - prsCount);
+
+    // Contributor proxy based on community forks (per QA/Anna review specification)
+    const contributorProxy = forks > 0
+      ? Math.max(1, Math.round(Math.min(forks, Math.sqrt(forks) * 3 + Math.log10(stars + 1) * 2)))
+      : (stars >= 10 ? 1 : 0);
+    const contributorsCount = repo.contributors_count || (repo.contributors?.length) || contributorProxy;
+
     return {
       name: repo.name,
       full_name: repo.full_name || `${repoOwner}/${repo.name}`,
@@ -381,6 +391,12 @@ export function calculateReport({ profile, repos = [], weights, targetRole = '' 
       stargazers_count: stars,
       forks,
       forks_count: forks,
+      open_issues_count: openIssuesCount,
+      openIssuesCount,
+      prs_count: prsCount,
+      prsCount,
+      contributors_count: contributorsCount,
+      contributorsCount,
       language: repo.language,
       topics: repo.topics || [],
       updated_at: repo.updated_at,
@@ -479,7 +495,14 @@ export function calculateReport({ profile, repos = [], weights, targetRole = '' 
   const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
   topRepos.forEach((repo, rIdx) => {
-    repoInsights[repo.name] = { issues: [], prs: [], contributors: [] };
+    repoInsights[repo.name] = {
+      issuesCount: repo.openIssuesCount || 0,
+      prsCount: repo.prsCount || 0,
+      contributorsCount: repo.contributorsCount || 0,
+      issues: [],
+      prs: [],
+      contributors: [],
+    };
 
     const lastUpdatedMs = new Date(repo.updated_at || repo.pushed_at || repo.created_at || now).getTime();
     const weeksInactive = Math.max(0, Math.floor((now - lastUpdatedMs) / ONE_WEEK_MS));

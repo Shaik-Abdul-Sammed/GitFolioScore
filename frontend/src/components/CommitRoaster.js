@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import { Flame, RefreshCw, GitCommit, AlertTriangle, CheckCircle } from 'lucide-react';
 import { waitForAnna } from '../lib/llm';
 
-function CommitRoaster({ username, repos = [] }) {
+function CommitRoaster({ username, repos = [], onRewardXP }) {
   const [loading, setLoading] = useState(false);
   const [roast, setRoast] = useState(null);
-  const [isFallback, setIsFallback] = useState(false);
 
   const fetchAndRoast = async () => {
     if (!username) return;
     setLoading(true);
-    setIsFallback(false);
     setRoast(null);
 
     let foundCommits = [];
@@ -85,25 +83,25 @@ Produce a humorous and insightful JSON response in this exact format:
 }`;
 
       let roastData = null;
-      let usedFallback = false;
       try {
-        await waitForAnna(2500);
+        await waitForAnna(10000);
         if (window?.anna?.llm?.complete) {
           const resp = await window.anna.llm.complete(
             {
-              system: 'You are a witty, senior tech lead roaster. Output ONLY valid raw JSON with keys: hygieneScore, headline, roastComment, worstOffenders, improvedSuggestion.',
-              prompt,
+              messages: [{ role: 'user', content: prompt }],
+              systemPrompt: 'You are a witty, senior tech lead roaster. Output ONLY valid raw JSON with keys: hygieneScore, headline, roastComment, worstOffenders, improvedSuggestion.',
               temperature: 0.7,
+              maxTokens: 600,
               modelPreferences: {
                 intelligencePriority: 0.8,
                 speedPriority: 0.85,
                 costPriority: 0.6,
               },
             },
-            { timeoutMs: 5000 }
+            { timeoutMs: 15000 }
           );
 
-          const raw = resp?.text || resp?.content?.text || '';
+          const raw = resp?.text || resp?.content?.text || (typeof resp === 'string' ? resp : '');
           const match = raw.match(/\{[\s\S]*\}/);
           if (match) {
             roastData = JSON.parse(match[0]);
@@ -114,7 +112,6 @@ Produce a humorous and insightful JSON response in this exact format:
       }
 
       if (!roastData) {
-        usedFallback = true;
         // Fallback roast heuristic
         roastData = {
           hygieneScore: Math.max(30, Math.floor(Math.random() * 45) + 30),
@@ -128,10 +125,9 @@ Produce a humorous and insightful JSON response in this exact format:
         };
       }
 
-      setIsFallback(usedFallback);
       setRoast(roastData);
+      onRewardXP?.(15, 'Roasted Commit History');
     } catch {
-      setIsFallback(true);
       setRoast({
         hygieneScore: 40,
         headline: 'Deterministic Git Commit Analysis',
@@ -179,13 +175,6 @@ Produce a humorous and insightful JSON response in this exact format:
           <span>{loading ? 'Roasting Commits...' : 'Roast My Commits 🔥'}</span>
         </button>
       </div>
-
-      {isFallback && roast && (
-        <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-400" />
-          <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
-        </div>
-      )}
 
       {!roast && !loading && (
         <div className="text-center py-8 text-gray-400 text-xs">

@@ -51,7 +51,7 @@ import { playLevelUpSound, playTypewriterClick } from './lib/audio';
 import OnboardingModal from './components/OnboardingModal';
 import QuotaModal from './components/QuotaModal';
 import ScoreExplainerModal from './components/ScoreExplainerModal';
-import { loadXP, addXPPoints } from './lib/xpStorage';
+import { loadXP, addXPPoints, clearStoredXP } from './lib/xpStorage';
 import {
   Moon,
   Sun,
@@ -401,6 +401,12 @@ function App() {
 
   const handleRewardXP = async (amount, reason) => {
     try {
+      if (amount === 0) {
+        await clearStoredXP();
+        setXp(0);
+        showToast('XP reset to 0 (Level 1 Code Initiate)', 'info');
+        return;
+      }
       const res = await addXPPoints(amount);
       setXp(res.newXP);
       if (res.leveledUp) {
@@ -718,8 +724,9 @@ function App() {
 
       // Dynamic Gaming XP Rewards based on discovery & growth
       try {
-        const earnedXP = 10;
-        const xpReason = 'Analyzed GitHub profile';
+        const isElite = (report.score || 0) >= 80;
+        const earnedXP = isElite ? 40 : 25;
+        const xpReason = isElite ? 'Scouted Elite Developer (80+ Score)' : 'Audited Developer Portfolio';
 
         handleRewardXP(earnedXP, xpReason);
 
@@ -950,6 +957,7 @@ function App() {
       if (state === 'advised' || advice) {
         runLLMAdvice(updatedReport, newRole, roastMode, persona);
       }
+      handleRewardXP(15, `Cross-Role Benchmark (${newRole})`);
       showToast(`Target role set to ${newRole}: score updated (${updatedReport.score}/100)`);
     }
   };
@@ -1727,10 +1735,19 @@ function App() {
             </div>
 
             {/* Feature 2: AI Commit Message Roaster */}
-            <CommitRoaster username={username} repos={data.repos || data.topRepos} />
+            <CommitRoaster
+              username={username}
+              repos={data.repos || data.topRepos}
+              onRewardXP={handleRewardXP}
+            />
 
             {/* Feature 8: AI Target Company OSINT */}
-            <CompanyOSINT username={username} data={data} repos={data.repos || data.topRepos} />
+            <CompanyOSINT
+              username={username}
+              data={data}
+              repos={data.repos || data.topRepos}
+              onRewardXP={handleRewardXP}
+            />
 
             {/* Score Breakdown */}
             <Breakdown

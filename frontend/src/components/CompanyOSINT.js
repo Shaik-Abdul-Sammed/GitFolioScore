@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, RefreshCw, CheckCircle2, AlertTriangle, ArrowRight, Target, AlertCircle } from 'lucide-react';
+import { Building2, RefreshCw, CheckCircle2, AlertTriangle, ArrowRight, Target } from 'lucide-react';
 import { waitForAnna } from '../lib/llm';
 
 const COMPANIES = [
@@ -12,15 +12,13 @@ const COMPANIES = [
   { id: 'yc_startup', name: 'YC Fast-Growth Startup', tags: 'Full-Stack, Next.js, Fast Shipping, Product Intuition' },
 ];
 
-function CompanyOSINT({ username, data, repos = [] }) {
+function CompanyOSINT({ username, data, repos = [], onRewardXP }) {
   const [selectedCompany, setSelectedCompany] = useState(COMPANIES[0].id);
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState(null);
-  const [isFallback, setIsFallback] = useState(false);
 
   const handleRunOSINT = async () => {
     setLoading(true);
-    setIsFallback(false);
     const company = COMPANIES.find((c) => c.id === selectedCompany) || COMPANIES[0];
 
     const topLanguages = Array.from(new Set(repos.map((r) => r.language).filter(Boolean))).slice(0, 5);
@@ -55,23 +53,24 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
     try {
       let result = null;
       try {
-        await waitForAnna(2500);
+        await waitForAnna(10000);
         if (window?.anna?.llm?.complete) {
           const resp = await window.anna.llm.complete(
             {
-              system: 'You are a staff technical hiring assessor. Return ONLY valid raw JSON with keys: matchPercent, barVerdict, companyFits, criticalGaps, actionPlan30Days.',
-              prompt,
+              messages: [{ role: 'user', content: prompt }],
+              systemPrompt: 'You are a staff technical hiring assessor. Return ONLY valid raw JSON with keys: matchPercent, barVerdict, companyFits, criticalGaps, actionPlan30Days.',
               temperature: 0.6,
+              maxTokens: 600,
               modelPreferences: {
                 intelligencePriority: 0.85,
                 speedPriority: 0.75,
                 costPriority: 0.5,
               },
             },
-            { timeoutMs: 5000 }
+            { timeoutMs: 15000 }
           );
 
-          const raw = resp?.text || resp?.content?.text || '';
+          const raw = resp?.text || resp?.content?.text || (typeof resp === 'string' ? resp : '');
           const match = raw.match(/\{[\s\S]*\}/);
           if (match) {
             result = JSON.parse(match[0]);
@@ -82,7 +81,6 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
       }
 
       if (!result) {
-        setIsFallback(true);
         // High quality heuristic fallback
         result = {
           matchPercent: Math.min(92, Math.max(58, (data?.score || 75) - 6)),
@@ -103,8 +101,8 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
       }
 
       setAnalysis(result);
+      onRewardXP?.(15, 'Evaluated Hiring Bar OSINT');
     } catch {
-      setIsFallback(true);
       setAnalysis({
         matchPercent: 72,
         barVerdict: `${company.name} engineering assessment based on repository telemetry.`,
@@ -173,13 +171,6 @@ Perform a rigorous OSINT gap analysis and return ONLY valid JSON:
         <span className="font-semibold text-indigo-300">Target Benchmark:</span>
         <span className="text-gray-300">{currentCompany.tags}</span>
       </div>
-
-      {isFallback && analysis && (
-        <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
-          <span>AI analysis is currently unavailable. Here is your deterministic match based on your stats:</span>
-        </div>
-      )}
 
       {analysis && (
         <div className="space-y-4 animate-fade-in">

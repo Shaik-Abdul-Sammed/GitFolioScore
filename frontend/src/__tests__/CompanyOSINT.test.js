@@ -54,11 +54,7 @@ describe('CompanyOSINT', () => {
     fireEvent.click(runBtn);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/AI analysis is currently unavailable. Here is your deterministic match based on your stats:/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/engineering bar demands proof of production reliability/i)).toBeInTheDocument();
     });
-
-    expect(screen.getByText(/engineering bar demands proof of production reliability/i)).toBeInTheDocument();
   });
 });

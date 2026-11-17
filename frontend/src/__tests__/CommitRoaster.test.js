@@ -66,12 +66,9 @@ describe('CommitRoaster', () => {
     fireEvent.click(roastBtn);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/AI analysis is currently unavailable. Here is your deterministic match based on your stats:/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Git Commit Disaster Zone/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Git Commit Disaster Zone/i)).toBeInTheDocument();
     expect(screen.getByText(/Your commits read like a stream of consciousness/i)).toBeInTheDocument();
   });
 });

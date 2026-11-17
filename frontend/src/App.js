@@ -281,16 +281,18 @@ function App() {
   const [auditCount, setAuditCount] = useState(0);
   const { i18n } = useTranslation();
 
-  // Force clear stale cache on fresh install / new version (v0.4.7)
+  // Force clear stale cache on fresh install / new version (v0.5.0)
   useEffect(() => {
-    const CURRENT_VERSION = 'v0.4.7';
+    const CURRENT_VERSION = 'v0.5.0';
     try {
       if (typeof localStorage !== 'undefined') {
         if (localStorage.getItem('app_version') !== CURRENT_VERSION) {
           localStorage.clear();
           localStorage.setItem('app_version', CURRENT_VERSION);
-          localStorage.setItem('gitfolioscore_xp', '0');
+          localStorage.setItem('gitfolioscore_xp_v5', '0');
+          localStorage.setItem('gitfolioscore_v5_init', 'true');
           if (window.anna?.storage?.set) {
+            window.anna.storage.set({ key: 'gitfolioscore_xp_v5', value: 0 }).catch(() => {});
             window.anna.storage.set({ key: 'gitfolioscore_xp', value: 0 }).catch(() => {});
           }
           setXp(0);
@@ -309,9 +311,12 @@ function App() {
         try {
           if (typeof localStorage !== 'undefined') {
             localStorage.removeItem('gitfolioscore_xp');
-            localStorage.setItem('gitfolioscore_xp', '0');
+            localStorage.removeItem('gitfolioscore_xp_v5');
+            localStorage.setItem('gitfolioscore_xp_v5', '0');
+            localStorage.setItem('gitfolioscore_v5_init', 'true');
           }
           if (window.anna?.storage?.set) {
+            await window.anna.storage.set({ key: 'gitfolioscore_xp_v5', value: 0 }).catch(() => {});
             await window.anna.storage.set({ key: 'gitfolioscore_xp', value: 0 }).catch(() => {});
           }
         } catch {
@@ -328,13 +333,15 @@ function App() {
 
     if (process.env.NODE_ENV !== 'test') {
       // Force one-time reset of any cached/stale legacy XP key so everyone starts fresh at Level 0 (0 XP)
-      const XP_RESET_KEY = 'gitfolioscore_xp_reset_to_zero_v3';
+      const XP_RESET_KEY = 'gitfolioscore_xp_reset_to_zero_v5';
       try {
         if (typeof localStorage !== 'undefined' && !localStorage.getItem(XP_RESET_KEY)) {
           localStorage.setItem(XP_RESET_KEY, 'true');
           localStorage.removeItem('gitfolioscore_xp');
-          localStorage.setItem('gitfolioscore_xp', '0');
+          localStorage.setItem('gitfolioscore_xp_v5', '0');
+          localStorage.setItem('gitfolioscore_v5_init', 'true');
           if (window?.anna?.storage?.set) {
+            window.anna.storage.set({ key: 'gitfolioscore_xp_v5', value: 0 }).catch(() => {});
             window.anna.storage.set({ key: 'gitfolioscore_xp', value: 0 }).catch(() => {});
           }
           if (isMounted) setXp(0);
@@ -724,7 +731,12 @@ function App() {
       }
 
       // 3. Pure scoring computation with Target Role benchmark
-      const report = calculateReport({ profile, repos, weights, targetRole: activeRole });
+      const report = calculateReport({
+        profile,
+        repos,
+        weights: showWeights ? weights : undefined,
+        targetRole: activeRole,
+      });
       setData(report);
       setState('scored');
       playLevelUpSound();
@@ -956,7 +968,7 @@ function App() {
       const updatedReport = calculateReport({
         profile: data.profile,
         repos: activeRepos,
-        weights,
+        weights: showWeights ? weights : undefined,
         targetRole: newRole,
       });
       updatedReport.repos = activeRepos;
@@ -965,7 +977,7 @@ function App() {
         runLLMAdvice(updatedReport, newRole, roastMode, persona);
       }
       handleRewardXP(15, `Cross-Role Benchmark (${newRole})`);
-      showToast(`Target role set to ${newRole}: score updated (${updatedReport.score}/100)`);
+      showToast(`Target role set to ${newRole} (Score: ${updatedReport.score}/100)`);
     }
   };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import LinkedInSync, { evaluateDeterministicLinkedIn } from '../components/LinkedInSync';
+import LinkedInSync, { evaluateDeterministicLinkedIn, validateLinkedInInput } from '../components/LinkedInSync';
 
 describe('LinkedInSync Component', () => {
   const mockReport = {
@@ -105,6 +105,51 @@ describe('LinkedInSync Component', () => {
 
       expect(res.verdict).toContain('claims "Fullstack Engineer"');
       expect(res.consistencyScore).toBe(82);
+    });
+  });
+
+  describe('validateLinkedInInput & Gibberish Protection', () => {
+    test('catches keyboard mashing and vowel-free strings like gjvnszvbcjxz', () => {
+      const roleCheck = validateLinkedInInput('gjvnszvbcjxz', '');
+      expect(roleCheck.valid).toBe(false);
+      expect(roleCheck.message).toContain('Invalid role text');
+
+      const textCheck = validateLinkedInInput('', 'gjvnszvbcjxz');
+      expect(textCheck.valid).toBe(false);
+      expect(textCheck.message).toContain('unreadable or random characters');
+    });
+
+    test('rejects empty input when not in no-LinkedIn mode', () => {
+      const emptyCheck = validateLinkedInInput('', '', false);
+      expect(emptyCheck.valid).toBe(false);
+      expect(emptyCheck.message).toContain('Please provide either');
+    });
+
+    test('allows legitimate professional job titles and bios', () => {
+      const validRole = validateLinkedInInput('Frontend Engineer', '');
+      expect(validRole.valid).toBe(true);
+
+      const validSummary = validateLinkedInInput('', 'Software engineer with 4 years experience building React and Node.js applications.');
+      expect(validSummary.valid).toBe(true);
+
+      const validBoth = validateLinkedInInput('DevOps & Cloud Engineer', 'Passionate about Kubernetes, Docker, and automated CI/CD pipelines.');
+      expect(validBoth.valid).toBe(true);
+    });
+
+    test('displays error message in UI and blocks step 2 when gibberish is entered', () => {
+      render(<LinkedInSync report={mockReport} />);
+      const trigger = screen.getByRole('button', { name: /Expand LinkedIn Sync/i });
+      fireEvent.click(trigger);
+
+      const input = screen.getByPlaceholderText(/Senior Fullstack Engineer/i);
+      fireEvent.change(input, { target: { value: 'gjvnszvbcjxz' } });
+
+      const auditBtn = screen.getByRole('button', { name: /Audit Consistency Score/i });
+      fireEvent.click(auditBtn);
+
+      expect(screen.getByText(/Invalid role text/i)).toBeInTheDocument();
+      // Verifies Step 2 is blocked (Consistency Score breakdown is not rendered)
+      expect(screen.queryByText(/Consistency Score/i)).not.toBeInTheDocument();
     });
   });
 });

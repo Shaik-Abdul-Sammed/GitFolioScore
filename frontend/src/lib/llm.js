@@ -49,23 +49,44 @@ export async function initAnnaSDK() {
       }
     }
 
-    // 2. Discover credentials from URL (wid & t)
+    // 2. Discover credentials from URL (wid & t) or iframe window.name / hash
     try {
       const params = new URLSearchParams(window.location.search);
-      const wid = params.get('wid');
-      const token = params.get('t');
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#\/?/, ''));
+      let wid = params.get('wid') || hashParams.get('wid');
+      let token = params.get('t') || hashParams.get('t');
+
+      if (!wid && window.name) {
+        try {
+          const parsedName = JSON.parse(window.name);
+          wid = parsedName?.wid || parsedName?.windowUuid;
+          token = token || parsedName?.t || parsedName?.token;
+        } catch {
+          // window.name not JSON
+        }
+      }
 
       if (wid && token) {
-        // Anna host serves the official runtime SDK at /static/anna-apps/_sdk/latest/index.js
+        const sdkUrls = [
+          '/static/anna-apps/_sdk/latest/index.js',
+          `${window.location.origin}/static/anna-apps/_sdk/latest/index.js`,
+          'https://anna.partners/static/anna-apps/_sdk/latest/index.js',
+        ];
         // eslint-disable-next-line no-new-func
         const importDynamic = new Function('url', 'return import(url)');
-        const mod = await importDynamic('/static/anna-apps/_sdk/latest/index.js');
-        if (mod && mod.AnnaAppRuntime) {
-          const rt = await mod.AnnaAppRuntime.connect({ windowUuid: wid, token });
-          window.anna = rt;
-          // eslint-disable-next-line no-console
-          console.log('[Anna Bridge] Successfully connected to AnnaAppRuntime!');
-          return rt;
+        for (const sdkUrl of sdkUrls) {
+          try {
+            const mod = await importDynamic(sdkUrl);
+            if (mod && mod.AnnaAppRuntime) {
+              const rt = await mod.AnnaAppRuntime.connect({ windowUuid: wid, token });
+              window.anna = rt;
+              // eslint-disable-next-line no-console
+              console.log('[Anna Bridge] Successfully connected to AnnaAppRuntime!');
+              return rt;
+            }
+          } catch {
+            // try next candidate URL
+          }
         }
       }
     } catch (err) {
@@ -107,16 +128,44 @@ export async function waitForAnna(timeoutMs = 15000) {
     if (window.anna?.llm?.complete) {
       return window.anna;
     }
+    if (typeof window.anna?.complete === 'function') {
+      window.anna.llm = window.anna.llm || {};
+      window.anna.llm.complete = window.anna.complete;
+      return window.anna;
+    }
+    if (typeof window.anna?.ai?.complete === 'function') {
+      window.anna.llm = window.anna.llm || {};
+      window.anna.llm.complete = window.anna.ai.complete;
+      return window.anna;
+    }
 
-    // 2. Iframe Parent Check: fallback to window.parent.anna if window.anna is missing
-    if (!window.anna && typeof window.parent !== 'undefined' && window.parent && window.parent !== window) {
+    // 2. Iframe Parent Check: fallback to window.parent.anna if window.anna.llm.complete is missing
+    if (!window.anna?.llm?.complete && typeof window.parent !== 'undefined' && window.parent && window.parent !== window) {
       try {
         if (window.parent.anna?.llm?.complete) {
           window.anna = window.parent.anna;
           return window.anna;
         }
+        if (typeof window.parent.anna?.complete === 'function') {
+          window.anna = window.parent.anna;
+          window.anna.llm = window.anna.llm || {};
+          window.anna.llm.complete = window.parent.anna.complete;
+          return window.anna;
+        }
       } catch {
         // Cross-origin iframe parent access might throw security error, ignore safely
+      }
+    }
+
+    // 3. Top window fallback
+    if (!window.anna?.llm?.complete && typeof window.top !== 'undefined' && window.top && window.top !== window && window.top !== window.parent) {
+      try {
+        if (window.top.anna?.llm?.complete) {
+          window.anna = window.top.anna;
+          return window.anna;
+        }
+      } catch {
+        // Cross-origin top access might throw security error, ignore safely
       }
     }
 

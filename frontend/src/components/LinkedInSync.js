@@ -49,7 +49,122 @@ function textContainsKeyword(text, keyword) {
   return new RegExp(`(^|[^a-zA-Z0-9])${escaped}([^a-zA-Z0-9]|$)`, 'i').test(text);
 }
 
+export function validateLinkedInInput(jobTitle = '', linkedInText = '', noLinkedInMode = false) {
+  const role = (jobTitle || '').trim();
+  const text = (linkedInText || '').trim();
+
+  // If in noLinkedInMode and both inputs are blank, user relies on default portfolio kickstart
+  if (noLinkedInMode && !role && !text) {
+    return { valid: true };
+  }
+
+  if (!role && !text) {
+    return {
+      valid: false,
+      message: 'Please provide either a Job Title / Target Role or paste your LinkedIn About/Experience summary.',
+    };
+  }
+
+  const isGibberishToken = (token) => {
+    const lettersOnly = token.toLowerCase().replace(/[^a-z]/g, '');
+    if (lettersOnly.length < 5) return false;
+
+    const COMMON_ACRONYMS = new Set(['html', 'css', 'aws', 'gcp', 'sql', 'grpc', 'rest', 'http', 'saas', 'cicd', 'k8s', 'devops', 'nextjs', 'react']);
+    if (COMMON_ACRONYMS.has(lettersOnly)) return false;
+
+    // Zero or negligible vowels in long string (e.g. "gjvnszvbcjxz")
+    const vowels = (lettersOnly.match(/[aeiouy]/g) || []).length;
+    const vowelRatio = vowels / lettersOnly.length;
+    if (lettersOnly.length >= 6 && vowelRatio < 0.12) return true;
+
+    // 5 or more consecutive consonants (e.g. "gjvnsz")
+    if (/[bcdfghjklmnpqrstvwxz]{5,}/i.test(lettersOnly)) return true;
+
+    // 3 or more repeated identical characters (e.g. "aaaaa", "zzzz")
+    if (/(.)\1{2,}/i.test(lettersOnly)) return true;
+
+    // Low unique character entropy in long word (e.g. "abcabcabc")
+    const uniqueChars = new Set(lettersOnly).size;
+    if (lettersOnly.length >= 8 && uniqueChars <= 3) return true;
+
+    return false;
+  };
+
+  // Check job title if provided
+  if (role) {
+    if (role.length < 2) {
+      return { valid: false, message: 'Job title is too short. Please enter a valid role (e.g., "Frontend Engineer").' };
+    }
+    const roleWords = role.split(/\s+/).filter(Boolean);
+    const gibberishWord = roleWords.find(isGibberishToken);
+    if (gibberishWord) {
+      return {
+        valid: false,
+        message: `Invalid role text ("${gibberishWord}"). Please enter a meaningful job title or career track.`,
+      };
+    }
+  }
+
+  // Check LinkedIn text if provided
+  if (text) {
+    const words = text.split(/\s+/).filter((w) => w.length > 0);
+    const gibberishWords = words.filter(isGibberishToken);
+
+    if (gibberishWords.length > 0 && (gibberishWords.length / words.length >= 0.30 || words.length <= 2)) {
+      return {
+        valid: false,
+        message: `The text appears to contain unreadable or random characters ("${gibberishWords[0]}"). Please enter genuine LinkedIn About or Experience text.`,
+      };
+    }
+
+    if (text.length < 15 && !role) {
+      return {
+        valid: false,
+        message: 'Summary is too brief. Please enter at least a complete sentence describing your experience, or provide a target role.',
+      };
+    }
+
+    const COMMON_WORDS = new Set([
+      'i', 'im', "i'm", 'me', 'my', 'we', 'our', 'a', 'an', 'the', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'with', 'from', 'as', 'by', 'about',
+      'is', 'are', 'was', 'were', 'have', 'has', 'had', 'been', 'built', 'worked', 'lead', 'managed', 'created', 'developed', 'design', 'scaling',
+      'software', 'engineer', 'developer', 'frontend', 'backend', 'fullstack', 'mobile', 'devops', 'cloud', 'data', 'web', 'system', 'systems',
+      'student', 'intern', 'architect', 'programming', 'code', 'experience', 'projects', 'tech', 'stack', 'javascript', 'typescript', 'python',
+      'react', 'node', 'java', 'golang', 'rust', 'c++', 'c#', 'aws', 'docker', 'kubernetes', 'html', 'css', 'sql', 'database', 'api', 'apis',
+      'years', 'team', 'company', 'solutions', 'scalable', 'applications', 'learning', 'performance', 'open', 'source', 'github', 'building',
+      'looking', 'opportunity', 'skills', 'tools', 'passionate', 'computer', 'science', 'technology', 'product', 'production', 'services', 'management'
+    ]);
+
+    const recognizedCount = words.filter((w) => {
+      const clean = w.toLowerCase().replace(/[^a-z]/g, '');
+      return COMMON_WORDS.has(clean) || clean.length <= 2;
+    }).length;
+
+    if (words.length >= 3 && recognizedCount === 0) {
+      return {
+        valid: false,
+        message: 'Unable to recognize standard professional keywords. Please enter your real LinkedIn summary or experience.',
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
 export function evaluateDeterministicLinkedIn(jobTitle = '', linkedInText = '', languages = [], topRepos = [], roastMode = false) {
+  const validation = validateLinkedInInput(jobTitle, linkedInText, false);
+  if (!validation.valid) {
+    return {
+      consistencyScore: 30,
+      verdict: `Unverified Profile Claims: The provided LinkedIn text does not contain recognized technical qualifications or industry keywords.`,
+      discrepancies: [
+        `Claimed profile information lacks verified industry terminology matching your GitHub repositories.`,
+      ],
+      recommendations: [
+        `Provide concrete job titles and technical accomplishments to properly benchmark against your GitHub code.`,
+      ],
+    };
+  }
+
   const claimedText = `${jobTitle} ${linkedInText}`.toLowerCase().trim();
   const repoLangs = (languages || [])
     .map((l) => (typeof l === 'string' ? l : (Array.isArray(l) ? l[0] : l.lang || l.name || '')).toLowerCase())
@@ -174,7 +289,12 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
   const handleAudit = async () => {
     const effectiveRole = jobTitle.trim() || (noLinkedInMode ? 'Software Engineer' : '');
     const effectiveText = linkedInText.trim() || (noLinkedInMode ? `Targeting ${effectiveRole} engineering positions based on active GitHub production code.` : '');
-    if (!effectiveText && !effectiveRole) return;
+
+    const validation = validateLinkedInInput(jobTitle, linkedInText, noLinkedInMode);
+    if (!validation.valid) {
+      setAuditError(validation.message);
+      return;
+    }
 
     setAuditing(true);
     setAuditError('');
@@ -350,7 +470,10 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
                   type="text"
                   placeholder={noLinkedInMode ? 'e.g. Frontend Engineer, Cloud Architect, Fullstack Developer' : 'e.g. Senior Fullstack Engineer | React, Node.js & Cloud Architect'}
                   value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
+                  onChange={(e) => {
+                    setJobTitle(e.target.value);
+                    if (auditError) setAuditError('');
+                  }}
                   className="w-full text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-500"
                   style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                 />
@@ -383,7 +506,10 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
                   style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                   placeholder={noLinkedInMode ? 'e.g. Building full-stack web applications with React and Node.js; exploring cloud deployment with Docker...' : 'e.g. Passionate full-stack engineer with 4 years building reactive user interfaces in React and robust backend microservices in Node...'}
                   value={linkedInText}
-                  onChange={(e) => setLinkedInText(e.target.value)}
+                  onChange={(e) => {
+                    setLinkedInText(e.target.value);
+                    if (auditError) setAuditError('');
+                  }}
                 />
                 <div className="flex justify-end pr-1 mt-1">
                   <span className="text-[10px] text-gray-400">
@@ -391,6 +517,13 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
                   </span>
                 </div>
               </div>
+
+              {auditError && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+                  <span>{auditError}</span>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <button
@@ -599,13 +732,6 @@ function LinkedInSync({ report, onUpdateHiringReadiness }) {
                   <span>{generatingHeadlines ? 'Writing...' : 'Generate Headlines'}</span>
                 </button>
               </div>
-            </div>
-          )}
-
-          {auditError && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{auditError}</span>
             </div>
           )}
 

@@ -37,12 +37,12 @@ function RepoInsights({ repo, insights }) {
   const issuesCount = insights?.issuesCount ?? repo.open_issues_count ?? (insights?.issues?.length || 0);
   const prsCount = insights?.prsCount ?? repo.prs_count ?? (insights?.prs?.length || 0);
 
-  // Fork-based proxy when GitHub omits contributors:
+  // Fork-based proxy when GitHub omits contributors (creator is always >= 1 contributor):
   const rawContributors = insights?.contributorsCount ?? repo.contributors_count ?? (insights?.contributors?.length || 0);
   const contributorProxy = forksCount > 0
     ? Math.max(1, Math.round(Math.min(forksCount, Math.sqrt(forksCount) * 3 + Math.log10(starsCount + 1) * 2)))
-    : (starsCount >= 10 ? 1 : 0);
-  const contributorsCount = rawContributors > 0 ? rawContributors : contributorProxy;
+    : 1;
+  const contributorsCount = Math.max(1, rawContributors > 0 ? rawContributors : contributorProxy);
 
   const candidateCards = [
     {

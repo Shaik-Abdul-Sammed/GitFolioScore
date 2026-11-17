@@ -16,22 +16,22 @@ export const ROLE_CRITERIA = {
   'Backend Engineer': {
     preferredLanguages: ['Go', 'Rust', 'Java', 'Python', 'C#', 'C++', 'Node.js', 'Ruby', 'PHP', 'SQL', 'Elixir'],
     preferredTopics: ['api', 'rest', 'graphql', 'backend', 'microservices', 'database', 'sql', 'postgresql', 'redis', 'server', 'grpc'],
-    weights: { profile: 15, repoQuality: 25, activity: 20, impact: 20, diversity: 10, docs: 10 },
+    weights: { profile: 10, repoQuality: 30, activity: 20, impact: 20, diversity: 10, docs: 10 },
   },
   'Mobile Engineer': {
     preferredLanguages: ['Kotlin', 'Swift', 'Dart', 'Java', 'Objective-C'],
     preferredTopics: ['android', 'ios', 'mobile', 'flutter', 'react-native', 'swiftui', 'jetpack-compose', 'app', 'expo', 'xcode'],
-    weights: { profile: 15, repoQuality: 30, activity: 15, impact: 20, diversity: 10, docs: 10 },
+    weights: { profile: 10, repoQuality: 30, activity: 20, impact: 20, diversity: 10, docs: 10 },
   },
   'Machine Learning / AI Engineer': {
     preferredLanguages: ['Python', 'Jupyter Notebook', 'R', 'C++', 'Julia'],
     preferredTopics: ['machine-learning', 'deep-learning', 'ai', 'data-science', 'nlp', 'computer-vision', 'pytorch', 'tensorflow', 'llm', 'huggingface', 'model'],
-    weights: { profile: 10, repoQuality: 25, activity: 20, impact: 25, diversity: 10, docs: 10 },
+    weights: { profile: 10, repoQuality: 25, activity: 15, impact: 30, diversity: 10, docs: 10 },
   },
   'DevOps & Cloud Engineer': {
     preferredLanguages: ['Shell', 'HCL', 'Dockerfile', 'Go', 'Python', 'Makefile', 'YAML'],
     preferredTopics: ['docker', 'kubernetes', 'terraform', 'ci-cd', 'devops', 'cloud', 'aws', 'k8s', 'ansible', 'helm', 'github-actions', 'infrastructure', 'monitoring', 'prometheus'],
-    weights: { profile: 10, repoQuality: 25, activity: 25, impact: 15, diversity: 10, docs: 15 },
+    weights: { profile: 10, repoQuality: 25, activity: 25, impact: 10, diversity: 10, docs: 20 },
   },
   'Fullstack Engineer': {
     preferredLanguages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Java', 'HTML', 'CSS', 'SQL'],
@@ -53,7 +53,7 @@ export function calculateRoleFit(repos = [], languageCount = {}, targetRole = ''
 
   let matchedLangWeight = 0;
   let totalLangWeight = 0;
-  Object.entries(languageCount).forEach(([lang, count]) => {
+  Object.entries(languageCount || {}).forEach(([lang, count]) => {
     totalLangWeight += count;
     if (criteria.preferredLanguages.some((pl) => pl.toLowerCase() === lang.toLowerCase())) {
       matchedLangWeight += count;
@@ -61,7 +61,20 @@ export function calculateRoleFit(repos = [], languageCount = {}, targetRole = ''
     }
   });
 
-  const langMatchRatio = totalLangWeight > 0 ? (matchedLangWeight / totalLangWeight) : 0.5;
+  let langMatchRatio = totalLangWeight > 0 ? (matchedLangWeight / totalLangWeight) : 0.25;
+
+  // For Fullstack, require cross-discipline balance (client + server/API/database)
+  if (targetRole === 'Fullstack Engineer') {
+    const hasClient = ['javascript', 'typescript', 'html', 'css', 'vue', 'svelte'].some((l) => (languageCount[l] || 0) > 0);
+    const hasServer = ['python', 'go', 'java', 'rust', 'c#', 'php', 'ruby', 'sql', 'c++'].some((l) => (languageCount[l] || 0) > 0);
+    const hasNodeOrApi = repos.some((r) => {
+      const text = `${r.name || ''} ${r.description || ''} ${(r.topics || []).join(' ')}`.toLowerCase();
+      return /node|express|fastapi|django|flask|spring|api|server|graphql|database|sql|postgres|mongo/i.test(text);
+    });
+    if (!(hasClient && (hasServer || hasNodeOrApi))) {
+      langMatchRatio = Math.min(0.65, langMatchRatio);
+    }
+  }
 
   let topicMatches = 0;
   repos.forEach((repo) => {
@@ -69,26 +82,54 @@ export function calculateRoleFit(repos = [], languageCount = {}, targetRole = ''
     topics.forEach((t) => {
       const tLower = t.toLowerCase();
       if (criteria.preferredTopics.some((pt) => tLower.includes(pt))) {
-        topicMatches++;
+        topicMatches += 1;
         matchedSkills.add(t);
       }
     });
-    // Check description for keywords
-    if (repo.description) {
-      const descLower = repo.description.toLowerCase();
-      criteria.preferredTopics.slice(0, 5).forEach((pt) => {
-        if (descLower.includes(pt)) {
-          topicMatches += 0.5;
-        }
-      });
+
+    // Check name and description for domain keywords
+    const repoText = `${repo.name || ''} ${repo.description || ''}`.toLowerCase();
+    criteria.preferredTopics.forEach((pt) => {
+      if (repoText.includes(pt)) {
+        topicMatches += 0.5;
+        matchedSkills.add(pt);
+      }
+    });
+
+    // Role-specific architectural signals
+    if (targetRole === 'DevOps & Cloud Engineer') {
+      if (repo.hasCI || repo.has_workflows || /ci|cd|action|docker|k8s|deploy|terraform/i.test(repoText)) {
+        topicMatches += 1.5;
+        matchedSkills.add('CI/CD');
+      }
+    }
+    if (targetRole === 'Frontend Engineer') {
+      if (repo.homepage || /demo|live|app|web|ui|interface/i.test(repoText)) {
+        topicMatches += 0.5;
+        matchedSkills.add('Live Web App');
+      }
+    }
+    if (targetRole === 'Mobile Engineer') {
+      if (/android|ios|flutter|react-native|mobile|swift|apk/i.test(repoText)) {
+        topicMatches += 1.5;
+        matchedSkills.add('Mobile Architecture');
+      }
+    }
+    if (targetRole === 'Machine Learning / AI Engineer') {
+      if (/model|dataset|pytorch|tensorflow|pipeline|training|inference|weights/i.test(repoText)) {
+        topicMatches += 1.5;
+        matchedSkills.add('AI/ML Pipeline');
+      }
     }
   });
 
-  const topicMatchRatio = Math.min(1, topicMatches / Math.max(1, repos.length * 0.8));
+  const topicMatchRatio = Math.min(1.0, topicMatches / Math.max(1, repos.length * 0.75));
 
-  // Combined fit score: 60% language relevance + 40% project domain relevance
-  const rawFit = Math.round((langMatchRatio * 60) + (topicMatchRatio * 40));
-  const fitScore = Math.max(20, Math.min(100, rawFit));
+  // Combined fit score: 55% language relevance + 45% domain/project relevance
+  const rawFit = Math.round((langMatchRatio * 55) + (topicMatchRatio * 45));
+  const fitScore = matchedLangWeight === 0 && topicMatches === 0
+    ? 20
+    : Math.max(20, Math.min(100, rawFit));
 
   let label = 'Domain Specialist';
   if (fitScore >= 80) label = 'Target Role Specialist';
@@ -127,16 +168,13 @@ export function computeScore({
   targetRole = '',
   isRepo = false,
 }) {
+  const DEFAULT_WEIGHTS = { profile: 15, repoQuality: 25, activity: 20, impact: 20, diversity: 10, docs: 10 };
+  const isCustomWeights = weights && Object.keys(DEFAULT_WEIGHTS).some((k) => weights[k] !== undefined && weights[k] !== DEFAULT_WEIGHTS[k]);
   const roleConfig = targetRole && ROLE_CRITERIA[targetRole] ? ROLE_CRITERIA[targetRole].weights : {};
   const w = {
-    profile: 15,
-    repoQuality: 25,
-    activity: 20,
-    impact: 20,
-    diversity: 10,
-    docs: 10,
+    ...DEFAULT_WEIGHTS,
     ...roleConfig,
-    ...(weights || {}),
+    ...(isCustomWeights ? weights : {}),
   };
 
   const reposCount = repos.length || 1;
@@ -210,12 +248,13 @@ export function computeScore({
   // ── Role fit modulation ─────────────────────────────────────────────────
   if (targetRole && ROLE_CRITERIA[targetRole] && !isRepo && repos.length > 0) {
     const roleFit = calculateRoleFit(repos, languageCount, targetRole);
-    // Explicit domain alignment factor: ranges from 0.60 (severe mismatch) to 1.0 (perfect match)
-    const roleFitRatio = Math.max(0.15, Math.min(1.0, roleFit.fitScore / 100));
-    const alignmentFactor = 0.60 + (roleFitRatio * 0.40);
-    repoQuality = Math.round(repoQuality * alignmentFactor);
-    impact = Math.round(impact * (0.75 + roleFitRatio * 0.25));
-    diversity = Math.round(diversity * (0.70 + roleFitRatio * 0.30));
+    // Dynamic domain alignment factor: ranges from 0.50 (severe mismatch) to 1.0 (perfect match)
+    const fitRatio = Math.max(0.15, Math.min(1.0, roleFit.fitScore / 100));
+
+    repoQuality = Math.round(repoQuality * (0.50 + fitRatio * 0.50));
+    impact = Math.round(impact * (0.60 + fitRatio * 0.40));
+    diversity = Math.round(diversity * (0.55 + fitRatio * 0.45));
+    activity = Math.round(activity * (0.75 + fitRatio * 0.25));
   }
 
   const breakdown = {
@@ -373,10 +412,11 @@ export function calculateReport({ profile, repos = [], weights, targetRole = '' 
     const openIssuesCount = repo.open_issues_count ?? Math.max(0, rawIssues - prsCount);
 
     // Contributor proxy based on community forks (per QA/Anna review specification)
+    // Every repository has at least 1 contributor (the repo creator/owner)
     const contributorProxy = forks > 0
       ? Math.max(1, Math.round(Math.min(forks, Math.sqrt(forks) * 3 + Math.log10(stars + 1) * 2)))
-      : (stars >= 10 ? 1 : 0);
-    const contributorsCount = repo.contributors_count || (repo.contributors?.length) || contributorProxy;
+      : 1;
+    const contributorsCount = Math.max(1, repo.contributors_count || (repo.contributors?.length) || contributorProxy);
 
     return {
       name: repo.name,
@@ -431,16 +471,13 @@ export function calculateReport({ profile, repos = [], weights, targetRole = '' 
   // Role fit evaluation
   const roleFit = calculateRoleFit(repoStats, languageCount, targetRole);
 
+  const DEFAULT_WEIGHTS = { profile: 15, repoQuality: 25, activity: 20, impact: 20, diversity: 10, docs: 10 };
+  const isCustomWeights = weights && Object.keys(DEFAULT_WEIGHTS).some((k) => weights[k] !== undefined && weights[k] !== DEFAULT_WEIGHTS[k]);
   const roleConfig = targetRole && ROLE_CRITERIA[targetRole] ? ROLE_CRITERIA[targetRole].weights : {};
   const effectiveWeights = {
-    profile: 15,
-    repoQuality: 25,
-    activity: 20,
-    impact: 20,
-    diversity: 10,
-    docs: 10,
+    ...DEFAULT_WEIGHTS,
     ...roleConfig,
-    ...(weights || {}),
+    ...(isCustomWeights ? weights : {}),
   };
 
   // Score breakdown
@@ -498,7 +535,7 @@ export function calculateReport({ profile, repos = [], weights, targetRole = '' 
     repoInsights[repo.name] = {
       issuesCount: repo.openIssuesCount || 0,
       prsCount: repo.prsCount || 0,
-      contributorsCount: repo.contributorsCount || 0,
+      contributorsCount: repo.contributorsCount || Math.max(1, repo.contributors_count || 1),
       issues: [],
       prs: [],
       contributors: [],

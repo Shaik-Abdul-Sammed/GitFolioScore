@@ -3,7 +3,9 @@
  * Defaults to Level 1 (0 XP) for all fresh users or cleared caches.
  */
 
-const STORAGE_KEY = 'gitfolioscore_xp';
+const STORAGE_KEY = 'gitfolioscore_xp_v5';
+const LEGACY_STORAGE_KEY = 'gitfolioscore_xp';
+const INIT_FLAG = 'gitfolioscore_v5_init';
 
 export const DEFAULT_INITIAL_STATE = {
   xp: 0,
@@ -70,13 +72,16 @@ export async function clearStoredXP() {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
       localStorage.setItem(STORAGE_KEY, '0');
+      localStorage.setItem(INIT_FLAG, 'true');
     }
   } catch {
     // Ignore storage errors
   }
   try {
     await setAnnaStorage(STORAGE_KEY, 0);
+    await setAnnaStorage(LEGACY_STORAGE_KEY, 0);
   } catch {
     // Ignore storage errors
   }
@@ -85,6 +90,28 @@ export async function clearStoredXP() {
 
 export async function loadXP() {
   let storedXP = null;
+
+  // Check if fresh install: first run should strictly initialize to Level 0 (0 XP)
+  try {
+    if (typeof localStorage !== 'undefined' && !localStorage.getItem(INIT_FLAG)) {
+      localStorage.setItem(INIT_FLAG, 'true');
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      localStorage.setItem(STORAGE_KEY, '0');
+      await setAnnaStorage(STORAGE_KEY, 0);
+      await setAnnaStorage(LEGACY_STORAGE_KEY, 0);
+      return {
+        xp: 0,
+        level: 0,
+        title: 'Code Initiate',
+        currentXP: 0,
+        nextXP: 50,
+        progress: 0,
+        valueOf: () => 0,
+      };
+    }
+  } catch {
+    // Fall back to storage check
+  }
 
   // 1. Try Anna OS storage
   try {
@@ -114,7 +141,7 @@ export async function loadXP() {
     }
   }
 
-  // 3. Fallback for fresh install: explicitly Level 1 default object { xp: 0, level: 1, title: 'Code Initiate' }
+  // 3. Fallback for fresh install: explicitly Level 0 default object { xp: 0, level: 0, title: 'Code Initiate' }
   const finalXP = storedXP !== null ? storedXP : DEFAULT_INITIAL_STATE.xp;
   const levelInfo = getLevelInfo(finalXP);
 
